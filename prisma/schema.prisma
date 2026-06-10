@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "cockroachdb"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Usuarios (socios)
+// ---------------------------------------------------------------------------
+
+model Usuario {
+  id           Int      @id @default(sequence())
+  nombre       String
+  apellido     String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  compras Compra[]
+  ventas  Venta[]
+  gastos  Gasto[]
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo de productos
+// ---------------------------------------------------------------------------
+
+enum CategoriaProducto {
+  ALIMENTO
+  POUCH
+  LATA
+  SNACK
+  GOLOSINA
+}
+
+enum Presentacion {
+  BOLSA_CERRADA
+  CAJA_CERRADA
+  INDIVIDUAL
+}
+
+model Producto {
+  id        Int               @id @default(sequence())
+  sku       String            @unique
+  nombre    String
+  marca     String
+  categoria CategoriaProducto
+  presentacion Presentacion
+
+  stockActual Int @default(0)
+
+  // Precios
+  precioCostoUnitario Decimal @default(0)
+  // Recargo aplicado sobre el costo para sugerir el precio de venta (ej: 30 = +30%)
+  margenPorcentaje    Decimal @default(30)
+  precioVenta         Decimal @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  compras        Compra[]
+  detalleVentas  DetalleVenta[]
+  historialStock HistorialStockMayorista[]
+
+  @@index([categoria])
+}
+
+// ---------------------------------------------------------------------------
+// Proveedores
+// ---------------------------------------------------------------------------
+
+model Proveedor {
+  id        Int     @id @default(sequence())
+  nombre    String
+  direccion String?
+  contacto  String?
+
+  compras Compra[]
+}
+
+// ---------------------------------------------------------------------------
+// Compras (ingresos de mercadería)
+// ---------------------------------------------------------------------------
+
+model Compra {
+  id          Int @id @default(sequence())
+  proveedorId Int
+  productoId  Int
+
+  cantidad            Int
+  precioCostoUnitario Decimal
+  costoEnvio          Decimal? @default(0)
+  numeroPedido        String?
+  facturado           Boolean  @default(false)
+  numeroFactura       String?
+  fechaCompra         DateTime @default(now())
+
+  usuarioId Int
+
+  proveedor Proveedor @relation(fields: [proveedorId], references: [id])
+  producto  Producto  @relation(fields: [productoId], references: [id])
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+
+  @@index([fechaCompra])
+  @@index([productoId])
+}
+
+// ---------------------------------------------------------------------------
+// Clientes
+// ---------------------------------------------------------------------------
+
+model Cliente {
+  id        Int     @id @default(sequence())
+  nombre    String
+  apellido  String
+  direccion String
+  telefono  String
+  email     String?
+
+  ventas Venta[]
+}
+
+// ---------------------------------------------------------------------------
+// Ventas
+// ---------------------------------------------------------------------------
+
+enum CanalVenta {
+  TIENDANUBE
+  WHATSAPP
+  TELEFONO
+}
+
+model Venta {
+  id        Int @id @default(sequence())
+  clienteId Int
+
+  canalVenta    CanalVenta
+  medioPago     String
+  costoEnvio    Decimal    @default(0)
+  facturado     Boolean    @default(false)
+  numeroFactura String?
+  fechaVenta    DateTime   @default(now())
+
+  usuarioId Int
+
+  cliente  Cliente        @relation(fields: [clienteId], references: [id])
+  usuario  Usuario        @relation(fields: [usuarioId], references: [id])
+  detalles DetalleVenta[]
+
+  @@index([fechaVenta])
+  @@index([clienteId])
+}
+
+model DetalleVenta {
+  id      Int @id @default(sequence())
+  ventaId Int
+  productoId Int
+
+  cantidad            Int
+  precioVentaUnitario Decimal
+
+  venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@index([ventaId])
+  @@index([productoId])
+}
+
+// ---------------------------------------------------------------------------
+// Gastos
+// ---------------------------------------------------------------------------
+
+enum CategoriaGasto {
+  MONOTRIBUTO
+  TELEFONO
+  COMMUNITY_MANAGER
+  PUBLICIDAD
+  SOPORTE_IT
+  OTROS
+}
+
+model Gasto {
+  id             Int            @id @default(sequence())
+  categoriaGasto CategoriaGasto
+  monto          Decimal
+  descripcion    String?
+  fechaGasto     DateTime       @default(now())
+
+  usuarioId Int?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([fechaGasto])
+}
+
+// ---------------------------------------------------------------------------
+// Historial de stock mayorista (importaciones de los viernes)
+// ---------------------------------------------------------------------------
+
+model HistorialStockMayorista {
+  id         Int @id @default(sequence())
+  productoId Int?
+
+  sku                   String
+  precioCostoScraped    Decimal
+  stockMayoristaScraped Int
+  fechaImportacion      DateTime @default(now())
+
+  producto Producto? @relation(fields: [productoId], references: [id])
+
+  @@index([fechaImportacion])
+  @@index([sku])
+}
