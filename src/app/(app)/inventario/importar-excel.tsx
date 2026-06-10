@@ -20,9 +20,9 @@ export function ImportarExcel() {
       try {
         const res = await importarExcel(formData);
         setResultado(
-          `Procesadas ${res.total} filas · ${res.actualizados} productos actualizados` +
+          `Procesados ${res.total} productos · ${res.actualizados} actualizados (precio de costo y venta)` +
             (res.sinCoincidencia > 0
-              ? ` · ${res.sinCoincidencia} SKU sin coincidencia`
+              ? ` · ${res.sinCoincidencia} sin coincidencia por nombre`
               : "")
         );
       } catch (e) {
@@ -57,7 +57,7 @@ export function ImportarExcel() {
             Arrastrá el archivo acá o <span className="text-blue-600 underline">elegí un archivo</span>
             <br />
             <span className="text-xs text-gray-400">
-              Columnas esperadas: SKU, Nombre, Costo, Stock Mayorista
+              Lista de precios del mayorista: Nombre, Tamaño, Precio Lista, Precio c/dto, Estado de stock, Codigo, SKU
             </span>
           </p>
         )}

@@ -107,15 +107,92 @@ export async function crearCompra(formData: FormData) {
   redirect("/inventario");
 }
 
-interface FilaExcel {
-  SKU?: string;
-  sku?: string;
-  Nombre?: string;
-  nombre?: string;
-  Costo?: number;
-  costo?: number;
-  "Stock Mayorista"?: number;
-  stock_mayorista?: number;
+// Las listas de precios de los mayoristas suelen venir con problemas de
+// codificación (UTF-8 leído como Latin-1, ej: "Tamaños" -> "TamaÃ±os").
+// Si detectamos el patrón típico de mojibake, lo corregimos.
+function corregirEncoding(s: string): string {
+  if (!s.includes("Ã") && !s.includes("Â")) return s;
+  try {
+    return Buffer.from(s, "latin1").toString("utf8");
+  } catch {
+    return s;
+  }
+}
+
+// Convierte precios con formato argentino ("$ 24.100,00") a número (24100).
+function parsearPrecio(valor: unknown): number {
+  if (typeof valor === "number") return valor;
+  const texto = String(valor ?? "").trim();
+  if (!texto) return 0;
+  const limpio = texto.replace(/[^0-9.,]/g, "");
+  const normalizado = limpio.replace(/\./g, "").replace(",", ".");
+  const numero = Number(normalizado);
+  return Number.isNaN(numero) ? 0 : numero;
+}
+
+// Parser de CSV simple (soporta campos entre comillas con comas y comillas escapadas).
+// No usamos XLSX para CSV porque convierte automáticamente celdas como
+// "$ 24.100,00" en números (perdiendo datos, ej: termina en 24.1).
+function parsearCSV(texto: string): Record<string, string>[] {
+  const lineas = texto.split(/\r\n|\n|\r/).filter((linea) => linea.length > 0);
+  if (lineas.length === 0) return [];
+
+  const parsearLinea = (linea: string): string[] => {
+    const campos: string[] = [];
+    let actual = "";
+    let dentroComillas = false;
+    for (let i = 0; i < linea.length; i++) {
+      const c = linea[i];
+      if (dentroComillas) {
+        if (c === '"') {
+          if (linea[i + 1] === '"') {
+            actual += '"';
+            i++;
+          } else {
+            dentroComillas = false;
+          }
+        } else {
+          actual += c;
+        }
+      } else if (c === '"') {
+        dentroComillas = true;
+      } else if (c === ",") {
+        campos.push(actual);
+        actual = "";
+      } else {
+        actual += c;
+      }
+    }
+    campos.push(actual);
+    return campos;
+  };
+
+  const encabezados = parsearLinea(lineas[0]);
+  return lineas.slice(1).map((linea) => {
+    const valores = parsearLinea(linea);
+    const fila: Record<string, string> = {};
+    encabezados.forEach((encabezado, i) => {
+      fila[encabezado] = valores[i] ?? "";
+    });
+    return fila;
+  });
+}
+
+// Normaliza nombres para poder comparar "RC Urinary Care" con "RC URINARY CARE".
+function normalizarNombre(s: string): string {
+  // Descompone acentos (NFD) y descarta los caracteres de marca diacrítica
+  // (rango Unicode 0x0300-0x036F) para que "Ñ"/"ñ" -> "n", "Ó" -> "O", etc.
+  return s
+    .normalize("NFD")
+    .split("")
+    .filter((c) => {
+      const code = c.charCodeAt(0);
+      return code < 0x0300 || code > 0x036f;
+    })
+    .join("")
+    .toUpperCase()
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 export async function importarExcel(formData: FormData) {
@@ -123,28 +200,67 @@ export async function importarExcel(formData: FormData) {
   if (!file || file.size === 0) throw new Error("Subí un archivo .xlsx o .csv");
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const workbook = XLSX.read(buffer, { type: "buffer" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const filas = XLSX.utils.sheet_to_json<FilaExcel>(sheet);
+
+  let filasRaw: Record<string, unknown>[];
+  if (file.name.toLowerCase().endsWith(".csv")) {
+    const texto = corregirEncoding(buffer.toString("utf8"));
+    filasRaw = parsearCSV(texto);
+  } else {
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    filasRaw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+  }
+
+  // Corregimos la codificación de claves y valores (por si vienen de un .xlsx
+  // con el mismo problema), y deduplicamos por "SKU" (cada variante de
+  // tamaño tiene su propio SKU único generado por el scraper).
+  const filasPorSku = new Map<string, Record<string, unknown>>();
+  for (const filaRaw of filasRaw) {
+    const fila: Record<string, unknown> = {};
+    for (const [clave, valor] of Object.entries(filaRaw)) {
+      const claveCorregida = corregirEncoding(clave);
+      fila[claveCorregida] = typeof valor === "string" ? corregirEncoding(valor) : valor;
+    }
+
+    const sku = String(fila["SKU"] ?? fila["Codigo"] ?? "").trim();
+    if (!sku) continue;
+    if (!filasPorSku.has(sku)) filasPorSku.set(sku, fila);
+  }
+
+  // Si nuestro producto tiene cargado el SKU del mayorista (Codigo-Tamaño),
+  // matcheamos por ahí. Si no, intentamos por nombre normalizado.
+  const productos = await prisma.producto.findMany();
+  const productosPorSku = new Map(productos.map((producto) => [producto.sku, producto]));
+  const productosPorNombre = new Map<string, (typeof productos)[number][]>();
+  for (const producto of productos) {
+    const clave = normalizarNombre(producto.nombre);
+    const lista = productosPorNombre.get(clave) ?? [];
+    lista.push(producto);
+    productosPorNombre.set(clave, lista);
+  }
 
   let actualizados = 0;
   let sinCoincidencia = 0;
   const ahora = new Date();
 
-  for (const fila of filas) {
-    const sku = String(fila.SKU ?? fila.sku ?? "").trim();
-    if (!sku) continue;
+  for (const [sku, fila] of filasPorSku) {
+    const nombre = String(fila["Nombre"] ?? "").trim();
+    const precioCosto = parsearPrecio(fila["Precio Lista"]);
+    const precioConDescuento = parsearPrecio(fila["Precio c/dto"]);
+    const tamanios = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim() || null;
+    const estadoStockMayorista = String(fila["Estado de stock"] ?? "").trim() || null;
 
-    const costo = Number(fila.Costo ?? fila.costo ?? 0);
-    const stockMayorista = Number(fila["Stock Mayorista"] ?? fila.stock_mayorista ?? 0);
-
-    const producto = await prisma.producto.findUnique({ where: { sku } });
+    let producto = productosPorSku.get(sku) ?? null;
+    if (!producto) {
+      const candidatos = productosPorNombre.get(normalizarNombre(nombre)) ?? [];
+      producto = candidatos.length === 1 ? candidatos[0] : null;
+    }
 
     if (producto) {
-      const precioVenta = costo * (1 + Number(producto.margenPorcentaje) / 100);
+      const precioVenta = precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
       await prisma.producto.update({
         where: { id: producto.id },
-        data: { precioCostoUnitario: costo, precioVenta },
+        data: { precioCostoUnitario: precioCosto, precioVenta },
       });
       actualizados++;
     } else {
@@ -155,8 +271,11 @@ export async function importarExcel(formData: FormData) {
       data: {
         productoId: producto?.id ?? null,
         sku,
-        precioCostoScraped: costo,
-        stockMayoristaScraped: stockMayorista,
+        nombre,
+        precioCostoScraped: precioCosto,
+        precioConDescuento,
+        tamanios,
+        estadoStockMayorista,
         fechaImportacion: ahora,
       },
     });
@@ -166,5 +285,5 @@ export async function importarExcel(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/ventas/nueva");
 
-  return { total: filas.length, actualizados, sinCoincidencia };
+  return { total: filasPorSku.size, actualizados, sinCoincidencia };
 }

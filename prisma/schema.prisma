@@ -203,10 +203,17 @@ model HistorialStockMayorista {
   id         Int @id @default(sequence())
   productoId Int?
 
-  sku                   String
-  precioCostoScraped    Decimal
-  stockMayoristaScraped Int
-  fechaImportacion      DateTime @default(now())
+  // Código del producto en la lista de precios del mayorista (no es el SKU propio)
+  sku    String
+  nombre String?
+
+  precioCostoScraped   Decimal
+  precioConDescuento   Decimal?
+  tamanios             String?
+  // Stock que tiene el MAYORISTA disponible (informativo, no es nuestro stock)
+  estadoStockMayorista String?
+
+  fechaImportacion DateTime @default(now())
 
   producto Producto? @relation(fields: [productoId], references: [id])
 
