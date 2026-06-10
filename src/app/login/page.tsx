@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
@@ -42,8 +43,9 @@ function LoginForm() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
       >
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-900">Estación Mascotera</h1>
+        <div className="flex flex-col items-center text-center">
+          <Image src="/logo.png" alt="Estación Mascotera" width={80} height={80} className="rounded-full" />
+          <h1 className="mt-2 text-xl font-semibold text-gray-900">Estación Mascotera</h1>
           <p className="mt-1 text-sm text-gray-500">Iniciá sesión para continuar</p>
         </div>
 

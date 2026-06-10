@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -18,7 +19,10 @@ export function Nav({ userName }: { userName: string }) {
     <header className="sticky top-0 z-10 border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-gray-900">🐾 Estación Mascotera</span>
+          <span className="flex items-center gap-2 font-semibold text-gray-900">
+            <Image src="/logo.png" alt="Estación Mascotera" width={32} height={32} className="rounded-full" />
+            Estación Mascotera
+          </span>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="text-sm text-gray-500 hover:text-gray-800 sm:hidden"
