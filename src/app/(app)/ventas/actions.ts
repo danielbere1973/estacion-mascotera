@@ -92,3 +92,89 @@ export async function crearVenta(formData: FormData) {
   revalidatePath("/");
   redirect("/ventas");
 }
+
+export async function actualizarVenta(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Venta inválida.");
+
+  const canalVenta = formData.get("canalVenta")?.toString() as CanalVenta;
+  const medioPago = formData.get("medioPago")?.toString().trim();
+  const costoEnvio = Number(formData.get("costoEnvio") || 0);
+  const facturado = formData.get("facturado") === "on";
+  const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+
+  if (!canalVenta || !medioPago) throw new Error("Faltan datos de la venta.");
+
+  const detalleIds = formData.getAll("detalleId").map((v) => Number(v));
+  const cantidades = formData.getAll("cantidad").map((v) => Number(v));
+  const precios = formData.getAll("precioVentaUnitario").map((v) => Number(v));
+  const descuentos = formData.getAll("descuentoPorcentaje").map((v) => Number(v) || 0);
+
+  await prisma.$transaction(async (tx) => {
+    const detallesActuales = await tx.detalleVenta.findMany({ where: { ventaId: id } });
+    const actualesPorId = new Map(detallesActuales.map((d) => [d.id, d]));
+
+    for (let i = 0; i < detalleIds.length; i++) {
+      const actual = actualesPorId.get(detalleIds[i]);
+      if (!actual) continue;
+
+      const nuevaCantidad = cantidades[i];
+      if (!nuevaCantidad || nuevaCantidad <= 0) {
+        throw new Error("La cantidad debe ser mayor a 0.");
+      }
+
+      const deltaCantidad = nuevaCantidad - actual.cantidad;
+      if (deltaCantidad !== 0) {
+        await tx.producto.update({
+          where: { id: actual.productoId },
+          data: { stockActual: { decrement: deltaCantidad } },
+        });
+      }
+
+      await tx.detalleVenta.update({
+        where: { id: actual.id },
+        data: {
+          cantidad: nuevaCantidad,
+          precioVentaUnitario: precios[i],
+          descuentoPorcentaje: descuentos[i],
+        },
+      });
+    }
+
+    await tx.venta.update({
+      where: { id },
+      data: { canalVenta, medioPago, costoEnvio, facturado, numeroFactura },
+    });
+  });
+
+  revalidatePath("/ventas");
+  revalidatePath("/inventario");
+  revalidatePath("/");
+  redirect("/ventas");
+}
+
+export async function eliminarVenta(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Venta inválida.");
+
+  await prisma.$transaction(async (tx) => {
+    const detalles = await tx.detalleVenta.findMany({ where: { ventaId: id } });
+    for (const d of detalles) {
+      await tx.producto.update({
+        where: { id: d.productoId },
+        data: { stockActual: { increment: d.cantidad } },
+      });
+    }
+    await tx.venta.delete({ where: { id } });
+  });
+
+  revalidatePath("/ventas");
+  revalidatePath("/inventario");
+  revalidatePath("/");
+}

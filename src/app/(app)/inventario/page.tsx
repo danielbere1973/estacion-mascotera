@@ -27,6 +27,12 @@ export default async function InventarioPage() {
         <h1 className="text-xl font-semibold text-gray-900">Inventario y Proveedores</h1>
         <div className="flex flex-wrap gap-2">
           <Link
+            href="/inventario/compras"
+            className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
+          >
+            Ver compras
+          </Link>
+          <Link
             href="/inventario/compra"
             className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700"
           >

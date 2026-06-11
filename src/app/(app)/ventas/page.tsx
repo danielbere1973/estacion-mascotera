@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { ConfirmSubmitButton } from "@/components/confirm-button";
+import { eliminarVenta } from "./actions";
 
 const CANAL_LABELS: Record<string, string> = {
   TIENDANUBE: "Tiendanube",
@@ -115,6 +117,7 @@ export default async function VentasPage({
               <th className="px-3 py-2 text-right">Descuento</th>
               <th className="px-3 py-2 text-right">Envío</th>
               <th className="px-3 py-2">Facturado</th>
+              <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -163,12 +166,31 @@ export default async function VentasPage({
                       </span>
                     )}
                   </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/ventas/${venta.id}/editar`}
+                        className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                      >
+                        Editar
+                      </Link>
+                      <form action={eliminarVenta}>
+                        <input type="hidden" name="id" value={venta.id} />
+                        <ConfirmSubmitButton
+                          confirmMessage="¿Eliminar esta venta? Se devolverá el stock de los productos vendidos."
+                          className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                        >
+                          Eliminar
+                        </ConfirmSubmitButton>
+                      </form>
+                    </div>
+                  </td>
                 </tr>
               );
             })}
             {ventas.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
                   No hay ventas registradas para este filtro.
                 </td>
               </tr>

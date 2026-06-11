@@ -115,6 +115,91 @@ export async function crearCompra(formData: FormData) {
   redirect("/inventario");
 }
 
+export async function actualizarCompra(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Compra inválida.");
+
+  const proveedorId = Number(formData.get("proveedorId"));
+  const cantidad = Number(formData.get("cantidad"));
+  const precioListaUnitario = Number(formData.get("precioCostoUnitario"));
+  const descuentoPorcentaje = Number(formData.get("descuentoPorcentaje") || 0);
+  const costoEnvio = Number(formData.get("costoEnvio") || 0);
+  const numeroPedido = formData.get("numeroPedido")?.toString().trim() || null;
+  const facturado = formData.get("facturado") === "on";
+  const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+
+  if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
+  if (!cantidad || cantidad <= 0) throw new Error("La cantidad debe ser mayor a 0.");
+  if (precioListaUnitario < 0) throw new Error("El precio de costo no es válido.");
+  if (descuentoPorcentaje < 0 || descuentoPorcentaje > 100) {
+    throw new Error("El descuento debe estar entre 0 y 100.");
+  }
+
+  const precioCostoUnitario = precioListaUnitario * (1 - descuentoPorcentaje / 100);
+
+  await prisma.$transaction(async (tx) => {
+    const compra = await tx.compra.findUniqueOrThrow({ where: { id } });
+    const producto = await tx.producto.findUniqueOrThrow({ where: { id: compra.productoId } });
+
+    const deltaCantidad = cantidad - compra.cantidad;
+    const precioVenta = precioCostoUnitario * (1 + Number(producto.margenPorcentaje) / 100);
+
+    await tx.producto.update({
+      where: { id: producto.id },
+      data: {
+        stockActual: { increment: deltaCantidad },
+        precioCostoUnitario,
+        precioVenta,
+      },
+    });
+
+    await tx.compra.update({
+      where: { id },
+      data: {
+        proveedorId,
+        cantidad,
+        precioCostoUnitario,
+        descuentoPorcentaje,
+        costoEnvio,
+        numeroPedido,
+        facturado,
+        numeroFactura,
+      },
+    });
+  });
+
+  revalidatePath("/inventario");
+  revalidatePath("/inventario/compras");
+  revalidatePath("/");
+  revalidatePath("/ventas/nueva");
+  redirect("/inventario/compras");
+}
+
+export async function eliminarCompra(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Compra inválida.");
+
+  await prisma.$transaction(async (tx) => {
+    const compra = await tx.compra.findUniqueOrThrow({ where: { id } });
+    await tx.producto.update({
+      where: { id: compra.productoId },
+      data: { stockActual: { decrement: compra.cantidad } },
+    });
+    await tx.compra.delete({ where: { id } });
+  });
+
+  revalidatePath("/inventario");
+  revalidatePath("/inventario/compras");
+  revalidatePath("/");
+  revalidatePath("/ventas/nueva");
+}
+
 // Las listas de precios de los mayoristas suelen venir con problemas de
 // codificación (UTF-8 leído como Latin-1, ej: "Tamaños" -> "TamaÃ±os").
 // Si detectamos el patrón típico de mojibake, lo corregimos.
