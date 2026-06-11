@@ -87,6 +87,30 @@ export default async function DashboardPage({
         ))}
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-gray-500">Ventas sin facturar</p>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">
+            {formatCurrency(metrics.ventasNoFacturadas.total)}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            {metrics.ventasNoFacturadas.cantidad} venta
+            {metrics.ventasNoFacturadas.cantidad === 1 ? "" : "s"} del período
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-gray-500">Compras sin facturar</p>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">
+            {formatCurrency(metrics.comprasNoFacturadas.total)}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            {metrics.comprasNoFacturadas.cantidad} compra
+            {metrics.comprasNoFacturadas.cantidad === 1 ? "" : "s"} del período
+          </p>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <h2 className="mb-2 text-sm font-medium text-gray-700">
           Gastos por categoría
