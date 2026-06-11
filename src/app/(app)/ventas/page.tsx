@@ -112,6 +112,7 @@ export default async function VentasPage({
               <th className="px-3 py-2">Canal</th>
               <th className="px-3 py-2">Pago</th>
               <th className="px-3 py-2 text-right">Total</th>
+              <th className="px-3 py-2 text-right">Descuento</th>
               <th className="px-3 py-2 text-right">Envío</th>
               <th className="px-3 py-2">Facturado</th>
             </tr>
@@ -120,6 +121,14 @@ export default async function VentasPage({
             {ventas.map((venta) => {
               const total = venta.detalles.reduce(
                 (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario),
+                0
+              );
+              const descuento = venta.detalles.reduce(
+                (acc, d) =>
+                  acc +
+                  d.cantidad *
+                    Number(d.precioVentaUnitario) *
+                    (Number(d.descuentoPorcentaje) / 100),
                 0
               );
               return (
@@ -136,6 +145,9 @@ export default async function VentasPage({
                   <td className="whitespace-nowrap px-3 py-2">{venta.medioPago}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
                     {formatCurrency(total)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right text-gray-500">
+                    {descuento > 0 ? `- ${formatCurrency(descuento)}` : "-"}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     {formatCurrency(Number(venta.costoEnvio))}
@@ -156,7 +168,7 @@ export default async function VentasPage({
             })}
             {ventas.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
                   No hay ventas registradas para este filtro.
                 </td>
               </tr>

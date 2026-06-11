@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Combobox } from "@/components/combobox";
 
 type Producto = {
   id: number;
@@ -48,13 +49,25 @@ export function VentaItems({ productos }: { productos: Producto[] }) {
     });
   }
 
-  const total = rows.reduce((acc, row) => {
+  const totalBruto = rows.reduce((acc, row) => {
+    const cantidad = Number(row.cantidad) || 0;
+    const precio = Number(row.precio) || 0;
+    return acc + cantidad * precio;
+  }, 0);
+
+  const totalConDescuento = rows.reduce((acc, row) => {
     const cantidad = Number(row.cantidad) || 0;
     const precio = Number(row.precio) || 0;
     const descuento = Number(row.descuento) || 0;
     const precioFinal = precio * (1 - descuento / 100);
     return acc + cantidad * precioFinal;
   }, 0);
+
+  const opciones = productos.map((p) => ({
+    value: String(p.id),
+    label: `${p.sku} · ${p.nombre}`,
+    search: `${p.sku} ${p.nombre}`,
+  }));
 
   return (
     <div className="space-y-3">
@@ -64,20 +77,16 @@ export function VentaItems({ productos }: { productos: Producto[] }) {
         const producto = productos.find((p) => String(p.id) === row.productoId);
         return (
           <div key={row.key} className="flex flex-wrap items-center gap-2">
-            <select
-              name="productoId"
-              required
-              value={row.productoId}
-              onChange={(e) => onProductoChange(row.key, e.target.value)}
-              className="min-w-[180px] flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-            >
-              <option value="">Seleccionar producto...</option>
-              {productos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.sku} · {p.nombre}
-                </option>
-              ))}
-            </select>
+            <div className="min-w-[180px] flex-1">
+              <Combobox
+                options={opciones}
+                value={row.productoId}
+                required
+                placeholder="Buscar por nombre o SKU..."
+                onSelect={(productoId) => onProductoChange(row.key, productoId)}
+              />
+            </div>
+            <input type="hidden" name="productoId" value={row.productoId} />
 
             <input
               type="number"
@@ -140,9 +149,16 @@ export function VentaItems({ productos }: { productos: Producto[] }) {
         + Agregar producto
       </button>
 
-      <p className="text-right text-sm font-semibold text-gray-700">
-        Total: {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(total)}
-      </p>
+      <div className="text-right text-sm">
+        {totalConDescuento !== totalBruto && (
+          <p className="text-gray-400 line-through">
+            {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(totalBruto)}
+          </p>
+        )}
+        <p className="font-semibold text-gray-700">
+          Total a cobrar: {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(totalConDescuento)}
+        </p>
+      </div>
     </div>
   );
 }

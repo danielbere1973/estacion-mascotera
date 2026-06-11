@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import { Combobox } from "@/components/combobox";
 import { NuevoProductoFields } from "./nuevo-producto-fields";
 
 export type MayoristaItem = {
@@ -24,32 +25,30 @@ export function MayoristaProductoSelector({
   const [sku, setSku] = useState("");
   const item = items.find((i) => i.sku === sku);
 
+  const opciones = items.map((i) => ({
+    value: i.sku,
+    label: `${i.nombre ?? ""}${i.tamanios ? ` · ${i.tamanios}` : ""} — ${formatCurrency(
+      i.precioConDescuento ?? i.precioCostoScraped
+    )}`,
+    search: `${i.nombre ?? ""} ${i.sku} ${i.tamanios ?? ""}`,
+  }));
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium text-gray-700">Producto (lista del proveedor)</label>
-      <select
-        required
+      <Combobox
+        options={opciones}
         value={sku}
-        onChange={(e) => {
-          const nuevoSku = e.target.value;
+        required
+        placeholder="Buscar por nombre o código..."
+        onSelect={(nuevoSku) => {
           setSku(nuevoSku);
           const seleccionado = items.find((i) => i.sku === nuevoSku);
           if (seleccionado) {
             onPrecioChange(seleccionado.precioConDescuento ?? seleccionado.precioCostoScraped);
           }
         }}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-      >
-        <option value="" disabled>
-          Seleccionar producto...
-        </option>
-        {items.map((i) => (
-          <option key={i.sku} value={i.sku}>
-            {i.nombre}
-            {i.tamanios ? ` · ${i.tamanios}` : ""} — {formatCurrency(i.precioConDescuento ?? i.precioCostoScraped)}
-          </option>
-        ))}
-      </select>
+      />
 
       {item &&
         (item.productoId ? (

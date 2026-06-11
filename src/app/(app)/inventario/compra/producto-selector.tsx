@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Combobox } from "@/components/combobox";
 import { NuevoProductoFields } from "./nuevo-producto-fields";
 
 type Producto = {
@@ -9,31 +10,33 @@ type Producto = {
   nombre: string;
 };
 
+const NUEVO = "nuevo";
+
 export function ProductoSelector({ productos }: { productos: Producto[] }) {
-  const [esNuevo, setEsNuevo] = useState(false);
+  const [productoId, setProductoId] = useState("");
+
+  const opciones = [
+    { value: NUEVO, label: "+ Nuevo producto", search: "nuevo producto" },
+    ...productos.map((p) => ({
+      value: String(p.id),
+      label: `${p.sku} · ${p.nombre}`,
+      search: `${p.sku} ${p.nombre}`,
+    })),
+  ];
 
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium text-gray-700">Producto</label>
-      <select
-        name="productoId"
+      <Combobox
+        options={opciones}
+        value={productoId}
         required
-        defaultValue=""
-        onChange={(e) => setEsNuevo(e.target.value === "nuevo")}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-      >
-        <option value="" disabled>
-          Seleccionar producto...
-        </option>
-        {productos.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.sku} · {p.nombre}
-          </option>
-        ))}
-        <option value="nuevo">+ Nuevo producto</option>
-      </select>
+        placeholder="Buscar por nombre o SKU..."
+        onSelect={setProductoId}
+      />
+      <input type="hidden" name="productoId" value={productoId} />
 
-      {esNuevo && <NuevoProductoFields />}
+      {productoId === NUEVO && <NuevoProductoFields />}
     </div>
   );
 }

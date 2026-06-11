@@ -50,8 +50,9 @@ export async function crearVenta(formData: FormData) {
       productoId,
       cantidad: cantidades[i],
       descuentoPorcentaje: descuentos[i],
-      // Precio final ya con el descuento aplicado.
-      precioVentaUnitario: precios[i] * (1 - descuentos[i] / 100),
+      // Precio bruto del producto: la rentabilidad se calcula sobre este valor,
+      // sin restar descuentos por medio de pago (ej: efectivo).
+      precioVentaUnitario: precios[i],
     }))
     .filter((item) => item.productoId && item.cantidad > 0);
 
