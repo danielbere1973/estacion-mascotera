@@ -115,6 +115,48 @@ export async function crearCompra(formData: FormData) {
   redirect("/inventario");
 }
 
+export async function actualizarItemMayorista(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Item inválido.");
+
+  const proveedorId = formData.get("proveedorId")?.toString();
+  const nombre = formData.get("nombre")?.toString().trim() || null;
+  const precioCostoScraped = Number(formData.get("precioCostoScraped"));
+  const precioConDescuentoStr = formData.get("precioConDescuento")?.toString().trim();
+  const precioConDescuento = precioConDescuentoStr ? Number(precioConDescuentoStr) : null;
+  const tamanios = formData.get("tamanios")?.toString().trim() || null;
+
+  if (precioCostoScraped < 0) throw new Error("El precio no es válido.");
+
+  await prisma.historialStockMayorista.update({
+    where: { id },
+    data: { nombre, precioCostoScraped, precioConDescuento, tamanios },
+  });
+
+  revalidatePath("/inventario/listas");
+  revalidatePath("/inventario/compra");
+  redirect(`/inventario/listas?proveedorId=${proveedorId}`);
+}
+
+export async function eliminarItemMayorista(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const proveedorId = Number(formData.get("proveedorId"));
+  const sku = formData.get("sku")?.toString();
+  if (!proveedorId || !sku) throw new Error("Item inválido.");
+
+  await prisma.historialStockMayorista.deleteMany({
+    where: { proveedorId, sku },
+  });
+
+  revalidatePath("/inventario/listas");
+  revalidatePath("/inventario/compra");
+}
+
 export async function actualizarCompra(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
