@@ -15,16 +15,20 @@ type Row = {
   productoId: string;
   cantidad: string;
   precio: string;
+  descuento: string;
 };
 
 export function VentaItems({ productos }: { productos: Producto[] }) {
   const [rows, setRows] = useState<Row[]>([
-    { key: 0, productoId: "", cantidad: "1", precio: "" },
+    { key: 0, productoId: "", cantidad: "1", precio: "", descuento: "0" },
   ]);
   const [nextKey, setNextKey] = useState(1);
 
   function addRow() {
-    setRows((r) => [...r, { key: nextKey, productoId: "", cantidad: "1", precio: "" }]);
+    setRows((r) => [
+      ...r,
+      { key: nextKey, productoId: "", cantidad: "1", precio: "", descuento: "0" },
+    ]);
     setNextKey((k) => k + 1);
   }
 
@@ -47,7 +51,9 @@ export function VentaItems({ productos }: { productos: Producto[] }) {
   const total = rows.reduce((acc, row) => {
     const cantidad = Number(row.cantidad) || 0;
     const precio = Number(row.precio) || 0;
-    return acc + cantidad * precio;
+    const descuento = Number(row.descuento) || 0;
+    const precioFinal = precio * (1 - descuento / 100);
+    return acc + cantidad * precioFinal;
   }, 0);
 
   return (
@@ -94,6 +100,19 @@ export function VentaItems({ productos }: { productos: Producto[] }) {
               onChange={(e) => updateRow(row.key, { precio: e.target.value })}
               className="w-28 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
               placeholder="Precio"
+            />
+
+            <input
+              type="number"
+              name="descuentoPorcentaje"
+              min={0}
+              max={100}
+              step="0.01"
+              value={row.descuento}
+              onChange={(e) => updateRow(row.key, { descuento: e.target.value })}
+              className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              placeholder="Desc. %"
+              title="Descuento %"
             />
 
             <button

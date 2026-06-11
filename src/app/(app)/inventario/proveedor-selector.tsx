@@ -7,7 +7,13 @@ type Proveedor = {
   nombre: string;
 };
 
-export function ProveedorSelector({ proveedores }: { proveedores: Proveedor[] }) {
+export function ProveedorSelector({
+  proveedores,
+  onChange,
+}: {
+  proveedores: Proveedor[];
+  onChange?: (value: string) => void;
+}) {
   const [esNuevo, setEsNuevo] = useState(false);
 
   return (
@@ -17,7 +23,10 @@ export function ProveedorSelector({ proveedores }: { proveedores: Proveedor[] })
         name="proveedorId"
         required
         defaultValue=""
-        onChange={(e) => setEsNuevo(e.target.value === "nuevo")}
+        onChange={(e) => {
+          setEsNuevo(e.target.value === "nuevo");
+          onChange?.(e.target.value);
+        }}
         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
       >
         <option value="" disabled>

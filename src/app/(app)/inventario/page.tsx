@@ -14,9 +14,12 @@ const CATEGORIA_LABELS: Record<string, string> = {
 };
 
 export default async function InventarioPage() {
-  const productos = await prisma.producto.findMany({
-    orderBy: [{ stockActual: "asc" }, { nombre: "asc" }],
-  });
+  const [productos, proveedores] = await Promise.all([
+    prisma.producto.findMany({
+      orderBy: [{ stockActual: "asc" }, { nombre: "asc" }],
+    }),
+    prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -36,7 +39,7 @@ export default async function InventarioPage() {
         <h2 className="mb-2 text-sm font-medium text-gray-700">
           Importar lista de precios del mayorista (.xlsx / .csv)
         </h2>
-        <ImportarExcel />
+        <ImportarExcel proveedores={proveedores} />
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">

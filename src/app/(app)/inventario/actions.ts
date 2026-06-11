@@ -26,14 +26,21 @@ export async function crearCompra(formData: FormData) {
   if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
 
   const cantidad = Number(formData.get("cantidad"));
-  const precioCostoUnitario = Number(formData.get("precioCostoUnitario"));
+  const precioListaUnitario = Number(formData.get("precioCostoUnitario"));
+  const descuentoPorcentaje = Number(formData.get("descuentoPorcentaje") || 0);
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const numeroPedido = formData.get("numeroPedido")?.toString().trim() || null;
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
 
   if (!cantidad || cantidad <= 0) throw new Error("La cantidad debe ser mayor a 0.");
-  if (precioCostoUnitario < 0) throw new Error("El precio de costo no es válido.");
+  if (precioListaUnitario < 0) throw new Error("El precio de costo no es válido.");
+  if (descuentoPorcentaje < 0 || descuentoPorcentaje > 100) {
+    throw new Error("El descuento debe estar entre 0 y 100.");
+  }
+
+  // Costo final por unidad ya con el descuento del proveedor aplicado.
+  const precioCostoUnitario = precioListaUnitario * (1 - descuentoPorcentaje / 100);
 
   let productoId = formData.get("productoId")?.toString();
 
@@ -92,6 +99,7 @@ export async function crearCompra(formData: FormData) {
         productoId: Number(productoId),
         cantidad,
         precioCostoUnitario,
+        descuentoPorcentaje,
         costoEnvio,
         numeroPedido,
         facturado,
@@ -199,6 +207,20 @@ export async function importarExcel(formData: FormData) {
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) throw new Error("Subí un archivo .xlsx o .csv");
 
+  let proveedorId = formData.get("proveedorId")?.toString();
+  if (proveedorId === "nuevo") {
+    const nombre = formData.get("proveedorNombre")?.toString().trim();
+    if (!nombre) throw new Error("Falta el nombre del proveedor.");
+    const direccion = formData.get("proveedorDireccion")?.toString().trim() || null;
+    const contacto = formData.get("proveedorContacto")?.toString().trim() || null;
+
+    const proveedor = await prisma.proveedor.create({
+      data: { nombre, direccion, contacto },
+    });
+    proveedorId = String(proveedor.id);
+  }
+  if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
+
   const buffer = Buffer.from(await file.arrayBuffer());
 
   let filasRaw: Record<string, unknown>[];
@@ -270,6 +292,7 @@ export async function importarExcel(formData: FormData) {
     await prisma.historialStockMayorista.create({
       data: {
         productoId: producto?.id ?? null,
+        proveedorId: Number(proveedorId),
         sku,
         nombre,
         precioCostoScraped: precioCosto,

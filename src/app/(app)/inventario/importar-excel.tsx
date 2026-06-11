@@ -2,9 +2,16 @@
 
 import { useRef, useState, useTransition } from "react";
 import { importarExcel } from "./actions";
+import { ProveedorSelector } from "./proveedor-selector";
 
-export function ImportarExcel() {
+type Proveedor = {
+  id: number;
+  nombre: string;
+};
+
+export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [dragOver, setDragOver] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
@@ -13,8 +20,15 @@ export function ImportarExcel() {
   function procesarArchivo(file: File) {
     setError(null);
     setResultado(null);
-    const formData = new FormData();
+
+    if (!formRef.current) return;
+    const formData = new FormData(formRef.current);
     formData.set("file", file);
+
+    if (!formData.get("proveedorId")) {
+      setError("Seleccioná el proveedor de la lista de precios.");
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -32,7 +46,9 @@ export function ImportarExcel() {
   }
 
   return (
-    <div className="space-y-2">
+    <form ref={formRef} className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+      <ProveedorSelector proveedores={proveedores} />
+
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -75,6 +91,6 @@ export function ImportarExcel() {
 
       {resultado && <p className="text-sm text-green-600">{resultado}</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
-    </div>
+    </form>
   );
 }

@@ -78,7 +78,8 @@ model Proveedor {
   direccion String?
   contacto  String?
 
-  compras Compra[]
+  compras           Compra[]
+  historialMayorista HistorialStockMayorista[]
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,8 @@ model Compra {
 
   cantidad            Int
   precioCostoUnitario Decimal
+  // Descuento aplicado por el proveedor sobre el precio de costo (ej: pago contado)
+  descuentoPorcentaje Decimal  @default(0)
   costoEnvio          Decimal? @default(0)
   numeroPedido        String?
   facturado           Boolean  @default(false)
@@ -161,6 +164,8 @@ model DetalleVenta {
 
   cantidad            Int
   precioVentaUnitario Decimal
+  // Descuento aplicado a este producto en la venta
+  descuentoPorcentaje Decimal  @default(0)
 
   venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
   producto Producto @relation(fields: [productoId], references: [id])
@@ -202,6 +207,7 @@ model Gasto {
 model HistorialStockMayorista {
   id         Int @id @default(sequence())
   productoId Int?
+  proveedorId Int?
 
   // Código del producto en la lista de precios del mayorista (no es el SKU propio)
   sku    String
@@ -215,8 +221,10 @@ model HistorialStockMayorista {
 
   fechaImportacion DateTime @default(now())
 
-  producto Producto? @relation(fields: [productoId], references: [id])
+  producto  Producto?  @relation(fields: [productoId], references: [id])
+  proveedor Proveedor? @relation(fields: [proveedorId], references: [id])
 
   @@index([fechaImportacion])
   @@index([sku])
+  @@index([proveedorId])
 }

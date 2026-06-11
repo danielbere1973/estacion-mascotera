@@ -43,12 +43,15 @@ export async function crearVenta(formData: FormData) {
   const productoIds = formData.getAll("productoId").map((v) => Number(v));
   const cantidades = formData.getAll("cantidad").map((v) => Number(v));
   const precios = formData.getAll("precioVentaUnitario").map((v) => Number(v));
+  const descuentos = formData.getAll("descuentoPorcentaje").map((v) => Number(v) || 0);
 
   const items = productoIds
     .map((productoId, i) => ({
       productoId,
       cantidad: cantidades[i],
-      precioVentaUnitario: precios[i],
+      descuentoPorcentaje: descuentos[i],
+      // Precio final ya con el descuento aplicado.
+      precioVentaUnitario: precios[i] * (1 - descuentos[i] / 100),
     }))
     .filter((item) => item.productoId && item.cantidad > 0);
 
@@ -69,6 +72,7 @@ export async function crearVenta(formData: FormData) {
             productoId: item.productoId,
             cantidad: item.cantidad,
             precioVentaUnitario: item.precioVentaUnitario,
+            descuentoPorcentaje: item.descuentoPorcentaje,
           })),
         },
       },
