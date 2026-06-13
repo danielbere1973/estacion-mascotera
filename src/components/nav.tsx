@@ -18,7 +18,10 @@ const linksRestringido = [
   { href: "/inventario/compras", label: "Compras" },
 ];
 
-const adminLinks = [{ href: "/usuarios", label: "Usuarios" }];
+const adminLinks = [
+  { href: "/usuarios", label: "Usuarios" },
+  { href: "/actividad", label: "Actividad" },
+];
 
 export function Nav({
   userName,

@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
+import { registrarLog } from "@/lib/log";
 import { RolUsuario } from "@prisma/client";
 
 export async function crearUsuario(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const nombre = formData.get("nombre")?.toString().trim();
   const apellido = formData.get("apellido")?.toString().trim();
@@ -33,16 +34,26 @@ export async function crearUsuario(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await prisma.usuario.create({
-    data: {
-      nombre,
-      apellido,
-      email,
-      passwordHash,
-      rol,
-      activo,
-      proveedorRestrictoId,
-    },
+  await prisma.$transaction(async (tx) => {
+    const usuario = await tx.usuario.create({
+      data: {
+        nombre,
+        apellido,
+        email,
+        passwordHash,
+        rol,
+        activo,
+        proveedorRestrictoId,
+      },
+    });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "CREAR",
+      entidad: "USUARIO",
+      entidadId: usuario.id,
+      detalle: `${nombre} ${apellido} (${email})`,
+    });
   });
 
   revalidatePath("/usuarios");
@@ -50,7 +61,7 @@ export async function crearUsuario(formData: FormData) {
 }
 
 export async function actualizarUsuario(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Usuario inválido.");
@@ -87,7 +98,17 @@ export async function actualizarUsuario(formData: FormData) {
     data.passwordHash = await bcrypt.hash(password, 10);
   }
 
-  await prisma.usuario.update({ where: { id }, data });
+  await prisma.$transaction(async (tx) => {
+    await tx.usuario.update({ where: { id }, data });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ACTUALIZAR",
+      entidad: "USUARIO",
+      entidadId: id,
+      detalle: `${nombre} ${apellido} (${email})`,
+    });
+  });
 
   revalidatePath("/usuarios");
   redirect("/usuarios");

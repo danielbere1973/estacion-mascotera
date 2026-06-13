@@ -56,6 +56,32 @@ export function NuevoProductoFields({
         <option value="INDIVIDUAL">Individual</option>
       </select>
       <div className="space-y-1">
+        <label className="text-xs text-gray-500">Contenido</label>
+        <input
+          name="productoContenido"
+          type="number"
+          step="0.01"
+          min={0}
+          defaultValue={1}
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+        />
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs text-gray-500">Unidad de medida</label>
+        <select
+          name="productoUnidadMedida"
+          required
+          defaultValue="UNIDAD"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+        >
+          <option value="KILOGRAMOS">Kilogramos</option>
+          <option value="GRAMOS">Gramos</option>
+          <option value="LITROS">Litros</option>
+          <option value="MILILITROS">Mililitros</option>
+          <option value="UNIDAD">Unidad</option>
+        </select>
+      </div>
+      <div className="space-y-1">
         <label className="text-xs text-gray-500">Margen sobre costo (%)</label>
         <input
           name="productoMargen"

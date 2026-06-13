@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
+import { registrarLog } from "@/lib/log";
 import { CanalVenta } from "@prisma/client";
 
 export async function crearVenta(formData: FormData) {
@@ -65,7 +66,7 @@ export async function crearVenta(formData: FormData) {
       }
     }
 
-    await tx.venta.create({
+    const venta = await tx.venta.create({
       data: {
         clienteId: Number(clienteId),
         canalVenta,
@@ -83,6 +84,7 @@ export async function crearVenta(formData: FormData) {
           })),
         },
       },
+      include: { cliente: true },
     });
 
     for (const item of items) {
@@ -91,6 +93,14 @@ export async function crearVenta(formData: FormData) {
         data: { stockActual: { decrement: item.cantidad } },
       });
     }
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "CREAR",
+      entidad: "VENTA",
+      entidadId: venta.id,
+      detalle: `Venta a ${venta.cliente.nombre} ${venta.cliente.apellido}`,
+    });
   });
 
   revalidatePath("/ventas");
@@ -157,6 +167,13 @@ export async function actualizarVenta(formData: FormData) {
       where: { id },
       data: { canalVenta, medioPago, costoEnvio, facturado, numeroFactura },
     });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ACTUALIZAR",
+      entidad: "VENTA",
+      entidadId: id,
+    });
   });
 
   revalidatePath("/ventas");
@@ -172,6 +189,7 @@ export async function eliminarVenta(formData: FormData) {
   if (!id) throw new Error("Venta inválida.");
 
   await prisma.$transaction(async (tx) => {
+    const venta = await tx.venta.findUniqueOrThrow({ where: { id }, include: { cliente: true } });
     const detalles = await tx.detalleVenta.findMany({ where: { ventaId: id } });
     for (const d of detalles) {
       await tx.producto.update({
@@ -180,6 +198,14 @@ export async function eliminarVenta(formData: FormData) {
       });
     }
     await tx.venta.delete({ where: { id } });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ELIMINAR",
+      entidad: "VENTA",
+      entidadId: id,
+      detalle: `Venta a ${venta.cliente.nombre} ${venta.cliente.apellido}`,
+    });
   });
 
   revalidatePath("/ventas");

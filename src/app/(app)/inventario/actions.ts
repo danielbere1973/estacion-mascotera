@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
-import { CategoriaProducto, Presentacion } from "@prisma/client";
+import { registrarLog } from "@/lib/log";
+import { CategoriaProducto, Presentacion, UnidadMedida } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
   const session = await requireAdmin();
@@ -50,9 +51,11 @@ export async function crearCompra(formData: FormData) {
       const marca = formData.get("productoMarca")?.toString().trim();
       const categoria = formData.get("productoCategoria")?.toString() as CategoriaProducto;
       const presentacion = formData.get("productoPresentacion")?.toString() as Presentacion;
+      const unidadMedida = formData.get("productoUnidadMedida")?.toString() as UnidadMedida;
+      const contenido = Number(formData.get("productoContenido") || 1);
       const margenPorcentaje = Number(formData.get("productoMargen") || 30);
 
-      if (!sku || !nombre || !marca || !categoria || !presentacion) {
+      if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
         throw new Error("Faltan datos del producto nuevo.");
       }
 
@@ -65,6 +68,8 @@ export async function crearCompra(formData: FormData) {
           marca,
           categoria,
           presentacion,
+          unidadMedida,
+          contenido,
           margenPorcentaje,
           precioCostoUnitario,
           precioVenta,
@@ -92,7 +97,7 @@ export async function crearCompra(formData: FormData) {
       });
     }
 
-    await tx.compra.create({
+    const compra = await tx.compra.create({
       data: {
         proveedorId: Number(proveedorId),
         productoId: Number(productoId),
@@ -105,6 +110,15 @@ export async function crearCompra(formData: FormData) {
         numeroFactura,
         usuarioId: Number(session.user.id),
       },
+      include: { producto: true, proveedor: true },
+    });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "CREAR",
+      entidad: "COMPRA",
+      entidadId: compra.id,
+      detalle: `${compra.producto.nombre} x${compra.cantidad} - ${compra.proveedor.nombre}`,
     });
   });
 
@@ -207,6 +221,14 @@ export async function actualizarCompra(formData: FormData) {
         numeroFactura,
       },
     });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ACTUALIZAR",
+      entidad: "COMPRA",
+      entidadId: id,
+      detalle: `${producto.nombre} x${cantidad}`,
+    });
   });
 
   revalidatePath("/inventario");
@@ -223,18 +245,80 @@ export async function eliminarCompra(formData: FormData) {
   if (!id) throw new Error("Compra inválida.");
 
   await prisma.$transaction(async (tx) => {
-    const compra = await tx.compra.findUniqueOrThrow({ where: { id } });
+    const compra = await tx.compra.findUniqueOrThrow({ where: { id }, include: { producto: true } });
     await tx.producto.update({
       where: { id: compra.productoId },
       data: { stockActual: { decrement: compra.cantidad } },
     });
     await tx.compra.delete({ where: { id } });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ELIMINAR",
+      entidad: "COMPRA",
+      entidadId: id,
+      detalle: `${compra.producto.nombre} x${compra.cantidad}`,
+    });
   });
 
   revalidatePath("/inventario");
   revalidatePath("/inventario/compras");
   revalidatePath("/");
   revalidatePath("/ventas/nueva");
+}
+
+export async function actualizarProducto(formData: FormData) {
+  const session = await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Producto inválido.");
+
+  const sku = formData.get("sku")?.toString().trim();
+  const nombre = formData.get("nombre")?.toString().trim();
+  const marca = formData.get("marca")?.toString().trim();
+  const categoria = formData.get("categoria")?.toString() as CategoriaProducto;
+  const presentacion = formData.get("presentacion")?.toString() as Presentacion;
+  const unidadMedida = formData.get("unidadMedida")?.toString() as UnidadMedida;
+  const contenido = Number(formData.get("contenido"));
+  const margenPorcentaje = Number(formData.get("margenPorcentaje"));
+
+  if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
+    throw new Error("Faltan datos del producto.");
+  }
+  if (!contenido || contenido <= 0) throw new Error("El contenido debe ser mayor a 0.");
+  if (margenPorcentaje < 0) throw new Error("El margen no es válido.");
+
+  await prisma.$transaction(async (tx) => {
+    const producto = await tx.producto.findUniqueOrThrow({ where: { id } });
+    const precioVenta = Number(producto.precioCostoUnitario) * (1 + margenPorcentaje / 100);
+
+    await tx.producto.update({
+      where: { id },
+      data: {
+        sku,
+        nombre,
+        marca,
+        categoria,
+        presentacion,
+        unidadMedida,
+        contenido,
+        margenPorcentaje,
+        precioVenta,
+      },
+    });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ACTUALIZAR",
+      entidad: "PRODUCTO",
+      entidadId: id,
+      detalle: `${nombre} (${sku})`,
+    });
+  });
+
+  revalidatePath("/inventario");
+  revalidatePath("/ventas/nueva");
+  redirect("/inventario");
 }
 
 // Las listas de precios de los mayoristas suelen venir con problemas de

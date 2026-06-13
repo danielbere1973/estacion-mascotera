@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
+import { registrarLog } from "@/lib/log";
 import { CategoriaGasto } from "@prisma/client";
 
 export async function crearGasto(formData: FormData) {
@@ -18,15 +19,25 @@ export async function crearGasto(formData: FormData) {
   if (!categoriaGasto) throw new Error("Seleccioná una categoría.");
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
 
-  await prisma.gasto.create({
-    data: {
-      categoriaGasto,
-      monto,
-      descripcion,
-      fechaGasto: fechaGastoStr ? new Date(fechaGastoStr) : new Date(),
+  await prisma.$transaction(async (tx) => {
+    const gasto = await tx.gasto.create({
+      data: {
+        categoriaGasto,
+        monto,
+        descripcion,
+        fechaGasto: fechaGastoStr ? new Date(fechaGastoStr) : new Date(),
+        usuarioId: Number(session.user.id),
+        pagadoPorId: pagadoPorIdStr ? Number(pagadoPorIdStr) : null,
+      },
+    });
+
+    await registrarLog(tx, {
       usuarioId: Number(session.user.id),
-      pagadoPorId: pagadoPorIdStr ? Number(pagadoPorIdStr) : null,
-    },
+      accion: "CREAR",
+      entidad: "GASTO",
+      entidadId: gasto.id,
+      detalle: `${categoriaGasto} - $${monto}`,
+    });
   });
 
   revalidatePath("/gastos");
@@ -48,15 +59,25 @@ export async function actualizarGasto(formData: FormData) {
   if (!categoriaGasto) throw new Error("Seleccioná una categoría.");
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
 
-  await prisma.gasto.update({
-    where: { id },
-    data: {
-      categoriaGasto,
-      monto,
-      descripcion,
-      fechaGasto: fechaGastoStr ? new Date(fechaGastoStr) : new Date(),
-      pagadoPorId: pagadoPorIdStr ? Number(pagadoPorIdStr) : null,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.gasto.update({
+      where: { id },
+      data: {
+        categoriaGasto,
+        monto,
+        descripcion,
+        fechaGasto: fechaGastoStr ? new Date(fechaGastoStr) : new Date(),
+        pagadoPorId: pagadoPorIdStr ? Number(pagadoPorIdStr) : null,
+      },
+    });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ACTUALIZAR",
+      entidad: "GASTO",
+      entidadId: id,
+      detalle: `${categoriaGasto} - $${monto}`,
+    });
   });
 
   revalidatePath("/gastos");
@@ -70,7 +91,18 @@ export async function eliminarGasto(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Gasto inválido.");
 
-  await prisma.gasto.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    const gasto = await tx.gasto.findUniqueOrThrow({ where: { id } });
+    await tx.gasto.delete({ where: { id } });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ELIMINAR",
+      entidad: "GASTO",
+      entidadId: id,
+      detalle: `${gasto.categoriaGasto} - $${gasto.monto}`,
+    });
+  });
 
   revalidatePath("/gastos");
   revalidatePath("/");

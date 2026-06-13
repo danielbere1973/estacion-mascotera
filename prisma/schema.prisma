@@ -34,6 +34,7 @@ model Usuario {
   ventas        Venta[]
   gastos        Gasto[]
   gastosPagados Gasto[] @relation("GastoPagadoPor")
+  logsActividad LogActividad[]
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +55,14 @@ enum Presentacion {
   INDIVIDUAL
 }
 
+enum UnidadMedida {
+  KILOGRAMOS
+  GRAMOS
+  LITROS
+  MILILITROS
+  UNIDAD
+}
+
 model Producto {
   id        Int               @id @default(sequence())
   sku       String            @unique
@@ -61,6 +70,10 @@ model Producto {
   marca     String
   categoria CategoriaProducto
   presentacion Presentacion
+
+  // Cómo se mide el producto (ej: 15 Kg, 500 ml, 12 Unidad para una caja x12)
+  unidadMedida UnidadMedida @default(UNIDAD)
+  contenido    Decimal      @default(1)
 
   stockActual Int @default(0)
 
@@ -215,6 +228,40 @@ model Gasto {
   pagadoPor   Usuario? @relation("GastoPagadoPor", fields: [pagadoPorId], references: [id])
 
   @@index([fechaGasto])
+}
+
+// ---------------------------------------------------------------------------
+// Log de actividad (auditoría: quién hizo qué y cuándo)
+// ---------------------------------------------------------------------------
+
+enum AccionLog {
+  CREAR
+  ACTUALIZAR
+  ELIMINAR
+}
+
+enum EntidadLog {
+  COMPRA
+  VENTA
+  GASTO
+  PRODUCTO
+  USUARIO
+  PROVEEDOR
+}
+
+model LogActividad {
+  id        Int        @id @default(sequence())
+  usuarioId Int
+  accion    AccionLog
+  entidad   EntidadLog
+  entidadId Int?
+  detalle   String?
+  fecha     DateTime   @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([fecha])
+  @@index([entidad, entidadId])
 }
 
 // ---------------------------------------------------------------------------
