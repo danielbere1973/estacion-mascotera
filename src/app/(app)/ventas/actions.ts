@@ -2,13 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/permissions";
 import { CanalVenta } from "@prisma/client";
 
 export async function crearVenta(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("No autenticado");
+  const session = await requireAdmin();
 
   let clienteId = formData.get("clienteId")?.toString();
 
@@ -59,6 +58,13 @@ export async function crearVenta(formData: FormData) {
   if (items.length === 0) throw new Error("Agregá al menos un producto.");
 
   await prisma.$transaction(async (tx) => {
+    for (const item of items) {
+      const producto = await tx.producto.findUniqueOrThrow({ where: { id: item.productoId } });
+      if (item.cantidad > producto.stockActual) {
+        throw new Error(`No hay suficiente stock de "${producto.nombre}" (disponible: ${producto.stockActual}).`);
+      }
+    }
+
     await tx.venta.create({
       data: {
         clienteId: Number(clienteId),
@@ -94,8 +100,7 @@ export async function crearVenta(formData: FormData) {
 }
 
 export async function actualizarVenta(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("No autenticado");
+  const session = await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Venta inválida.");
@@ -128,6 +133,10 @@ export async function actualizarVenta(formData: FormData) {
 
       const deltaCantidad = nuevaCantidad - actual.cantidad;
       if (deltaCantidad !== 0) {
+        const producto = await tx.producto.findUniqueOrThrow({ where: { id: actual.productoId } });
+        if (deltaCantidad > producto.stockActual) {
+          throw new Error(`No hay suficiente stock de "${producto.nombre}" (disponible: ${producto.stockActual}).`);
+        }
         await tx.producto.update({
           where: { id: actual.productoId },
           data: { stockActual: { decrement: deltaCantidad } },
@@ -157,8 +166,7 @@ export async function actualizarVenta(formData: FormData) {
 }
 
 export async function eliminarVenta(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("No autenticado");
+  const session = await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Venta inválida.");

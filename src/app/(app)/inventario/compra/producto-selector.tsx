@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Combobox } from "@/components/combobox";
 import { NuevoProductoFields } from "./nuevo-producto-fields";
+import type { MayoristaItem } from "./mayorista-producto-selector";
 
 type Producto = {
   id: number;
@@ -12,7 +13,13 @@ type Producto = {
 
 const NUEVO = "nuevo";
 
-export function ProductoSelector({ productos }: { productos: Producto[] }) {
+export function ProductoSelector({
+  productos,
+  itemsDelProveedor = [],
+}: {
+  productos: Producto[];
+  itemsDelProveedor?: MayoristaItem[];
+}) {
   const [productoId, setProductoId] = useState("");
 
   const opciones = [
@@ -23,6 +30,11 @@ export function ProductoSelector({ productos }: { productos: Producto[] }) {
       search: `${p.sku} ${p.nombre}`,
     })),
   ];
+
+  const itemMayorista =
+    productoId && productoId !== NUEVO
+      ? itemsDelProveedor.find((i) => String(i.productoId) === productoId)
+      : undefined;
 
   return (
     <div className="space-y-2">
@@ -35,6 +47,12 @@ export function ProductoSelector({ productos }: { productos: Producto[] }) {
         onSelect={setProductoId}
       />
       <input type="hidden" name="productoId" value={productoId} />
+
+      {itemMayorista && (
+        <p className="text-xs text-gray-500">
+          SKU del proveedor: <span className="font-mono">{itemMayorista.sku}</span>
+        </p>
+      )}
 
       {productoId === NUEVO && <NuevoProductoFields />}
     </div>

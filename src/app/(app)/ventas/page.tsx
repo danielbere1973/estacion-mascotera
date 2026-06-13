@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
@@ -22,6 +23,9 @@ export default async function VentasPage({
 }) {
   const params = await searchParams;
 
+  const session = await auth();
+  const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
+
   const where: Record<string, unknown> = {};
 
   if (params.desde || params.hasta) {
@@ -37,6 +41,16 @@ export default async function VentasPage({
 
   if (params.facturado === "si") where.facturado = true;
   if (params.facturado === "no") where.facturado = false;
+
+  if (esRestringido) {
+    const comprasDelProveedor = await prisma.compra.findMany({
+      where: { proveedorId: session?.user?.proveedorRestrictoId ?? -1 },
+      select: { productoId: true },
+      distinct: ["productoId"],
+    });
+    const productoIds = comprasDelProveedor.map((c) => c.productoId);
+    where.detalles = { some: { productoId: { in: productoIds } } };
+  }
 
   const [ventas, clientes] = await Promise.all([
     prisma.venta.findMany({
@@ -55,12 +69,14 @@ export default async function VentasPage({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Ventas</h1>
-        <Link
-          href="/ventas/nueva"
-          className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          + Nueva venta
-        </Link>
+        {!esRestringido && (
+          <Link
+            href="/ventas/nueva"
+            className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            + Nueva venta
+          </Link>
+        )}
       </div>
 
       <form className="flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm">
@@ -117,7 +133,7 @@ export default async function VentasPage({
               <th className="px-3 py-2 text-right">Descuento</th>
               <th className="px-3 py-2 text-right">Envío</th>
               <th className="px-3 py-2">Facturado</th>
-              <th className="px-3 py-2"></th>
+              {!esRestringido && <th className="px-3 py-2"></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -166,31 +182,33 @@ export default async function VentasPage({
                       </span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/ventas/${venta.id}/editar`}
-                        className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                      >
-                        Editar
-                      </Link>
-                      <form action={eliminarVenta}>
-                        <input type="hidden" name="id" value={venta.id} />
-                        <ConfirmSubmitButton
-                          confirmMessage="¿Eliminar esta venta? Se devolverá el stock de los productos vendidos."
-                          className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                  {!esRestringido && (
+                    <td className="whitespace-nowrap px-3 py-2 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link
+                          href={`/ventas/${venta.id}/editar`}
+                          className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
                         >
-                          Eliminar
-                        </ConfirmSubmitButton>
-                      </form>
-                    </div>
-                  </td>
+                          Editar
+                        </Link>
+                        <form action={eliminarVenta}>
+                          <input type="hidden" name="id" value={venta.id} />
+                          <ConfirmSubmitButton
+                            confirmMessage="¿Eliminar esta venta? Se devolverá el stock de los productos vendidos."
+                            className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                          >
+                            Eliminar
+                          </ConfirmSubmitButton>
+                        </form>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {ventas.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={esRestringido ? 8 : 9} className="px-3 py-6 text-center text-gray-400">
                   No hay ventas registradas para este filtro.
                 </td>
               </tr>

@@ -11,17 +11,29 @@ datasource db {
 // Usuarios (socios)
 // ---------------------------------------------------------------------------
 
+enum RolUsuario {
+  ADMIN
+  LECTOR_RESTRINGIDO
+}
+
 model Usuario {
-  id           Int      @id @default(sequence())
+  id           Int        @id @default(sequence())
   nombre       String
   apellido     String
-  email        String   @unique
+  email        String     @unique
   passwordHash String
-  createdAt    DateTime @default(now())
+  activo       Boolean    @default(true)
+  rol          RolUsuario @default(ADMIN)
+  createdAt    DateTime   @default(now())
 
-  compras Compra[]
-  ventas  Venta[]
-  gastos  Gasto[]
+  // Si el rol es LECTOR_RESTRINGIDO, limita lo que puede ver a un proveedor puntual.
+  proveedorRestrictoId Int?
+  proveedorRestricto   Proveedor? @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
+
+  compras       Compra[]
+  ventas        Venta[]
+  gastos        Gasto[]
+  gastosPagados Gasto[] @relation("GastoPagadoPor")
 }
 
 // ---------------------------------------------------------------------------
@@ -80,6 +92,7 @@ model Proveedor {
 
   compras           Compra[]
   historialMayorista HistorialStockMayorista[]
+  usuariosRestringidos Usuario[] @relation("UsuarioProveedorRestricto")
 }
 
 // ---------------------------------------------------------------------------
@@ -196,6 +209,10 @@ model Gasto {
 
   usuarioId Int?
   usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  // Quién pagó el gasto (puede ser distinto de quién lo cargó en el sistema).
+  pagadoPorId Int?
+  pagadoPor   Usuario? @relation("GastoPagadoPor", fields: [pagadoPorId], references: [id])
 
   @@index([fechaGasto])
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getDashboardMetrics, CATEGORIA_GASTO_LABELS } from "@/lib/metrics";
+import { auth } from "@/auth";
+import { getDashboardMetrics, getDashboardMetricsRestringido, CATEGORIA_GASTO_LABELS } from "@/lib/metrics";
 import { getRangoFechas, parsePeriodo, PERIODOS, type PeriodoKey } from "@/lib/periodo";
 import { formatCurrency } from "@/lib/format";
 import { GastosPieChart } from "@/components/gastos-pie-chart";
@@ -12,7 +13,12 @@ export default async function DashboardPage({
   const params = await searchParams;
   const periodo = parsePeriodo(params.periodo);
   const rango = getRangoFechas(periodo);
-  const metrics = await getDashboardMetrics(rango);
+  const session = await auth();
+  const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
+  const metrics =
+    esRestringido && session?.user?.proveedorRestrictoId
+      ? await getDashboardMetricsRestringido(rango, session.user.proveedorRestrictoId)
+      : await getDashboardMetrics(rango);
 
   const cards = [
     {
@@ -111,12 +117,14 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-medium text-gray-700">
-          Gastos por categoría
-        </h2>
-        <GastosPieChart data={gastosData} />
-      </div>
+      {!esRestringido && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-2 text-sm font-medium text-gray-700">
+            Gastos por categoría
+          </h2>
+          <GastosPieChart data={gastosData} />
+        </div>
+      )}
     </div>
   );
 }

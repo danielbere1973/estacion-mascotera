@@ -40,6 +40,13 @@ export function EditarVentaItems({ detalles }: { detalles: Detalle[] }) {
     <div className="space-y-3">
       <label className="text-sm font-medium text-gray-700">Productos</label>
 
+      <div className="hidden flex-wrap gap-2 sm:flex">
+        <span className="min-w-[180px] flex-1 text-xs font-medium text-gray-500">Producto</span>
+        <span className="w-20 text-xs font-medium text-gray-500">Cantidad</span>
+        <span className="w-28 text-xs font-medium text-gray-500">Precio</span>
+        <span className="w-20 text-xs font-medium text-gray-500">Descuento %</span>
+      </div>
+
       {items.map((item) => (
         <div key={item.id} className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="detalleId" value={item.id} />
@@ -47,41 +54,50 @@ export function EditarVentaItems({ detalles }: { detalles: Detalle[] }) {
             {item.productoSku} · {item.productoNombre}
           </span>
 
-          <input
-            type="number"
-            name="cantidad"
-            min={1}
-            required
-            value={item.cantidad}
-            onChange={(e) => update(item.id, { cantidad: e.target.value })}
-            className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-            placeholder="Cant."
-          />
+          <div className="space-y-0.5">
+            <label className="block text-xs text-gray-400 sm:hidden">Cantidad</label>
+            <input
+              type="number"
+              name="cantidad"
+              min={1}
+              required
+              value={item.cantidad}
+              onChange={(e) => update(item.id, { cantidad: e.target.value })}
+              className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              placeholder="Cant."
+            />
+          </div>
 
-          <input
-            type="number"
-            name="precioVentaUnitario"
-            min={0}
-            step="0.01"
-            required
-            value={item.precioVentaUnitario}
-            onChange={(e) => update(item.id, { precioVentaUnitario: e.target.value })}
-            className="w-28 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-            placeholder="Precio"
-          />
+          <div className="space-y-0.5">
+            <label className="block text-xs text-gray-400 sm:hidden">Precio</label>
+            <input
+              type="number"
+              name="precioVentaUnitario"
+              min={0}
+              step="0.01"
+              required
+              value={item.precioVentaUnitario}
+              onChange={(e) => update(item.id, { precioVentaUnitario: e.target.value })}
+              className="w-28 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              placeholder="Precio"
+            />
+          </div>
 
-          <input
-            type="number"
-            name="descuentoPorcentaje"
-            min={0}
-            max={100}
-            step="0.01"
-            value={item.descuentoPorcentaje}
-            onChange={(e) => update(item.id, { descuentoPorcentaje: e.target.value })}
-            className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-            placeholder="Desc. %"
-            title="Descuento %"
-          />
+          <div className="space-y-0.5">
+            <label className="block text-xs text-gray-400 sm:hidden">Descuento %</label>
+            <input
+              type="number"
+              name="descuentoPorcentaje"
+              min={0}
+              max={100}
+              step="0.01"
+              value={item.descuentoPorcentaje}
+              onChange={(e) => update(item.id, { descuentoPorcentaje: e.target.value })}
+              className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              placeholder="Desc. %"
+              title="Descuento %"
+            />
+          </div>
         </div>
       ))}
 

@@ -4,6 +4,8 @@ import { authConfig } from "@/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
+const RUTAS_PERMITIDAS_LECTOR_RESTRINGIDO = ["/", "/ventas", "/inventario/compras"];
+
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const isLoginPage = req.nextUrl.pathname.startsWith("/login");
@@ -16,6 +18,12 @@ export default auth((req) => {
 
   if (isLoggedIn && isLoginPage) {
     return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+  }
+
+  if (isLoggedIn && req.auth?.user?.rol === "LECTOR_RESTRINGIDO") {
+    if (!RUTAS_PERMITIDAS_LECTOR_RESTRINGIDO.includes(req.nextUrl.pathname)) {
+      return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+    }
   }
 });
 

@@ -3,13 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as XLSX from "xlsx";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/permissions";
 import { CategoriaProducto, Presentacion } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("No autenticado");
+  const session = await requireAdmin();
 
   let proveedorId = formData.get("proveedorId")?.toString();
   if (proveedorId === "nuevo") {
@@ -116,8 +115,7 @@ export async function crearCompra(formData: FormData) {
 }
 
 export async function actualizarItemMayorista(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("No autenticado");
+  const session = await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Item inválido.");
@@ -142,8 +140,7 @@ export async function actualizarItemMayorista(formData: FormData) {
 }
 
 export async function eliminarItemMayorista(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("No autenticado");
+  const session = await requireAdmin();
 
   const proveedorId = Number(formData.get("proveedorId"));
   const sku = formData.get("sku")?.toString();
@@ -158,8 +155,7 @@ export async function eliminarItemMayorista(formData: FormData) {
 }
 
 export async function actualizarCompra(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("No autenticado");
+  const session = await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Compra inválida.");
@@ -221,8 +217,7 @@ export async function actualizarCompra(formData: FormData) {
 }
 
 export async function eliminarCompra(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("No autenticado");
+  const session = await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Compra inválida.");
@@ -331,6 +326,8 @@ function normalizarNombre(s: string): string {
 }
 
 export async function importarExcel(formData: FormData) {
+  await requireAdmin();
+
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) throw new Error("Subí un archivo .xlsx o .csv");
 

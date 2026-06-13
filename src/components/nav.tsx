@@ -12,8 +12,25 @@ const links = [
   { href: "/gastos", label: "Gastos" },
 ];
 
-export function Nav({ userName }: { userName: string }) {
+const linksRestringido = [
+  { href: "/", label: "Dashboard" },
+  { href: "/ventas", label: "Ventas" },
+  { href: "/inventario/compras", label: "Compras" },
+];
+
+const adminLinks = [{ href: "/usuarios", label: "Usuarios" }];
+
+export function Nav({
+  userName,
+  isAdmin,
+  isRestringido,
+}: {
+  userName: string;
+  isAdmin: boolean;
+  isRestringido: boolean;
+}) {
   const pathname = usePathname();
+  const visibleLinks = isRestringido ? linksRestringido : isAdmin ? [...links, ...adminLinks] : links;
 
   return (
     <header className="sticky top-0 z-10 border-b border-gray-200 bg-white">
@@ -32,7 +49,7 @@ export function Nav({ userName }: { userName: string }) {
         </div>
 
         <nav className="flex gap-1 overflow-x-auto">
-          {links.map((link) => {
+          {visibleLinks.map((link) => {
             const active = pathname === link.href;
             return (
               <Link

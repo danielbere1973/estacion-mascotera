@@ -4,9 +4,10 @@ import { ClienteSelector } from "./cliente-selector";
 import { VentaItems } from "./venta-items";
 
 export default async function NuevaVentaPage() {
-  const [clientes, productos] = await Promise.all([
+  const [clientes, productos, proveedores, comprasPorProducto] = await Promise.all([
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
+      where: { stockActual: { gt: 0 } },
       orderBy: { nombre: "asc" },
       select: {
         id: true,
@@ -16,11 +17,24 @@ export default async function NuevaVentaPage() {
         stockActual: true,
       },
     }),
+    prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.compra.findMany({
+      select: { productoId: true, proveedorId: true },
+      distinct: ["productoId", "proveedorId"],
+    }),
   ]);
+
+  const proveedorIdsPorProducto = new Map<number, number[]>();
+  for (const c of comprasPorProducto) {
+    const lista = proveedorIdsPorProducto.get(c.productoId) ?? [];
+    lista.push(c.proveedorId);
+    proveedorIdsPorProducto.set(c.productoId, lista);
+  }
 
   const productosPlain = productos.map((p) => ({
     ...p,
     precioVenta: p.precioVenta.toString(),
+    proveedorIds: proveedorIdsPorProducto.get(p.id) ?? [],
   }));
 
   return (
@@ -59,7 +73,7 @@ export default async function NuevaVentaPage() {
           </div>
         </div>
 
-        <VentaItems productos={productosPlain} />
+        <VentaItems productos={productosPlain} proveedores={proveedores} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">

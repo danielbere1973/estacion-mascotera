@@ -70,7 +70,7 @@ export function CompraForm({
       {usarMayorista ? (
         <MayoristaProductoSelector items={itemsDelProveedor} onPrecioChange={setPrecioCosto} />
       ) : (
-        <ProductoSelector productos={productos} />
+        <ProductoSelector productos={productos} itemsDelProveedor={itemsDelProveedor} />
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

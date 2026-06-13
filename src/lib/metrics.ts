@@ -119,6 +119,98 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   };
 }
 
+export async function getDashboardMetricsRestringido(rango: RangoFechas, proveedorId: number) {
+  const fechaVenta = fechaWhere(rango);
+  const fechaCompra = fechaWhere(rango);
+
+  const comprasDelProveedor = await prisma.compra.findMany({
+    where: { proveedorId },
+    select: { productoId: true },
+    distinct: ["productoId"],
+  });
+  const productoIds = comprasDelProveedor.map((c) => c.productoId);
+
+  const [detalles, compras, productos, ventasNoFact, comprasNoFact] = await Promise.all([
+    prisma.detalleVenta.findMany({
+      where: {
+        productoId: { in: productoIds },
+        ...(fechaVenta ? { venta: { fechaVenta } } : {}),
+      },
+      select: {
+        cantidad: true,
+        precioVentaUnitario: true,
+        ventaId: true,
+        producto: { select: { precioCostoUnitario: true } },
+      },
+    }),
+    prisma.compra.aggregate({
+      where: { proveedorId, ...(fechaCompra ? { fechaCompra } : {}) },
+      _sum: { precioCostoUnitario: true, costoEnvio: true, cantidad: true },
+    }),
+    prisma.producto.findMany({
+      where: { id: { in: productoIds } },
+      select: { stockActual: true, precioCostoUnitario: true },
+    }),
+    prisma.detalleVenta.findMany({
+      where: {
+        productoId: { in: productoIds },
+        venta: { facturado: false, ...(fechaVenta ? { fechaVenta } : {}) },
+      },
+      select: { cantidad: true, precioVentaUnitario: true, ventaId: true },
+    }),
+    prisma.compra.findMany({
+      where: { proveedorId, facturado: false, ...(fechaCompra ? { fechaCompra } : {}) },
+      select: { cantidad: true, precioCostoUnitario: true, costoEnvio: true },
+    }),
+  ]);
+
+  let totalFacturado = 0;
+  let costoMercaderiaVendida = 0;
+
+  for (const d of detalles) {
+    totalFacturado += d.cantidad * Number(d.precioVentaUnitario);
+    costoMercaderiaVendida += d.cantidad * Number(d.producto.precioCostoUnitario);
+  }
+
+  const totalComprasMercaderia =
+    Number(compras._sum.precioCostoUnitario ?? 0) + Number(compras._sum.costoEnvio ?? 0);
+
+  const totalGastado = totalComprasMercaderia;
+
+  const rentabilidadNeta = totalFacturado - costoMercaderiaVendida;
+
+  const valorStock = productos.reduce(
+    (acc, p) => acc + p.stockActual * Number(p.precioCostoUnitario),
+    0
+  );
+
+  const ventasNoFacturadas = {
+    cantidad: new Set(ventasNoFact.map((d) => d.ventaId)).size,
+    total: ventasNoFact.reduce(
+      (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario),
+      0
+    ),
+  };
+
+  const comprasNoFacturadas = {
+    cantidad: comprasNoFact.length,
+    total: comprasNoFact.reduce(
+      (acc, c) => acc + c.cantidad * Number(c.precioCostoUnitario) + Number(c.costoEnvio ?? 0),
+      0
+    ),
+  };
+
+  return {
+    totalFacturado,
+    totalGastado,
+    rentabilidadNeta,
+    valorStock,
+    gastosPorCategoria: [] as { categoria: CategoriaGasto; monto: number }[],
+    ventasNoFacturadas,
+    comprasNoFacturadas,
+  };
+}
+
 export const CATEGORIA_GASTO_LABELS: Record<CategoriaGasto, string> = {
   MONOTRIBUTO: "Monotributo",
   TELEFONO: "Teléfono",
