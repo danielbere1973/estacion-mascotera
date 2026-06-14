@@ -79,7 +79,7 @@ export default async function InventarioPage() {
               <th className="px-3 py-2 text-right">Stock</th>
               <th className="px-3 py-2 text-right">Costo</th>
               <th className="px-3 py-2 text-right">Margen</th>
-              <th className="px-3 py-2 text-right">Precio Venta</th>
+              <th className="px-3 py-2 text-right">Valor total (costo)</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -112,7 +112,7 @@ export default async function InventarioPage() {
                     +{p.margenPorcentaje.toString()}%
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
-                    {formatCurrency(p.precioVenta.toString())}
+                    {formatCurrency(p.stockActual * Number(p.precioCostoUnitario))}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     <Link

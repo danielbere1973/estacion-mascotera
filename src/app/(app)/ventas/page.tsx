@@ -57,7 +57,7 @@ export default async function VentasPage({
       where,
       include: {
         cliente: true,
-        detalles: { include: { producto: true } },
+        detalles: { include: { producto: { select: { precioCostoUnitario: true } } } },
       },
       orderBy: { fechaVenta: "desc" },
       take: 100,
@@ -132,6 +132,7 @@ export default async function VentasPage({
               <th className="px-3 py-2 text-right">Total</th>
               <th className="px-3 py-2 text-right">Descuento</th>
               <th className="px-3 py-2 text-right">Envío</th>
+              {!esRestringido && <th className="px-3 py-2 text-right">Ganancia</th>}
               <th className="px-3 py-2">Facturado</th>
               {!esRestringido && <th className="px-3 py-2"></th>}
             </tr>
@@ -150,6 +151,11 @@ export default async function VentasPage({
                     (Number(d.descuentoPorcentaje) / 100),
                 0
               );
+              const costoMercaderia = venta.detalles.reduce(
+                (acc, d) => acc + d.cantidad * Number(d.producto.precioCostoUnitario),
+                0
+              );
+              const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio);
               return (
                 <tr key={venta.id} className="hover:bg-gray-50">
                   <td className="whitespace-nowrap px-3 py-2">
@@ -171,6 +177,15 @@ export default async function VentasPage({
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     {formatCurrency(Number(venta.costoEnvio))}
                   </td>
+                  {!esRestringido && (
+                    <td
+                      className={`whitespace-nowrap px-3 py-2 text-right font-medium ${
+                        ganancia >= 0 ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {formatCurrency(ganancia)}
+                    </td>
+                  )}
                   <td className="whitespace-nowrap px-3 py-2">
                     {venta.facturado ? (
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
@@ -208,7 +223,7 @@ export default async function VentasPage({
             })}
             {ventas.length === 0 && (
               <tr>
-                <td colSpan={esRestringido ? 8 : 9} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={esRestringido ? 8 : 10} className="px-3 py-6 text-center text-gray-400">
                   No hay ventas registradas para este filtro.
                 </td>
               </tr>

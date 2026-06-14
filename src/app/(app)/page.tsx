@@ -42,6 +42,16 @@ export default async function DashboardPage({
       value: metrics.valorStock,
       hint: "Stock actual a precio de costo",
     },
+    {
+      label: "Costo Mercadería Vendida",
+      value: metrics.costoMercaderiaVendida,
+      hint: "Costo de los productos vendidos en el período",
+    },
+    {
+      label: "Costo Mercadería Comprada",
+      value: metrics.totalComprasMercaderia,
+      hint: "Costo de los productos comprados en el período",
+    },
   ];
 
   const gastosData = metrics.gastosPorCategoria.map((g) => ({
@@ -70,7 +80,7 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <div
             key={card.label}
