@@ -37,6 +37,8 @@ export async function crearVenta(formData: FormData) {
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+  const vendidoPorId = formData.get("vendidoPorId") ? Number(formData.get("vendidoPorId")) : null;
+  const cobradoPorId = formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
 
   if (!canalVenta || !medioPago) throw new Error("Faltan datos de la venta.");
 
@@ -74,6 +76,8 @@ export async function crearVenta(formData: FormData) {
         costoEnvio,
         facturado,
         numeroFactura,
+        vendidoPorId,
+        cobradoPorId,
         usuarioId: Number(session.user.id),
         detalles: {
           create: items.map((item) => ({

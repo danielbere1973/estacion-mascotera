@@ -8,7 +8,10 @@ export default async function EditarProductoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const producto = await prisma.producto.findUnique({ where: { id: Number(id) } });
+  const [producto, tipos] = await Promise.all([
+    prisma.producto.findUnique({ where: { id: Number(id) } }),
+    prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
+  ]);
   if (!producto) notFound();
 
   return (
@@ -57,11 +60,9 @@ export default async function EditarProductoPage({
               required
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="ALIMENTO">Alimento</option>
-              <option value="POUCH">Pouch</option>
-              <option value="LATA">Lata</option>
-              <option value="SNACK">Snack</option>
-              <option value="GOLOSINA">Golosina</option>
+              {tipos.map((t) => (
+                <option key={t.id} value={t.nombre}>{t.nombre}</option>
+              ))}
             </select>
           </div>
 

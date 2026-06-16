@@ -19,6 +19,7 @@ const linksRestringido = [
 ];
 
 const adminLinks = [
+  { href: "/clientes", label: "Clientes" },
   { href: "/usuarios", label: "Usuarios" },
   { href: "/actividad", label: "Actividad" },
 ];

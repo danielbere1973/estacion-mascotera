@@ -4,7 +4,7 @@ import { CompraForm } from "./compra-form";
 import type { MayoristaItem } from "./mayorista-producto-selector";
 
 export default async function NuevaCompraPage() {
-  const [proveedores, productos, historial] = await Promise.all([
+  const [proveedores, productos, historial, tiposProducto] = await Promise.all([
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       orderBy: { nombre: "asc" },
@@ -13,7 +13,9 @@ export default async function NuevaCompraPage() {
     prisma.historialStockMayorista.findMany({
       where: { proveedorId: { not: null } },
       orderBy: { fechaImportacion: "desc" },
+      include: { producto: { select: { sku: true } } },
     }),
+    prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
   ]);
 
   // Última lista importada por proveedor: nos quedamos con el registro más
@@ -32,6 +34,7 @@ export default async function NuevaCompraPage() {
       precioConDescuento: h.precioConDescuento?.toString() ?? null,
       tamanios: h.tamanios,
       productoId: h.productoId,
+      productoSku: h.producto?.sku ?? null,
     });
   }
 
@@ -42,6 +45,7 @@ export default async function NuevaCompraPage() {
         proveedores={proveedores}
         productos={productos}
         mayoristaItems={mayoristaItems}
+        tiposProducto={tiposProducto}
         action={crearCompra}
       />
     </div>

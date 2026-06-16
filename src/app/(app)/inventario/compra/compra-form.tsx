@@ -8,16 +8,19 @@ import { MayoristaProductoSelector, type MayoristaItem } from "./mayorista-produ
 
 type Proveedor = { id: number; nombre: string };
 type Producto = { id: number; sku: string; nombre: string };
+type TipoProducto = { id: number; nombre: string };
 
 export function CompraForm({
   proveedores,
   productos,
   mayoristaItems,
+  tiposProducto,
   action,
 }: {
   proveedores: Proveedor[];
   productos: Producto[];
   mayoristaItems: MayoristaItem[];
+  tiposProducto: TipoProducto[];
   action: (formData: FormData) => void;
 }) {
   const [proveedorId, setProveedorId] = useState("");
@@ -68,7 +71,7 @@ export function CompraForm({
       )}
 
       {usarMayorista ? (
-        <MayoristaProductoSelector items={itemsDelProveedor} onPrecioChange={setPrecioCosto} />
+        <MayoristaProductoSelector items={itemsDelProveedor} onPrecioChange={setPrecioCosto} tiposProducto={tiposProducto} />
       ) : (
         <ProductoSelector productos={productos} itemsDelProveedor={itemsDelProveedor} />
       )}

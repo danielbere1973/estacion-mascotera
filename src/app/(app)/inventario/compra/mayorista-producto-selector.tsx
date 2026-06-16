@@ -13,14 +13,17 @@ export type MayoristaItem = {
   precioConDescuento: string | null;
   tamanios: string | null;
   productoId: number | null;
+  productoSku: string | null;
 };
 
 export function MayoristaProductoSelector({
   items,
   onPrecioChange,
+  tiposProducto = [],
 }: {
   items: MayoristaItem[];
   onPrecioChange: (precio: string) => void;
+  tiposProducto?: { id: number; nombre: string }[];
 }) {
   const [sku, setSku] = useState("");
   const item = items.find((i) => i.sku === sku);
@@ -54,7 +57,9 @@ export function MayoristaProductoSelector({
         (item.productoId ? (
           <>
             <input type="hidden" name="productoId" value={item.productoId} />
-            <p className="text-xs text-gray-500">Vinculado a un producto existente de tu inventario.</p>
+            <p className="text-xs text-gray-500">
+              Vinculado a producto{item.productoSku ? <> — SKU: <span className="font-mono font-medium">{item.productoSku}</span></> : " existente de tu inventario"}.
+            </p>
           </>
         ) : (
           <div key={item.sku} className="space-y-2">
@@ -62,7 +67,7 @@ export function MayoristaProductoSelector({
             <p className="text-xs text-amber-600">
               Producto nuevo: completá el SKU propio y los datos faltantes.
             </p>
-            <NuevoProductoFields defaultNombre={item.nombre ?? ""} />
+            <NuevoProductoFields defaultNombre={item.nombre ?? ""} tiposProducto={tiposProducto} />
           </div>
         ))}
     </div>

@@ -30,23 +30,22 @@ model Usuario {
   proveedorRestrictoId Int?
   proveedorRestricto   Proveedor? @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
 
-  compras       Compra[]
-  ventas        Venta[]
-  gastos        Gasto[]
-  gastosPagados Gasto[] @relation("GastoPagadoPor")
-  logsActividad LogActividad[]
+  compras          Compra[]
+  ventas           Venta[]
+  ventasVendidas   Venta[] @relation("VentaVendidaPor")
+  ventasCobradas   Venta[] @relation("VentaCobradaPor")
+  gastos           Gasto[]
+  gastosPagados    Gasto[] @relation("GastoPagadoPor")
+  logsActividad    LogActividad[]
 }
 
 // ---------------------------------------------------------------------------
 // Catálogo de productos
 // ---------------------------------------------------------------------------
 
-enum CategoriaProducto {
-  ALIMENTO
-  POUCH
-  LATA
-  SNACK
-  GOLOSINA
+model TipoProducto {
+  id     Int    @id @default(sequence())
+  nombre String @unique
 }
 
 enum Presentacion {
@@ -68,7 +67,7 @@ model Producto {
   sku       String            @unique
   nombre    String
   marca     String
-  categoria CategoriaProducto
+  categoria String
   presentacion Presentacion
 
   // Cómo se mide el producto (ej: 15 Kg, 500 ml, 12 Unidad para una caja x12)
@@ -175,9 +174,15 @@ model Venta {
 
   usuarioId Int
 
-  cliente  Cliente        @relation(fields: [clienteId], references: [id])
-  usuario  Usuario        @relation(fields: [usuarioId], references: [id])
-  detalles DetalleVenta[]
+  // Quién realizó la venta y quién cobró (pueden ser distintos socios)
+  vendidoPorId Int?
+  cobradoPorId Int?
+
+  cliente    Cliente        @relation(fields: [clienteId], references: [id])
+  usuario    Usuario        @relation(fields: [usuarioId], references: [id])
+  vendidoPor Usuario?       @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
+  cobradoPor Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
+  detalles   DetalleVenta[]
 
   @@index([fechaVenta])
   @@index([clienteId])

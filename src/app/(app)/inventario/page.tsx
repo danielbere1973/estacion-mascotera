@@ -7,13 +7,6 @@ import { eliminarProducto } from "./actions";
 
 const STOCK_BAJO_UMBRAL = 5;
 
-const CATEGORIA_LABELS: Record<string, string> = {
-  ALIMENTO: "Alimento",
-  POUCH: "Pouch",
-  LATA: "Lata",
-  SNACK: "Snack",
-  GOLOSINA: "Golosina",
-};
 
 export default async function InventarioPage() {
   const [productos, proveedores] = await Promise.all([
@@ -33,6 +26,12 @@ export default async function InventarioPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Inventario y Proveedores</h1>
         <div className="flex flex-wrap gap-2">
+          <Link
+            href="/inventario/tipos"
+            className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
+          >
+            Tipos de producto
+          </Link>
           <Link
             href="/inventario/listas"
             className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
@@ -93,9 +92,7 @@ export default async function InventarioPage() {
                   <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{p.sku}</td>
                   <td className="px-3 py-2">{p.nombre}</td>
                   <td className="whitespace-nowrap px-3 py-2">{p.marca}</td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {CATEGORIA_LABELS[p.categoria] ?? p.categoria}
-                  </td>
+                  <td className="whitespace-nowrap px-3 py-2">{p.categoria}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-gray-500">
                     {formatContenido(p.contenido.toString(), p.unidadMedida)}
                   </td>

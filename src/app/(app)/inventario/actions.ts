@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
-import { CategoriaProducto, Presentacion, UnidadMedida } from "@prisma/client";
+import { Presentacion, UnidadMedida } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
   const session = await requireAdmin();
@@ -49,7 +49,7 @@ export async function crearCompra(formData: FormData) {
       const sku = formData.get("productoSku")?.toString().trim();
       const nombre = formData.get("productoNombre")?.toString().trim();
       const marca = formData.get("productoMarca")?.toString().trim();
-      const categoria = formData.get("productoCategoria")?.toString() as CategoriaProducto;
+      const categoria = formData.get("productoCategoria")?.toString().trim();
       const presentacion = formData.get("productoPresentacion")?.toString() as Presentacion;
       const unidadMedida = formData.get("productoUnidadMedida")?.toString() as UnidadMedida;
       const contenido = Number(formData.get("productoContenido") || 1);
@@ -316,7 +316,7 @@ export async function actualizarProducto(formData: FormData) {
   const sku = formData.get("sku")?.toString().trim();
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim();
-  const categoria = formData.get("categoria")?.toString() as CategoriaProducto;
+  const categoria = formData.get("categoria")?.toString().trim();
   const presentacion = formData.get("presentacion")?.toString() as Presentacion;
   const unidadMedida = formData.get("unidadMedida")?.toString() as UnidadMedida;
   const contenido = Number(formData.get("contenido"));
@@ -369,7 +369,7 @@ export async function crearProductoDesdeListaMayorista(formData: FormData) {
   const sku = formData.get("sku")?.toString().trim();
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim();
-  const categoria = formData.get("categoria")?.toString() as CategoriaProducto;
+  const categoria = formData.get("categoria")?.toString().trim();
   const presentacion = formData.get("presentacion")?.toString() as Presentacion;
   const unidadMedida = formData.get("unidadMedida")?.toString() as UnidadMedida;
   const contenido = Number(formData.get("contenido"));

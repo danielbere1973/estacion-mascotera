@@ -1,9 +1,11 @@
 export function NuevoProductoFields({
   defaultNombre = "",
   defaultSku = "",
+  tiposProducto = [],
 }: {
   defaultNombre?: string;
   defaultSku?: string;
+  tiposProducto?: { id: number; nombre: string }[];
 }) {
   return (
     <div className="grid grid-cols-1 gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
@@ -36,11 +38,9 @@ export function NuevoProductoFields({
         <option value="" disabled>
           Categoría...
         </option>
-        <option value="ALIMENTO">Alimento</option>
-        <option value="POUCH">Pouch</option>
-        <option value="LATA">Lata</option>
-        <option value="SNACK">Snack</option>
-        <option value="GOLOSINA">Golosina</option>
+        {tiposProducto.map((t) => (
+          <option key={t.id} value={t.nombre}>{t.nombre}</option>
+        ))}
       </select>
       <select
         name="productoPresentacion"

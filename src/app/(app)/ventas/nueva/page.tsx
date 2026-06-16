@@ -4,7 +4,7 @@ import { ClienteSelector } from "./cliente-selector";
 import { VentaItems } from "./venta-items";
 
 export default async function NuevaVentaPage() {
-  const [clientes, productos, proveedores, comprasPorProducto] = await Promise.all([
+  const [clientes, productos, proveedores, comprasPorProducto, usuarios] = await Promise.all([
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       where: { stockActual: { gt: 0 } },
@@ -21,6 +21,11 @@ export default async function NuevaVentaPage() {
     prisma.compra.findMany({
       select: { productoId: true, proveedorId: true },
       distinct: ["productoId", "proveedorId"],
+    }),
+    prisma.usuario.findMany({
+      where: { activo: true },
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+      select: { id: true, nombre: true, apellido: true },
     }),
   ]);
 
@@ -70,6 +75,34 @@ export default async function NuevaVentaPage() {
               placeholder="Transferencia, Efectivo, Mercado Pago..."
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Vendido por</label>
+            <select
+              name="vendidoPorId"
+              defaultValue=""
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">— Sin especificar —</option>
+              {usuarios.map((u) => (
+                <option key={u.id} value={u.id}>{u.apellido}, {u.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Cobrado por</label>
+            <select
+              name="cobradoPorId"
+              defaultValue=""
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">— Sin especificar —</option>
+              {usuarios.map((u) => (
+                <option key={u.id} value={u.id}>{u.apellido}, {u.nombre}</option>
+              ))}
+            </select>
           </div>
         </div>
 
