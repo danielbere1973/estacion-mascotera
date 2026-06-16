@@ -22,12 +22,13 @@ type Row = {
   productoId: string;
   cantidad: string;
   precio: string;
-  descuento: string;
+  descuento: string;  // porcentaje (lo que se envía al servidor)
+  descuentoMonto: string;
 };
 
 export function VentaItems({ productos, proveedores }: { productos: Producto[]; proveedores: Proveedor[] }) {
   const [rows, setRows] = useState<Row[]>([
-    { key: 0, productoId: "", cantidad: "1", precio: "", descuento: "0" },
+    { key: 0, productoId: "", cantidad: "1", precio: "", descuento: "0", descuentoMonto: "0" },
   ]);
   const [nextKey, setNextKey] = useState(1);
   const [filtroProveedorId, setFiltroProveedorId] = useState("");
@@ -35,7 +36,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
   function addRow() {
     setRows((r) => [
       ...r,
-      { key: nextKey, productoId: "", cantidad: "1", precio: "", descuento: "0" },
+      { key: nextKey, productoId: "", cantidad: "1", precio: "", descuento: "0", descuentoMonto: "0" },
     ]);
     setNextKey((k) => k + 1);
   }
@@ -54,16 +55,44 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
       productoId,
       precio: producto ? producto.precioVenta : "",
       cantidad: "1",
+      descuento: "0",
+      descuentoMonto: "0",
     });
   }
 
-  function onCantidadChange(key: number, value: string, stockActual: number) {
+  function onCantidadChange(key: number, value: string, row: Row, stockActual: number) {
     const cantidad = Number(value);
-    if (Number.isFinite(cantidad) && cantidad > stockActual) {
-      updateRow(key, { cantidad: String(stockActual) });
-      return;
-    }
-    updateRow(key, { cantidad: value });
+    const cantidadFinal = Number.isFinite(cantidad) && cantidad > stockActual ? stockActual : cantidad;
+    const valorBruto = cantidadFinal * (Number(row.precio) || 0);
+    const pct = Number(row.descuento) || 0;
+    const monto = valorBruto > 0 ? (valorBruto * pct / 100).toFixed(2) : "0";
+    updateRow(key, {
+      cantidad: String(cantidadFinal),
+      descuentoMonto: monto,
+    });
+  }
+
+  function onPrecioChange(key: number, value: string, row: Row) {
+    const precio = Number(value) || 0;
+    const cantidad = Number(row.cantidad) || 0;
+    const valorBruto = precio * cantidad;
+    const pct = Number(row.descuento) || 0;
+    const monto = valorBruto > 0 ? (valorBruto * pct / 100).toFixed(2) : "0";
+    updateRow(key, { precio: value, descuentoMonto: monto });
+  }
+
+  function onDescuentoPctChange(key: number, value: string, row: Row) {
+    const pct = Number(value) || 0;
+    const valorBruto = (Number(row.precio) || 0) * (Number(row.cantidad) || 0);
+    const monto = valorBruto > 0 ? (valorBruto * pct / 100).toFixed(2) : "0";
+    updateRow(key, { descuento: value, descuentoMonto: monto });
+  }
+
+  function onDescuentoMontoChange(key: number, value: string, row: Row) {
+    const monto = Number(value) || 0;
+    const valorBruto = (Number(row.precio) || 0) * (Number(row.cantidad) || 0);
+    const pct = valorBruto > 0 ? ((monto / valorBruto) * 100).toFixed(4) : "0";
+    updateRow(key, { descuentoMonto: value, descuento: pct });
   }
 
   const totalBruto = rows.reduce((acc, row) => {
@@ -114,9 +143,10 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
 
       <div className="hidden flex-wrap gap-2 sm:flex">
         <span className="min-w-[180px] flex-1 text-xs font-medium text-gray-500">Producto</span>
-        <span className="w-20 text-xs font-medium text-gray-500">Cantidad</span>
-        <span className="w-28 text-xs font-medium text-gray-500">Precio</span>
-        <span className="w-20 text-xs font-medium text-gray-500">Descuento %</span>
+        <span className="w-16 text-xs font-medium text-gray-500">Cant.</span>
+        <span className="w-28 text-xs font-medium text-gray-500">Precio unit.</span>
+        <span className="w-20 text-xs font-medium text-gray-500">Desc. $</span>
+        <span className="w-20 text-xs font-medium text-gray-500">Desc. %</span>
         <span className="w-7"></span>
       </div>
 
@@ -144,14 +174,14 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 max={producto?.stockActual}
                 required
                 value={row.cantidad}
-                onChange={(e) => onCantidadChange(row.key, e.target.value, producto?.stockActual ?? Infinity)}
-                className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                onChange={(e) => onCantidadChange(row.key, e.target.value, row, producto?.stockActual ?? Infinity)}
+                className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                 placeholder="Cant."
               />
             </div>
 
             <div className="space-y-0.5">
-              <label className="block text-xs text-gray-400 sm:hidden">Precio</label>
+              <label className="block text-xs text-gray-400 sm:hidden">Precio unitario</label>
               <input
                 type="number"
                 name="precioVentaUnitario"
@@ -159,9 +189,23 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 step="0.01"
                 required
                 value={row.precio}
-                onChange={(e) => updateRow(row.key, { precio: e.target.value })}
+                onChange={(e) => onPrecioChange(row.key, e.target.value, row)}
                 className="w-28 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                 placeholder="Precio"
+              />
+            </div>
+
+            <div className="space-y-0.5">
+              <label className="block text-xs text-gray-400 sm:hidden">Descuento $</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={row.descuentoMonto}
+                onChange={(e) => onDescuentoMontoChange(row.key, e.target.value, row)}
+                className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                placeholder="Dto. $"
+                title="Descuento en pesos"
               />
             </div>
 
@@ -174,9 +218,9 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 max={100}
                 step="0.01"
                 value={row.descuento}
-                onChange={(e) => updateRow(row.key, { descuento: e.target.value })}
+                onChange={(e) => onDescuentoPctChange(row.key, e.target.value, row)}
                 className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                placeholder="Desc. %"
+                placeholder="Dto. %"
                 title="Descuento %"
               />
             </div>
