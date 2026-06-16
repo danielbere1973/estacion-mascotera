@@ -116,6 +116,14 @@ export default async function ListasMayoristaPage({
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     <div className="flex justify-end gap-2">
+                      {!item.productoId && (
+                        <Link
+                          href={`/inventario/listas/${item.id}/crear-producto?proveedorId=${proveedorId}`}
+                          className="rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                        >
+                          Crear producto
+                        </Link>
+                      )}
                       <Link
                         href={`/inventario/listas/${item.id}/editar?proveedorId=${proveedorId}`}
                         className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"

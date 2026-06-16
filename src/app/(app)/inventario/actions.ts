@@ -321,6 +321,67 @@ export async function actualizarProducto(formData: FormData) {
   redirect("/inventario");
 }
 
+export async function crearProductoDesdeListaMayorista(formData: FormData) {
+  const session = await requireAdmin();
+
+  const listaItemId = Number(formData.get("listaItemId"));
+  const proveedorId = Number(formData.get("proveedorId"));
+  const sku = formData.get("sku")?.toString().trim();
+  const nombre = formData.get("nombre")?.toString().trim();
+  const marca = formData.get("marca")?.toString().trim();
+  const categoria = formData.get("categoria")?.toString() as CategoriaProducto;
+  const presentacion = formData.get("presentacion")?.toString() as Presentacion;
+  const unidadMedida = formData.get("unidadMedida")?.toString() as UnidadMedida;
+  const contenido = Number(formData.get("contenido"));
+  const margenPorcentaje = Number(formData.get("margenPorcentaje"));
+  const precioCostoUnitario = Number(formData.get("precioCostoUnitario"));
+
+  if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
+    throw new Error("Faltan datos del producto.");
+  }
+  if (!contenido || contenido <= 0) throw new Error("El contenido debe ser mayor a 0.");
+  if (margenPorcentaje < 0) throw new Error("El margen no es válido.");
+  if (!precioCostoUnitario || precioCostoUnitario <= 0) throw new Error("El precio de costo no es válido.");
+
+  const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
+
+  await prisma.$transaction(async (tx) => {
+    const producto = await tx.producto.create({
+      data: {
+        sku,
+        nombre,
+        marca,
+        categoria,
+        presentacion,
+        unidadMedida,
+        contenido,
+        margenPorcentaje,
+        precioCostoUnitario,
+        precioVenta,
+        stockActual: 0,
+      },
+    });
+
+    await tx.historialStockMayorista.updateMany({
+      where: { id: listaItemId },
+      data: { productoId: producto.id },
+    });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "CREAR",
+      entidad: "PRODUCTO",
+      entidadId: producto.id,
+      detalle: `${nombre} (${sku}) desde lista proveedor`,
+    });
+  });
+
+  revalidatePath("/inventario");
+  revalidatePath("/inventario/listas");
+  revalidatePath("/ventas/nueva");
+  redirect(`/inventario/listas?proveedorId=${proveedorId}`);
+}
+
 // Las listas de precios de los mayoristas suelen venir con problemas de
 // codificación (UTF-8 leído como Latin-1, ej: "Tamaños" -> "TamaÃ±os").
 // Si detectamos el patrón típico de mojibake, lo corregimos.
@@ -331,6 +392,11 @@ function corregirEncoding(s: string): string {
   } catch {
     return s;
   }
+}
+
+// Saca el primer cero de un SKU si empieza con uno (ej: "06443-0.355" → "6443-0.355").
+function normalizarSku(sku: string): string {
+  return sku.startsWith("0") ? sku.slice(1) : sku;
 }
 
 // Convierte precios con formato argentino ("$ 24.100,00") a número (24100).
@@ -452,7 +518,7 @@ export async function importarExcel(formData: FormData) {
       fila[claveCorregida] = typeof valor === "string" ? corregirEncoding(valor) : valor;
     }
 
-    const sku = String(fila["SKU"] ?? fila["Codigo"] ?? "").trim();
+    const sku = normalizarSku(String(fila["SKU"] ?? fila["Codigo"] ?? "").trim());
     if (!sku) continue;
     if (!filasPorSku.has(sku)) filasPorSku.set(sku, fila);
   }

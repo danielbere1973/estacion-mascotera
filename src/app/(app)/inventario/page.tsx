@@ -21,8 +21,8 @@ export default async function InventarioPage() {
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
   ]);
 
-  const valorStockCosto = productos.reduce(
-    (acc, p) => acc + p.stockActual * Number(p.precioCostoUnitario),
+  const valorStockLista = productos.reduce(
+    (acc, p) => acc + p.stockActual * Number(p.precioVenta),
     0
   );
 
@@ -53,11 +53,11 @@ export default async function InventarioPage() {
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <p className="text-sm text-gray-500">Valor de stock (a costo)</p>
+        <p className="text-sm text-gray-500">Valor de stock (precio de lista)</p>
         <p className="mt-1 text-2xl font-semibold text-gray-900">
-          {formatCurrency(valorStockCosto)}
+          {formatCurrency(valorStockLista)}
         </p>
-        <p className="mt-1 text-xs text-gray-400">Suma de costo unitario × stock actual de cada producto</p>
+        <p className="mt-1 text-xs text-gray-400">Suma de precio de venta × stock actual de cada producto</p>
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -79,7 +79,7 @@ export default async function InventarioPage() {
               <th className="px-3 py-2 text-right">Stock</th>
               <th className="px-3 py-2 text-right">Costo</th>
               <th className="px-3 py-2 text-right">Margen</th>
-              <th className="px-3 py-2 text-right">Valor total (costo)</th>
+              <th className="px-3 py-2 text-right">Precio Lista</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -112,7 +112,7 @@ export default async function InventarioPage() {
                     +{p.margenPorcentaje.toString()}%
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
-                    {formatCurrency(p.stockActual * Number(p.precioCostoUnitario))}
+                    {formatCurrency(p.precioVenta.toString())}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     <Link
