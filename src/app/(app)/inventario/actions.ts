@@ -267,6 +267,46 @@ export async function eliminarCompra(formData: FormData) {
   revalidatePath("/ventas/nueva");
 }
 
+export async function eliminarProducto(formData: FormData) {
+  const session = await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Producto inválido.");
+
+  await prisma.$transaction(async (tx) => {
+    const producto = await tx.producto.findUniqueOrThrow({
+      where: { id },
+      include: {
+        _count: { select: { compras: true, detalleVentas: true } },
+      },
+    });
+
+    if (producto._count.compras > 0 || producto._count.detalleVentas > 0) {
+      throw new Error(
+        "No se puede eliminar un producto que tiene compras o ventas registradas."
+      );
+    }
+
+    await tx.historialStockMayorista.updateMany({
+      where: { productoId: id },
+      data: { productoId: null },
+    });
+
+    await tx.producto.delete({ where: { id } });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ELIMINAR",
+      entidad: "PRODUCTO",
+      entidadId: id,
+      detalle: `${producto.nombre} (${producto.sku})`,
+    });
+  });
+
+  revalidatePath("/inventario");
+  revalidatePath("/ventas/nueva");
+}
+
 export async function actualizarProducto(formData: FormData) {
   const session = await requireAdmin();
 

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatContenido } from "@/lib/format";
 import { ImportarExcel } from "./importar-excel";
+import { ConfirmSubmitButton } from "@/components/confirm-button";
+import { eliminarProducto } from "./actions";
 
 const STOCK_BAJO_UMBRAL = 5;
 
@@ -115,12 +117,23 @@ export default async function InventarioPage() {
                     {formatCurrency(p.precioVenta.toString())}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
-                    <Link
-                      href={`/inventario/productos/${p.id}/editar`}
-                      className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                    >
-                      Editar
-                    </Link>
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/inventario/productos/${p.id}/editar`}
+                        className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                      >
+                        Editar
+                      </Link>
+                      <form action={eliminarProducto}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <ConfirmSubmitButton
+                          confirmMessage={`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`}
+                          className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                        >
+                          Eliminar
+                        </ConfirmSubmitButton>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               );
