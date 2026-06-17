@@ -64,6 +64,10 @@ export default async function ReportesPage({
     needsGastos
       ? prisma.gasto.findMany({
           where: { fechaGasto: { gte: fechaDesde, lte: fechaHasta } },
+          include: {
+            usuario: { select: { nombre: true, apellido: true } },
+            pagadoPor: { select: { nombre: true, apellido: true } },
+          },
           orderBy: { fechaGasto: "asc" },
         })
       : Promise.resolve([]),
@@ -254,11 +258,13 @@ export default async function ReportesPage({
             </span>
           </p>
           <ReporteTable
-            headers={["Fecha", "Categoría", "Monto", "Descripción"]}
+            headers={["Fecha", "Categoría", "Monto", "Cargado por", "Pagado por", "Descripción"]}
             rows={gastos.map((g) => [
               new Date(g.fechaGasto).toLocaleDateString("es-AR"),
               g.categoriaGasto,
               formatARS(Number(g.monto)),
+              g.usuario ? `${g.usuario.apellido}, ${g.usuario.nombre}` : "-",
+              g.pagadoPor ? `${g.pagadoPor.apellido}, ${g.pagadoPor.nombre}` : "-",
               g.descripcion ?? "",
             ])}
             alignRight={[2]}

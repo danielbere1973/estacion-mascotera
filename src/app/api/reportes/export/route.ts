@@ -139,10 +139,21 @@ export async function GET(req: NextRequest) {
   if (tipo === "gastos") {
     const gastos = await prisma.gasto.findMany({
       where: { fechaGasto: { gte: fechaDesde, lte: fechaHasta } },
+      include: {
+        usuario: { select: { nombre: true, apellido: true } },
+        pagadoPor: { select: { nombre: true, apellido: true } },
+      },
       orderBy: { fechaGasto: "asc" },
     });
-    const rows: unknown[][] = [["Fecha", "Categoría", "Monto", "Descripción"]];
-    for (const g of gastos) rows.push([new Date(g.fechaGasto).toLocaleDateString("es-AR"), g.categoriaGasto, Number(g.monto), g.descripcion ?? ""]);
+    const rows: unknown[][] = [["Fecha", "Categoría", "Monto", "Cargado por", "Pagado por", "Descripción"]];
+    for (const g of gastos) rows.push([
+      new Date(g.fechaGasto).toLocaleDateString("es-AR"),
+      g.categoriaGasto,
+      Number(g.monto),
+      g.usuario ? `${g.usuario.apellido}, ${g.usuario.nombre}` : "",
+      g.pagadoPor ? `${g.pagadoPor.apellido}, ${g.pagadoPor.nombre}` : "",
+      g.descripcion ?? "",
+    ]);
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Gastos");
   }
 
