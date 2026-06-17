@@ -10,6 +10,7 @@ const links = [
   { href: "/ventas", label: "Ventas" },
   { href: "/inventario", label: "Inventario" },
   { href: "/gastos", label: "Gastos" },
+  { href: "/reportes", label: "Reportes" },
 ];
 
 const linksRestringido = [

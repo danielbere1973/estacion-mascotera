@@ -4,7 +4,7 @@ import { CompraForm } from "./compra-form";
 import type { MayoristaItem } from "./mayorista-producto-selector";
 
 export default async function NuevaCompraPage() {
-  const [proveedores, productos, historial, tiposProducto] = await Promise.all([
+  const [proveedores, productos, historial, tiposProducto, usuarios] = await Promise.all([
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       orderBy: { nombre: "asc" },
@@ -16,6 +16,11 @@ export default async function NuevaCompraPage() {
       include: { producto: { select: { sku: true } } },
     }),
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.usuario.findMany({
+      where: { activo: true },
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+      select: { id: true, nombre: true, apellido: true },
+    }),
   ]);
 
   // Última lista importada por proveedor: nos quedamos con el registro más
@@ -46,6 +51,7 @@ export default async function NuevaCompraPage() {
         productos={productos}
         mayoristaItems={mayoristaItems}
         tiposProducto={tiposProducto}
+        usuarios={usuarios}
         action={crearCompra}
       />
     </div>

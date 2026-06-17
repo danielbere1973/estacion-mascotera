@@ -9,18 +9,21 @@ import { MayoristaProductoSelector, type MayoristaItem } from "./mayorista-produ
 type Proveedor = { id: number; nombre: string };
 type Producto = { id: number; sku: string; nombre: string };
 type TipoProducto = { id: number; nombre: string };
+type Usuario = { id: number; nombre: string; apellido: string };
 
 export function CompraForm({
   proveedores,
   productos,
   mayoristaItems,
   tiposProducto,
+  usuarios,
   action,
 }: {
   proveedores: Proveedor[];
   productos: Producto[];
   mayoristaItems: MayoristaItem[];
   tiposProducto: TipoProducto[];
+  usuarios: Usuario[];
   action: (formData: FormData) => void;
 }) {
   const [proveedorId, setProveedorId] = useState("");
@@ -141,6 +144,20 @@ export function CompraForm({
             name="numeroPedido"
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Pagado por</label>
+          <select
+            name="pagadoPorId"
+            defaultValue=""
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">— Sin especificar —</option>
+            {usuarios.map((u) => (
+              <option key={u.id} value={u.id}>{u.apellido}, {u.nombre}</option>
+            ))}
+          </select>
         </div>
 
         <div className="flex items-end">

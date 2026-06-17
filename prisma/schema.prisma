@@ -31,6 +31,7 @@ model Usuario {
   proveedorRestricto   Proveedor? @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
 
   compras          Compra[]
+  comprasPagadas   Compra[] @relation("CompraPagadaPor")
   ventas           Venta[]
   ventasVendidas   Venta[] @relation("VentaVendidaPor")
   ventasCobradas   Venta[] @relation("VentaCobradaPor")
@@ -126,11 +127,13 @@ model Compra {
   numeroFactura       String?
   fechaCompra         DateTime @default(now())
 
-  usuarioId Int
+  usuarioId    Int
+  pagadoPorId  Int?
 
   proveedor Proveedor @relation(fields: [proveedorId], references: [id])
   producto  Producto  @relation(fields: [productoId], references: [id])
   usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  pagadoPor Usuario?  @relation("CompraPagadaPor", fields: [pagadoPorId], references: [id])
 
   @@index([fechaCompra])
   @@index([productoId])

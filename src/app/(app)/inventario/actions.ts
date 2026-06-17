@@ -32,6 +32,7 @@ export async function crearCompra(formData: FormData) {
   const numeroPedido = formData.get("numeroPedido")?.toString().trim() || null;
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+  const pagadoPorId = formData.get("pagadoPorId") ? Number(formData.get("pagadoPorId")) : null;
 
   if (!cantidad || cantidad <= 0) throw new Error("La cantidad debe ser mayor a 0.");
   if (precioListaUnitario < 0) throw new Error("El precio de costo no es válido.");
@@ -108,6 +109,7 @@ export async function crearCompra(formData: FormData) {
         numeroPedido,
         facturado,
         numeroFactura,
+        pagadoPorId,
         usuarioId: Number(session.user.id),
       },
       include: { producto: true, proveedor: true },
