@@ -25,113 +25,87 @@ export async function crearCompra(formData: FormData) {
   }
   if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
 
-  const cantidad = Number(formData.get("cantidad"));
-  const precioListaUnitario = Number(formData.get("precioCostoUnitario"));
-  const descuentoPorcentaje = Number(formData.get("descuentoPorcentaje") || 0);
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const numeroPedido = formData.get("numeroPedido")?.toString().trim() || null;
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const pagadoPorId = formData.get("pagadoPorId") ? Number(formData.get("pagadoPorId")) : null;
 
-  if (!cantidad || cantidad <= 0) throw new Error("La cantidad debe ser mayor a 0.");
-  if (precioListaUnitario < 0) throw new Error("El precio de costo no es válido.");
-  if (descuentoPorcentaje < 0 || descuentoPorcentaje > 100) {
-    throw new Error("El descuento debe estar entre 0 y 100.");
-  }
+  const skus = formData.getAll("itemSku").map((v) => v.toString().trim());
+  const nombres = formData.getAll("itemNombre").map((v) => v.toString().trim());
+  const cantidades = formData.getAll("itemCantidad").map((v) => Number(v));
+  const precios = formData.getAll("itemPrecio").map((v) => Number(v));
+  const descuentos = formData.getAll("itemDescuento").map((v) => Number(v) || 0);
 
-  // Costo final por unidad ya con el descuento del proveedor aplicado.
-  const precioCostoUnitario = precioListaUnitario * (1 - descuentoPorcentaje / 100);
+  const items = skus
+    .map((sku, i) => ({
+      sku,
+      nombre: nombres[i] || sku,
+      cantidad: cantidades[i],
+      precioLista: precios[i],
+      descuentoPct: descuentos[i],
+      precioCosto: precios[i] * (1 - descuentos[i] / 100),
+    }))
+    .filter((item) => item.sku && item.cantidad > 0 && item.precioLista >= 0);
 
-  // Modo lista del proveedor: viene skuProducto (SKU del item de la lista)
-  // Modo manual: viene productoId (ID del producto en inventario)
-  const skuProducto = formData.get("skuProducto")?.toString().trim();
-  const nombreProducto = formData.get("nombreProducto")?.toString().trim() || skuProducto || "Sin nombre";
-  let productoId = formData.get("productoId")?.toString();
+  if (items.length === 0) throw new Error("Agregá al menos un producto.");
 
   await prisma.$transaction(async (tx) => {
-    if (skuProducto) {
-      // Buscar producto por SKU. Si no existe, crearlo con datos mínimos.
-      let producto = await tx.producto.findFirst({ where: { sku: skuProducto } });
+    const tipoDefault = await tx.tipoProducto.findFirst({ orderBy: { nombre: "asc" } });
 
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      let producto = await tx.producto.findFirst({ where: { sku: item.sku } });
       if (!producto) {
-        const tiposDisponibles = await tx.tipoProducto.findFirst({ orderBy: { nombre: "asc" } });
         producto = await tx.producto.create({
           data: {
-            sku: skuProducto,
-            nombre: nombreProducto,
+            sku: item.sku,
+            nombre: item.nombre,
             marca: "-",
-            categoria: tiposDisponibles?.nombre ?? "General",
+            categoria: tipoDefault?.nombre ?? "General",
             presentacion: "BOLSA_CERRADA" as Presentacion,
             unidadMedida: "KILOGRAMOS" as UnidadMedida,
             contenido: 1,
             margenPorcentaje: 30,
-            precioCostoUnitario,
-            precioVenta: precioCostoUnitario * 1.3,
-            stockActual: cantidad,
+            precioCostoUnitario: item.precioCosto,
+            precioVenta: item.precioCosto * 1.3,
+            stockActual: item.cantidad,
           },
         });
       } else {
-        const precioVenta = precioCostoUnitario * (1 + Number(producto.margenPorcentaje) / 100);
+        const precioVenta = item.precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
         await tx.producto.update({
           where: { id: producto.id },
-          data: { precioCostoUnitario, precioVenta, stockActual: { increment: cantidad } },
+          data: { precioCostoUnitario: item.precioCosto, precioVenta, stockActual: { increment: item.cantidad } },
         });
       }
-      productoId = String(producto.id);
-    } else if (productoId === "nuevo") {
-      const sku = formData.get("productoSku")?.toString().trim();
-      const nombre = formData.get("productoNombre")?.toString().trim();
-      const marca = formData.get("productoMarca")?.toString().trim();
-      const categoria = formData.get("productoCategoria")?.toString().trim();
-      const presentacion = formData.get("productoPresentacion")?.toString() as Presentacion;
-      const unidadMedida = formData.get("productoUnidadMedida")?.toString() as UnidadMedida;
-      const contenido = Number(formData.get("productoContenido") || 1);
-      const margenPorcentaje = Number(formData.get("productoMargen") || 30);
 
-      if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
-        throw new Error("Faltan datos del producto nuevo.");
-      }
-
-      const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
-      const producto = await tx.producto.create({
-        data: { sku, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual: cantidad },
+      const compra = await tx.compra.create({
+        data: {
+          proveedorId: Number(proveedorId),
+          productoId: producto.id,
+          cantidad: item.cantidad,
+          precioCostoUnitario: item.precioCosto,
+          descuentoPorcentaje: item.descuentoPct,
+          costoEnvio: i === 0 ? costoEnvio : 0,
+          numeroPedido,
+          facturado,
+          numeroFactura,
+          pagadoPorId,
+          usuarioId: Number(session.user.id),
+        },
+        include: { producto: true, proveedor: true },
       });
-      productoId = String(producto.id);
-    } else {
-      if (!productoId) throw new Error("Debe seleccionar un producto.");
-      const producto = await tx.producto.findUniqueOrThrow({ where: { id: Number(productoId) } });
-      const precioVenta = precioCostoUnitario * (1 + Number(producto.margenPorcentaje) / 100);
-      await tx.producto.update({
-        where: { id: producto.id },
-        data: { precioCostoUnitario, precioVenta, stockActual: { increment: cantidad } },
+
+      await registrarLog(tx, {
+        usuarioId: Number(session.user.id),
+        accion: "CREAR",
+        entidad: "COMPRA",
+        entidadId: compra.id,
+        detalle: `${compra.producto.nombre} x${compra.cantidad} - ${compra.proveedor.nombre}`,
       });
     }
-
-    const compra = await tx.compra.create({
-      data: {
-        proveedorId: Number(proveedorId),
-        productoId: Number(productoId),
-        cantidad,
-        precioCostoUnitario,
-        descuentoPorcentaje,
-        costoEnvio,
-        numeroPedido,
-        facturado,
-        numeroFactura,
-        pagadoPorId,
-        usuarioId: Number(session.user.id),
-      },
-      include: { producto: true, proveedor: true },
-    });
-
-    await registrarLog(tx, {
-      usuarioId: Number(session.user.id),
-      accion: "CREAR",
-      entidad: "COMPRA",
-      entidadId: compra.id,
-      detalle: `${compra.producto.nombre} x${compra.cantidad} - ${compra.proveedor.nombre}`,
-    });
   });
 
   revalidatePath("/inventario");
