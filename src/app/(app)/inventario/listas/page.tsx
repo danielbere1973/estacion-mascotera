@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
-import { eliminarItemMayorista } from "../actions";
+import { eliminarItemMayorista, vincularItemMayorista } from "../actions";
 
 export default async function ListasMayoristaPage({
   searchParams,
@@ -12,7 +12,13 @@ export default async function ListasMayoristaPage({
   const params = await searchParams;
   const proveedorId = params.proveedorId ? Number(params.proveedorId) : undefined;
 
-  const proveedores = await prisma.proveedor.findMany({ orderBy: { nombre: "asc" } });
+  const [proveedores, productos] = await Promise.all([
+    prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.producto.findMany({
+      orderBy: [{ nombre: "asc" }],
+      select: { id: true, sku: true, nombre: true },
+    }),
+  ]);
 
   let items: {
     id: number;
@@ -22,11 +28,14 @@ export default async function ListasMayoristaPage({
     precioConDescuento: string | null;
     tamanios: string | null;
     productoId: number | null;
+    productoSku: string | null;
+    productoNombre: string | null;
   }[] = [];
 
   if (proveedorId) {
     const historial = await prisma.historialStockMayorista.findMany({
       where: { proveedorId },
+      include: { producto: { select: { sku: true, nombre: true } } },
       orderBy: { fechaImportacion: "desc" },
     });
 
@@ -42,6 +51,8 @@ export default async function ListasMayoristaPage({
         precioConDescuento: h.precioConDescuento?.toString() ?? null,
         tamanios: h.tamanios,
         productoId: h.productoId,
+        productoSku: h.producto?.sku ?? null,
+        productoNombre: h.producto?.nombre ?? null,
       });
     }
     items.sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? ""));
@@ -82,12 +93,12 @@ export default async function ListasMayoristaPage({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
-                <th className="px-3 py-2">SKU</th>
+                <th className="px-3 py-2">SKU proveedor</th>
                 <th className="px-3 py-2">Nombre</th>
                 <th className="px-3 py-2">Tamaño</th>
-                <th className="px-3 py-2 text-right">Precio Lista</th>
+                <th className="px-3 py-2 text-right">Precio lista</th>
                 <th className="px-3 py-2 text-right">Precio c/dto</th>
-                <th className="px-3 py-2">Vinculado</th>
+                <th className="px-3 py-2">Producto vinculado</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -103,15 +114,31 @@ export default async function ListasMayoristaPage({
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     {item.precioConDescuento ? formatCurrency(item.precioConDescuento) : "-"}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {item.productoId ? (
-                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-                        Sí
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                        No
-                      </span>
+                  <td className="px-3 py-2">
+                    <form action={vincularItemMayorista} className="flex items-center gap-2">
+                      <input type="hidden" name="id" value={item.id} />
+                      <input type="hidden" name="proveedorId" value={proveedorId} />
+                      <select
+                        name="productoId"
+                        defaultValue={item.productoId ?? ""}
+                        className="rounded-md border border-gray-300 px-2 py-1 text-xs"
+                      >
+                        <option value="">— Sin vincular —</option>
+                        {productos.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.sku} · {p.nombre}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="submit"
+                        className="rounded-md bg-gray-700 px-2 py-1 text-xs text-white hover:bg-gray-800"
+                      >
+                        Guardar
+                      </button>
+                    </form>
+                    {item.productoSku && (
+                      <p className="mt-0.5 text-xs text-green-700 font-mono">{item.productoSku}</p>
                     )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">

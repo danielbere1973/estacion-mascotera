@@ -155,6 +155,25 @@ export async function actualizarItemMayorista(formData: FormData) {
   redirect(`/inventario/listas?proveedorId=${proveedorId}`);
 }
 
+export async function vincularItemMayorista(formData: FormData) {
+  await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  const productoId = formData.get("productoId")?.toString().trim();
+  const proveedorId = formData.get("proveedorId")?.toString();
+
+  if (!id) throw new Error("Item inválido.");
+
+  await prisma.historialStockMayorista.update({
+    where: { id },
+    data: { productoId: productoId ? Number(productoId) : null },
+  });
+
+  revalidatePath("/inventario/listas");
+  revalidatePath("/inventario/compra");
+  redirect(`/inventario/listas?proveedorId=${proveedorId}`);
+}
+
 export async function eliminarItemMayorista(formData: FormData) {
   const session = await requireAdmin();
 
