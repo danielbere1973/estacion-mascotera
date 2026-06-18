@@ -8,21 +8,20 @@ import { MayoristaProductoSelector, type MayoristaItem } from "./mayorista-produ
 
 type Proveedor = { id: number; nombre: string };
 type Producto = { id: number; sku: string; nombre: string };
-type TipoProducto = { id: number; nombre: string };
 type Usuario = { id: number; nombre: string; apellido: string };
 
 export function CompraForm({
   proveedores,
   productos,
   mayoristaItems,
-  tiposProducto,
+  tiposProducto: _tiposProducto,
   usuarios,
   action,
 }: {
   proveedores: Proveedor[];
   productos: Producto[];
   mayoristaItems: MayoristaItem[];
-  tiposProducto: TipoProducto[];
+  tiposProducto: { id: number; nombre: string }[];
   usuarios: Usuario[];
   action: (formData: FormData) => void;
 }) {
@@ -30,6 +29,8 @@ export function CompraForm({
   const [modo, setModo] = useState<"mayorista" | "manual">("mayorista");
   const [precioCosto, setPrecioCosto] = useState("");
   const [descuento, setDescuento] = useState("0");
+  const [skuProveedor, setSkuProveedor] = useState("");
+  const [nombreProveedor, setNombreProveedor] = useState("");
 
   const itemsDelProveedor = useMemo(
     () => mayoristaItems.filter((i) => String(i.proveedorId) === proveedorId),
@@ -49,32 +50,44 @@ export function CompraForm({
           setProveedorId(value);
           setModo("mayorista");
           setPrecioCosto("");
+          setSkuProveedor("");
+          setNombreProveedor("");
         }}
       />
 
       {proveedorId && proveedorId !== "nuevo" && hayListaProveedor && (
         <div className="flex gap-4 text-sm text-gray-700">
           <label className="flex items-center gap-1.5">
-            <input
-              type="radio"
-              checked={modo === "mayorista"}
-              onChange={() => setModo("mayorista")}
-            />
+            <input type="radio" checked={modo === "mayorista"} onChange={() => setModo("mayorista")} />
             Lista del proveedor
           </label>
           <label className="flex items-center gap-1.5">
-            <input
-              type="radio"
-              checked={modo === "manual"}
-              onChange={() => setModo("manual")}
-            />
+            <input type="radio" checked={modo === "manual"} onChange={() => setModo("manual")} />
             Carga manual
           </label>
         </div>
       )}
 
       {usarMayorista ? (
-        <MayoristaProductoSelector items={itemsDelProveedor} onPrecioChange={setPrecioCosto} tiposProducto={tiposProducto} />
+        <div className="space-y-3">
+          <MayoristaProductoSelector
+            items={itemsDelProveedor}
+            onSelect={(precio, sku, nombre) => {
+              setPrecioCosto(precio);
+              setSkuProveedor(sku);
+              setNombreProveedor(nombre);
+            }}
+          />
+          {skuProveedor && (
+            <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              <span className="font-mono font-medium">{skuProveedor}</span>
+              {nombreProveedor && <span className="ml-2 text-gray-500">· {nombreProveedor}</span>}
+            </div>
+          )}
+          {/* El SKU del proveedor identifica el producto en el inventario */}
+          <input type="hidden" name="skuProducto" value={skuProveedor} />
+          <input type="hidden" name="nombreProducto" value={nombreProveedor} />
+        </div>
       ) : (
         <ProductoSelector productos={productos} itemsDelProveedor={itemsDelProveedor} />
       )}
@@ -140,19 +153,12 @@ export function CompraForm({
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">N° de pedido (opcional)</label>
-          <input
-            name="numeroPedido"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
+          <input name="numeroPedido" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Pagado por</label>
-          <select
-            name="pagadoPorId"
-            defaultValue=""
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
+          <select name="pagadoPorId" defaultValue="" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
             <option value="">— Sin especificar —</option>
             {usuarios.map((u) => (
               <option key={u.id} value={u.id}>{u.apellido}, {u.nombre}</option>
@@ -169,10 +175,7 @@ export function CompraForm({
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">N° de factura (opcional)</label>
-          <input
-            name="numeroFactura"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
+          <input name="numeroFactura" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
       </div>
 

@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { Combobox } from "@/components/combobox";
-import { NuevoProductoFields } from "./nuevo-producto-fields";
 
 export type MayoristaItem = {
   proveedorId: number;
@@ -18,16 +16,11 @@ export type MayoristaItem = {
 
 export function MayoristaProductoSelector({
   items,
-  onPrecioChange,
-  tiposProducto = [],
+  onSelect,
 }: {
   items: MayoristaItem[];
-  onPrecioChange: (precio: string) => void;
-  tiposProducto?: { id: number; nombre: string }[];
+  onSelect: (precio: string, sku: string, nombre: string) => void;
 }) {
-  const [sku, setSku] = useState("");
-  const item = items.find((i) => i.sku === sku);
-
   const opciones = items.map((i) => ({
     value: i.sku,
     label: `${i.nombre ?? ""}${i.tamanios ? ` · ${i.tamanios}` : ""} — ${formatCurrency(
@@ -37,39 +30,20 @@ export function MayoristaProductoSelector({
   }));
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">Producto (lista del proveedor)</label>
+    <div className="space-y-1">
+      <label className="text-sm font-medium text-gray-700">Buscar en lista del proveedor</label>
       <Combobox
         options={opciones}
-        value={sku}
-        required
+        value=""
         placeholder="Buscar por nombre o código..."
-        onSelect={(nuevoSku) => {
-          setSku(nuevoSku);
-          const seleccionado = items.find((i) => i.sku === nuevoSku);
-          if (seleccionado) {
-            onPrecioChange(seleccionado.precioConDescuento ?? seleccionado.precioCostoScraped);
-          }
+        onSelect={(sku) => {
+          const item = items.find((i) => i.sku === sku);
+          if (!item) return;
+          const precio = item.precioConDescuento ?? item.precioCostoScraped;
+          const nombre = [item.nombre, item.tamanios].filter(Boolean).join(" · ");
+          onSelect(precio, item.sku, nombre);
         }}
       />
-
-      {item &&
-        (item.productoId ? (
-          <>
-            <input type="hidden" name="productoId" value={item.productoId} />
-            <p className="text-xs text-gray-500">
-              Vinculado a producto{item.productoSku ? <> — SKU: <span className="font-mono font-medium">{item.productoSku}</span></> : " existente de tu inventario"}.
-            </p>
-          </>
-        ) : (
-          <div key={item.sku} className="space-y-2">
-            <input type="hidden" name="productoId" value="nuevo" />
-            <p className="text-xs text-amber-600">
-              Producto nuevo: completá el SKU propio y los datos faltantes.
-            </p>
-            <NuevoProductoFields defaultNombre={item.nombre ?? ""} tiposProducto={tiposProducto} />
-          </div>
-        ))}
     </div>
   );
 }

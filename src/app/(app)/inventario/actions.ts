@@ -43,10 +43,43 @@ export async function crearCompra(formData: FormData) {
   // Costo final por unidad ya con el descuento del proveedor aplicado.
   const precioCostoUnitario = precioListaUnitario * (1 - descuentoPorcentaje / 100);
 
+  // Modo lista del proveedor: viene skuProducto (SKU del item de la lista)
+  // Modo manual: viene productoId (ID del producto en inventario)
+  const skuProducto = formData.get("skuProducto")?.toString().trim();
+  const nombreProducto = formData.get("nombreProducto")?.toString().trim() || skuProducto || "Sin nombre";
   let productoId = formData.get("productoId")?.toString();
 
   await prisma.$transaction(async (tx) => {
-    if (productoId === "nuevo") {
+    if (skuProducto) {
+      // Buscar producto por SKU. Si no existe, crearlo con datos mínimos.
+      let producto = await tx.producto.findFirst({ where: { sku: skuProducto } });
+
+      if (!producto) {
+        const tiposDisponibles = await tx.tipoProducto.findFirst({ orderBy: { nombre: "asc" } });
+        producto = await tx.producto.create({
+          data: {
+            sku: skuProducto,
+            nombre: nombreProducto,
+            marca: "-",
+            categoria: tiposDisponibles?.nombre ?? "General",
+            presentacion: "BOLSA_CERRADA" as Presentacion,
+            unidadMedida: "KILOGRAMOS" as UnidadMedida,
+            contenido: 1,
+            margenPorcentaje: 30,
+            precioCostoUnitario,
+            precioVenta: precioCostoUnitario * 1.3,
+            stockActual: cantidad,
+          },
+        });
+      } else {
+        const precioVenta = precioCostoUnitario * (1 + Number(producto.margenPorcentaje) / 100);
+        await tx.producto.update({
+          where: { id: producto.id },
+          data: { precioCostoUnitario, precioVenta, stockActual: { increment: cantidad } },
+        });
+      }
+      productoId = String(producto.id);
+    } else if (productoId === "nuevo") {
       const sku = formData.get("productoSku")?.toString().trim();
       const nombre = formData.get("productoNombre")?.toString().trim();
       const marca = formData.get("productoMarca")?.toString().trim();
@@ -61,40 +94,17 @@ export async function crearCompra(formData: FormData) {
       }
 
       const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
-
       const producto = await tx.producto.create({
-        data: {
-          sku,
-          nombre,
-          marca,
-          categoria,
-          presentacion,
-          unidadMedida,
-          contenido,
-          margenPorcentaje,
-          precioCostoUnitario,
-          precioVenta,
-          stockActual: cantidad,
-        },
+        data: { sku, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual: cantidad },
       });
       productoId = String(producto.id);
     } else {
       if (!productoId) throw new Error("Debe seleccionar un producto.");
-
-      const producto = await tx.producto.findUniqueOrThrow({
-        where: { id: Number(productoId) },
-      });
-
-      const precioVenta =
-        precioCostoUnitario * (1 + Number(producto.margenPorcentaje) / 100);
-
+      const producto = await tx.producto.findUniqueOrThrow({ where: { id: Number(productoId) } });
+      const precioVenta = precioCostoUnitario * (1 + Number(producto.margenPorcentaje) / 100);
       await tx.producto.update({
         where: { id: producto.id },
-        data: {
-          precioCostoUnitario,
-          precioVenta,
-          stockActual: { increment: cantidad },
-        },
+        data: { precioCostoUnitario, precioVenta, stockActual: { increment: cantidad } },
       });
     }
 
