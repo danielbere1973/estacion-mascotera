@@ -50,6 +50,17 @@ export default async function NuevaVentaPage() {
         <ClienteSelector clientes={clientes} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-sm font-medium text-gray-700">Fecha de venta</label>
+            <input
+              type="date"
+              name="fechaVenta"
+              defaultValue={new Date().toISOString().slice(0, 10)}
+              required
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Canal de venta</label>
             <select

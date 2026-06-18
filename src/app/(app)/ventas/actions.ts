@@ -39,6 +39,8 @@ export async function crearVenta(formData: FormData) {
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const vendidoPorId = formData.get("vendidoPorId") ? Number(formData.get("vendidoPorId")) : null;
   const cobradoPorId = formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
+  const fechaVentaStr = formData.get("fechaVenta")?.toString();
+  const fechaVenta = fechaVentaStr ? new Date(fechaVentaStr) : new Date();
 
   if (!canalVenta || !medioPago) throw new Error("Faltan datos de la venta.");
 
@@ -76,6 +78,7 @@ export async function crearVenta(formData: FormData) {
         costoEnvio,
         facturado,
         numeroFactura,
+        fechaVenta,
         vendidoPorId,
         cobradoPorId,
         usuarioId: Number(session.user.id),

@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type ComboboxOption = {
   value: string;
   label: string;
-  // Texto adicional sobre el que también se puede buscar (ej: SKU, código, tamaño).
   search: string;
 };
 
-// Normaliza para poder buscar "Urinary" y encontrar "URINARY", o "ñ" y encontrar "Ñ".
 function normalizar(s: string): string {
   return s
     .normalize("NFD")
@@ -38,7 +37,9 @@ export function Combobox({
   const selected = options.find((o) => o.value === value);
   const [query, setQuery] = useState(selected?.label ?? "");
   const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     setQuery(selected?.label ?? "");
@@ -56,49 +57,69 @@ export function Combobox({
     return () => document.removeEventListener("mousedown", onClickOutside);
   });
 
+  function handleOpen() {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 2,
+        left: rect.left,
+        width: Math.max(rect.width, 320),
+        zIndex: 9999,
+      });
+    }
+    setOpen(true);
+  }
+
   const q = normalizar(query);
   const filtrados = q
     ? options.filter((o) => normalizar(`${o.label} ${o.search}`).includes(q)).slice(0, 50)
     : options.slice(0, 50);
 
+  const dropdown = open ? (
+    <ul
+      style={dropdownStyle}
+      className="max-h-64 overflow-auto rounded-md border border-gray-200 bg-white text-sm shadow-lg"
+    >
+      {filtrados.length === 0 ? (
+        <li className="px-3 py-2 text-gray-400">Sin resultados</li>
+      ) : (
+        filtrados.map((o) => (
+          <li
+            key={o.value}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onSelect(o.value);
+              setQuery(o.label);
+              setOpen(false);
+            }}
+            className="cursor-pointer px-3 py-2 hover:bg-blue-50"
+          >
+            <span className="font-mono text-xs text-gray-400 mr-2">{o.value}</span>
+            {o.label}
+          </li>
+        ))
+      )}
+    </ul>
+  ) : null;
+
   return (
     <div ref={containerRef} className="relative">
       <input
+        ref={inputRef}
         type="text"
         value={query}
         required={required && !value}
         placeholder={placeholder}
-        onFocus={() => setOpen(true)}
+        onFocus={handleOpen}
         onChange={(e) => {
           setQuery(e.target.value);
-          setOpen(true);
+          handleOpen();
           if (value) onSelect("");
         }}
         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
       />
-      {open && filtrados.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white text-sm shadow-lg">
-          {filtrados.map((o) => (
-            <li
-              key={o.value}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                onSelect(o.value);
-                setQuery(o.label);
-                setOpen(false);
-              }}
-              className="cursor-pointer px-3 py-2 hover:bg-blue-50"
-            >
-              {o.label}
-            </li>
-          ))}
-        </ul>
-      )}
-      {open && filtrados.length === 0 && (
-        <ul className="absolute z-10 mt-1 w-full overflow-auto rounded-md border border-gray-200 bg-white text-sm shadow-lg">
-          <li className="px-3 py-2 text-gray-400">Sin resultados</li>
-        </ul>
-      )}
+      {typeof window !== "undefined" && createPortal(dropdown, document.body)}
     </div>
   );
 }

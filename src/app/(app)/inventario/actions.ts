@@ -30,6 +30,8 @@ export async function crearCompra(formData: FormData) {
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const pagadoPorId = formData.get("pagadoPorId") ? Number(formData.get("pagadoPorId")) : null;
+  const fechaCompraStr = formData.get("fechaCompra")?.toString();
+  const fechaCompra = fechaCompraStr ? new Date(fechaCompraStr) : new Date();
 
   const skus = formData.getAll("itemSku").map((v) => v.toString().trim());
   const nombres = formData.getAll("itemNombre").map((v) => v.toString().trim());
@@ -93,6 +95,7 @@ export async function crearCompra(formData: FormData) {
           facturado,
           numeroFactura,
           pagadoPorId,
+          fechaCompra,
           usuarioId: Number(session.user.id),
         },
         include: { producto: true, proveedor: true },
