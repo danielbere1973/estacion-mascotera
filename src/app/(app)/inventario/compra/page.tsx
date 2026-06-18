@@ -23,6 +23,13 @@ export default async function NuevaCompraPage() {
     }),
   ]);
 
+  // Índice de productos existentes por SKU (normalizado a mayúsculas) para
+  // detectar automáticamente si un item de la lista ya está en el inventario,
+  // independientemente de si el historial tiene productoId seteado.
+  const productosPorSku = new Map(
+    productos.map((p) => [p.sku.toUpperCase().trim(), p])
+  );
+
   // Última lista importada por proveedor: nos quedamos con el registro más
   // reciente de cada combinación proveedor + sku.
   const vistos = new Set<string>();
@@ -31,6 +38,14 @@ export default async function NuevaCompraPage() {
     const clave = `${h.proveedorId}-${h.sku}`;
     if (vistos.has(clave)) continue;
     vistos.add(clave);
+
+    // Primero usamos el productoId ya guardado en el historial; si no está,
+    // buscamos por SKU en el inventario para auto-detectar el producto.
+    const productoVinculado =
+      h.productoId && h.producto
+        ? { id: h.productoId, sku: h.producto.sku }
+        : (productosPorSku.get(h.sku.toUpperCase().trim()) ?? null);
+
     mayoristaItems.push({
       proveedorId: h.proveedorId as number,
       sku: h.sku,
@@ -38,8 +53,8 @@ export default async function NuevaCompraPage() {
       precioCostoScraped: h.precioCostoScraped.toString(),
       precioConDescuento: h.precioConDescuento?.toString() ?? null,
       tamanios: h.tamanios,
-      productoId: h.productoId,
-      productoSku: h.producto?.sku ?? null,
+      productoId: productoVinculado?.id ?? null,
+      productoSku: productoVinculado?.sku ?? null,
     });
   }
 
