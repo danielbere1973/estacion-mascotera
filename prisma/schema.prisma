@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "cockroachdb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -17,7 +17,7 @@ enum RolUsuario {
 }
 
 model Usuario {
-  id           Int        @id @default(sequence())
+  id           Int        @id @default(autoincrement())
   nombre       String
   apellido     String
   email        String     @unique
@@ -45,7 +45,7 @@ model Usuario {
 // ---------------------------------------------------------------------------
 
 model TipoProducto {
-  id     Int    @id @default(sequence())
+  id     Int    @id @default(autoincrement())
   nombre String @unique
 }
 
@@ -64,7 +64,7 @@ enum UnidadMedida {
 }
 
 model Producto {
-  id        Int               @id @default(sequence())
+  id        Int               @id @default(autoincrement())
   sku       String            @unique
   nombre    String
   marca     String
@@ -98,7 +98,7 @@ model Producto {
 // ---------------------------------------------------------------------------
 
 model Proveedor {
-  id        Int     @id @default(sequence())
+  id        Int     @id @default(autoincrement())
   nombre    String
   direccion String?
   contacto  String?
@@ -113,7 +113,7 @@ model Proveedor {
 // ---------------------------------------------------------------------------
 
 model Compra {
-  id          Int @id @default(sequence())
+  id          Int @id @default(autoincrement())
   proveedorId Int
   productoId  Int
 
@@ -144,7 +144,7 @@ model Compra {
 // ---------------------------------------------------------------------------
 
 model Cliente {
-  id        Int     @id @default(sequence())
+  id        Int     @id @default(autoincrement())
   nombre    String
   apellido  String
   direccion String
@@ -165,7 +165,7 @@ enum CanalVenta {
 }
 
 model Venta {
-  id        Int @id @default(sequence())
+  id        Int @id @default(autoincrement())
   clienteId Int
 
   canalVenta    CanalVenta
@@ -192,7 +192,7 @@ model Venta {
 }
 
 model DetalleVenta {
-  id      Int @id @default(sequence())
+  id      Int @id @default(autoincrement())
   ventaId Int
   productoId Int
 
@@ -222,7 +222,7 @@ enum CategoriaGasto {
 }
 
 model Gasto {
-  id             Int            @id @default(sequence())
+  id             Int            @id @default(autoincrement())
   categoriaGasto CategoriaGasto
   monto          Decimal
   descripcion    String?
@@ -258,7 +258,7 @@ enum EntidadLog {
 }
 
 model LogActividad {
-  id        Int        @id @default(sequence())
+  id        Int        @id @default(autoincrement())
   usuarioId Int
   accion    AccionLog
   entidad   EntidadLog
@@ -277,7 +277,7 @@ model LogActividad {
 // ---------------------------------------------------------------------------
 
 model HistorialStockMayorista {
-  id         Int @id @default(sequence())
+  id         Int @id @default(autoincrement())
   productoId Int?
   proveedorId Int?
 
