@@ -71,6 +71,9 @@ model Producto {
   categoria String
   presentacion Presentacion
 
+  proveedorId Int?
+  proveedor   Proveedor? @relation("ProductoProveedor", fields: [proveedorId], references: [id])
+
   // Cómo se mide el producto (ej: 15 Kg, 500 ml, 12 Unidad para una caja x12)
   unidadMedida UnidadMedida @default(UNIDAD)
   contenido    Decimal      @default(1)
@@ -106,6 +109,7 @@ model Proveedor {
   compras           Compra[]
   historialMayorista HistorialStockMayorista[]
   usuariosRestringidos Usuario[] @relation("UsuarioProveedorRestricto")
+  productos         Producto[] @relation("ProductoProveedor")
 }
 
 // ---------------------------------------------------------------------------

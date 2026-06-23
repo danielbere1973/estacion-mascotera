@@ -2,7 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { crearProducto } from "../../actions";
 
 export default async function NuevoProductoPage() {
-  const tipos = await prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } });
+  const [tipos, proveedores] = await Promise.all([
+    prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -10,6 +13,17 @@ export default async function NuevoProductoPage() {
 
       <form action={crearProducto} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-sm font-medium text-gray-700">Proveedor</label>
+            <select name="proveedorId" defaultValue="" required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              <option value="" disabled>Seleccionar proveedor...</option>
+              {proveedores.map((p) => (
+                <option key={p.id} value={p.id}>{p.nombre}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">SKU</label>
             <input name="sku" required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
@@ -62,13 +76,13 @@ export default async function NuevoProductoPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Margen sobre costo (%)</label>
-            <input name="margenPorcentaje" type="number" step="0.01" min={0} defaultValue={30} required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+            <label className="text-sm font-medium text-gray-700">Precio costo unitario</label>
+            <input name="precioCostoUnitario" type="number" step="0.01" min={0} defaultValue={0} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Precio costo unitario</label>
-            <input name="precioCostoUnitario" type="number" step="0.01" min={0} defaultValue={0} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+            <label className="text-sm font-medium text-gray-700">Margen sobre costo (%)</label>
+            <input name="margenPorcentaje" type="number" step="0.01" min={0} defaultValue={30} required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
           </div>
 
           <div className="space-y-1">

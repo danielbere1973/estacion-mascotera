@@ -328,6 +328,8 @@ export async function crearProducto(formData: FormData) {
   const margenPorcentaje = Number(formData.get("margenPorcentaje") || 30);
   const precioCostoUnitario = Number(formData.get("precioCostoUnitario") || 0);
   const stockActual = Number(formData.get("stockActual") || 0);
+  const proveedorIdStr = formData.get("proveedorId")?.toString();
+  const proveedorId = proveedorIdStr ? Number(proveedorIdStr) : null;
 
   if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
     throw new Error("Faltan datos del producto.");
@@ -337,7 +339,7 @@ export async function crearProducto(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     const producto = await tx.producto.create({
-      data: { sku, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual },
+      data: { sku, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual, proveedorId },
     });
 
     await registrarLog(tx, {
@@ -368,6 +370,9 @@ export async function actualizarProducto(formData: FormData) {
   const unidadMedida = formData.get("unidadMedida")?.toString() as UnidadMedida;
   const contenido = Number(formData.get("contenido"));
   const margenPorcentaje = Number(formData.get("margenPorcentaje"));
+  const precioCostoUnitario = Number(formData.get("precioCostoUnitario"));
+  const proveedorIdStr = formData.get("proveedorId")?.toString();
+  const proveedorId = proveedorIdStr ? Number(proveedorIdStr) : null;
 
   if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
     throw new Error("Faltan datos del producto.");
@@ -375,10 +380,9 @@ export async function actualizarProducto(formData: FormData) {
   if (!contenido || contenido <= 0) throw new Error("El contenido debe ser mayor a 0.");
   if (margenPorcentaje < 0) throw new Error("El margen no es válido.");
 
-  await prisma.$transaction(async (tx) => {
-    const producto = await tx.producto.findUniqueOrThrow({ where: { id } });
-    const precioVenta = Number(producto.precioCostoUnitario) * (1 + margenPorcentaje / 100);
+  const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
 
+  await prisma.$transaction(async (tx) => {
     await tx.producto.update({
       where: { id },
       data: {
@@ -390,7 +394,9 @@ export async function actualizarProducto(formData: FormData) {
         unidadMedida,
         contenido,
         margenPorcentaje,
+        precioCostoUnitario,
         precioVenta,
+        proveedorId,
       },
     });
 
