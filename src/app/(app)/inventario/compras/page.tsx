@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDate } from "@/lib/format";
-import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { eliminarCompra } from "../actions";
+import { ComprasAgrupadas } from "./compras-agrupadas";
 
 export default async function ComprasPage() {
   const session = await auth();
@@ -13,8 +12,22 @@ export default async function ComprasPage() {
     where: esRestringido ? { proveedorId: session?.user?.proveedorRestrictoId ?? -1 } : undefined,
     include: { proveedor: true, producto: true },
     orderBy: { fechaCompra: "desc" },
-    take: 100,
+    take: 200,
   });
+
+  const comprasSerialized = compras.map((c) => ({
+    id: c.id,
+    fechaCompra: c.fechaCompra,
+    cantidad: c.cantidad,
+    precioCostoUnitario: c.precioCostoUnitario.toString(),
+    descuentoPorcentaje: c.descuentoPorcentaje.toString(),
+    costoEnvio: c.costoEnvio?.toString() ?? null,
+    numeroPedido: c.numeroPedido,
+    facturado: c.facturado,
+    numeroFactura: c.numeroFactura,
+    proveedor: { nombre: c.proveedor.nombre },
+    producto: { sku: c.producto.sku, nombre: c.producto.nombre },
+  }));
 
   return (
     <div className="space-y-4">
@@ -30,82 +43,19 @@ export default async function ComprasPage() {
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-3 py-2">Fecha</th>
-              <th className="px-3 py-2">Proveedor</th>
-              <th className="px-3 py-2">Producto</th>
-              <th className="px-3 py-2 text-right">Cant.</th>
-              <th className="px-3 py-2 text-right">Costo unit.</th>
-              <th className="px-3 py-2 text-right">Desc.</th>
-              <th className="px-3 py-2 text-right">Envío</th>
-              <th className="px-3 py-2">Facturado</th>
-              {!esRestringido && <th className="px-3 py-2"></th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {compras.map((c) => (
-              <tr key={c.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap px-3 py-2">{formatDate(c.fechaCompra)}</td>
-                <td className="whitespace-nowrap px-3 py-2">{c.proveedor.nombre}</td>
-                <td className="px-3 py-2">
-                  {c.producto.sku} · {c.producto.nombre}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">{c.cantidad}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">
-                  {formatCurrency(c.precioCostoUnitario.toString())}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">
-                  {Number(c.descuentoPorcentaje) > 0 ? `${c.descuentoPorcentaje}%` : "-"}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">
-                  {formatCurrency((c.costoEnvio ?? 0).toString())}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2">
-                  {c.facturado ? (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-                      Sí {c.numeroFactura ? `· ${c.numeroFactura}` : ""}
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                      No
-                    </span>
-                  )}
-                </td>
-                {!esRestringido && (
-                  <td className="whitespace-nowrap px-3 py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/inventario/compras/${c.id}/editar`}
-                        className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                      >
-                        Editar
-                      </Link>
-                      <form action={eliminarCompra}>
-                        <input type="hidden" name="id" value={c.id} />
-                        <ConfirmSubmitButton
-                          confirmMessage="¿Eliminar esta compra? Se revertirá el stock cargado."
-                          className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                        >
-                          Eliminar
-                        </ConfirmSubmitButton>
-                      </form>
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
-            {compras.length === 0 && (
-              <tr>
-                <td colSpan={esRestringido ? 8 : 9} className="px-3 py-6 text-center text-gray-400">
-                  No hay compras registradas.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-400 font-medium pl-11">
+          <span>Fecha</span>
+          <span>Proveedor</span>
+          <span>N° Pedido</span>
+          <span>Productos</span>
+          <span className="text-right">Total · Estado</span>
+        </div>
+        <ComprasAgrupadas
+          compras={comprasSerialized}
+          esRestringido={esRestringido}
+          accionEliminar={eliminarCompra}
+        />
       </div>
     </div>
   );
