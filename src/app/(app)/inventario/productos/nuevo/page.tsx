@@ -85,10 +85,6 @@ export default async function NuevoProductoPage() {
             <input name="margenPorcentaje" type="number" step="0.01" min={0} defaultValue={30} required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Stock inicial</label>
-            <input name="stockActual" type="number" min={0} defaultValue={0} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-          </div>
         </div>
 
         <button type="submit" className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">

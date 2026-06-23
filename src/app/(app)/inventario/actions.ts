@@ -327,7 +327,7 @@ export async function crearProducto(formData: FormData) {
   const contenido = Number(formData.get("contenido") || 1);
   const margenPorcentaje = Number(formData.get("margenPorcentaje") || 30);
   const precioCostoUnitario = Number(formData.get("precioCostoUnitario") || 0);
-  const stockActual = Number(formData.get("stockActual") || 0);
+  const stockActual = 0; // El stock se mueve solo por compras, no al dar de alta
   const proveedorIdStr = formData.get("proveedorId")?.toString();
   const proveedorId = proveedorIdStr ? Number(proveedorIdStr) : null;
 
