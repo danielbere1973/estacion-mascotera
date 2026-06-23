@@ -315,6 +315,45 @@ export async function eliminarProducto(formData: FormData) {
   revalidatePath("/ventas/nueva");
 }
 
+export async function crearProducto(formData: FormData) {
+  const session = await requireAdmin();
+
+  const sku = formData.get("sku")?.toString().trim();
+  const nombre = formData.get("nombre")?.toString().trim();
+  const marca = formData.get("marca")?.toString().trim();
+  const categoria = formData.get("categoria")?.toString().trim();
+  const presentacion = formData.get("presentacion")?.toString() as Presentacion;
+  const unidadMedida = formData.get("unidadMedida")?.toString() as UnidadMedida;
+  const contenido = Number(formData.get("contenido") || 1);
+  const margenPorcentaje = Number(formData.get("margenPorcentaje") || 30);
+  const precioCostoUnitario = Number(formData.get("precioCostoUnitario") || 0);
+  const stockActual = Number(formData.get("stockActual") || 0);
+
+  if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
+    throw new Error("Faltan datos del producto.");
+  }
+
+  const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
+
+  await prisma.$transaction(async (tx) => {
+    const producto = await tx.producto.create({
+      data: { sku, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual },
+    });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "CREAR",
+      entidad: "PRODUCTO",
+      entidadId: producto.id,
+      detalle: `${nombre} (${sku})`,
+    });
+  });
+
+  revalidatePath("/inventario");
+  revalidatePath("/ventas/nueva");
+  redirect("/inventario");
+}
+
 export async function actualizarProducto(formData: FormData) {
   const session = await requireAdmin();
 

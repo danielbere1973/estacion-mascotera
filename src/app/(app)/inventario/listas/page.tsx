@@ -60,7 +60,15 @@ export default async function ListasMayoristaPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Listas de precios por proveedor</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Listas de precios por proveedor</h1>
+        <Link
+          href="/inventario/productos/nuevo"
+          className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+        >
+          + Nuevo producto
+        </Link>
+      </div>
 
       <form className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm">
         <div className="space-y-1">

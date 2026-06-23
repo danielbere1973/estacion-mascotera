@@ -89,12 +89,21 @@ export function CompraItems({ items }: { items: MayoristaItem[] }) {
                       )}
                     </div>
                   ) : (
-                    <input
-                      placeholder="SKU"
-                      value={row.sku}
-                      onChange={(e) => update(row.id, "sku", e.target.value)}
-                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                    />
+                    <div className="space-y-1">
+                      <input
+                        placeholder="SKU"
+                        value={row.sku}
+                        onChange={(e) => update(row.id, "sku", e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                      />
+                      <a
+                        href="/inventario/productos/nuevo"
+                        target="_blank"
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        + Crear producto nuevo
+                      </a>
+                    </div>
                   )}
                   {/* campos hidden para enviar al server */}
                   <input type="hidden" name="itemSku" value={row.sku} />

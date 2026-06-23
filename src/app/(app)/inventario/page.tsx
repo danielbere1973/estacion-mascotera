@@ -45,6 +45,12 @@ export default async function InventarioPage() {
             Ver compras
           </Link>
           <Link
+            href="/inventario/productos/nuevo"
+            className="rounded-md bg-green-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-green-700"
+          >
+            + Nuevo producto
+          </Link>
+          <Link
             href="/inventario/compra"
             className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700"
           >
