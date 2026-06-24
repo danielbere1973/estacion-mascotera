@@ -125,6 +125,7 @@ export async function actualizarItemMayorista(formData: FormData) {
 
   const proveedorId = formData.get("proveedorId")?.toString();
   const nombre = formData.get("nombre")?.toString().trim() || null;
+  const skuInterno = formData.get("skuInterno")?.toString().trim() || null;
   const precioCostoScraped = Number(formData.get("precioCostoScraped"));
   const precioConDescuentoStr = formData.get("precioConDescuento")?.toString().trim();
   const precioConDescuento = precioConDescuentoStr ? Number(precioConDescuentoStr) : null;
@@ -134,7 +135,7 @@ export async function actualizarItemMayorista(formData: FormData) {
 
   await prisma.historialStockMayorista.update({
     where: { id },
-    data: { nombre, precioCostoScraped, precioConDescuento, tamanios },
+    data: { nombre, skuInterno, precioCostoScraped, precioConDescuento, tamanios },
   });
 
   revalidatePath("/inventario/listas");

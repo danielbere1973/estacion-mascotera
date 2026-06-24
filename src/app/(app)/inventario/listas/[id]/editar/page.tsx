@@ -26,11 +26,22 @@ export default async function EditarItemMayoristaPage({
         <input type="hidden" name="id" value={item.id} />
         <input type="hidden" name="proveedorId" value={proveedorId ?? item.proveedorId ?? ""} />
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">SKU del proveedor</label>
-          <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-700">
-            {item.sku}
-          </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">SKU del proveedor</label>
+            <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-700">
+              {item.sku}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">SKU Interno</label>
+            <input
+              name="skuInterno"
+              defaultValue={item.skuInterno ?? ""}
+              placeholder="Ej: RC-URI-1.5"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+            />
+          </div>
         </div>
 
         <div className="space-y-1">

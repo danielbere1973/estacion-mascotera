@@ -286,7 +286,8 @@ model HistorialStockMayorista {
   proveedorId Int?
 
   // Código del producto en la lista de precios del mayorista (no es el SKU propio)
-  sku    String
+  sku       String
+  skuInterno String?
   nombre String?
 
   precioCostoScraped   Decimal

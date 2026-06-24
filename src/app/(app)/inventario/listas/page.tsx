@@ -23,6 +23,7 @@ export default async function ListasMayoristaPage({
   let items: {
     id: number;
     sku: string;
+    skuInterno: string | null;
     nombre: string | null;
     precioCostoScraped: string;
     precioConDescuento: string | null;
@@ -46,6 +47,7 @@ export default async function ListasMayoristaPage({
       items.push({
         id: h.id,
         sku: h.sku,
+        skuInterno: h.skuInterno,
         nombre: h.nombre,
         precioCostoScraped: h.precioCostoScraped.toString(),
         precioConDescuento: h.precioConDescuento?.toString() ?? null,
@@ -102,6 +104,7 @@ export default async function ListasMayoristaPage({
             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-3 py-2">SKU proveedor</th>
+                <th className="px-3 py-2">SKU Interno</th>
                 <th className="px-3 py-2">Nombre</th>
                 <th className="px-3 py-2">Tamaño</th>
                 <th className="px-3 py-2 text-right">Precio lista</th>
@@ -114,6 +117,9 @@ export default async function ListasMayoristaPage({
               {items.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{item.sku}</td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-blue-700">
+                    {item.skuInterno ?? <span className="text-gray-300">—</span>}
+                  </td>
                   <td className="px-3 py-2">{item.nombre}</td>
                   <td className="whitespace-nowrap px-3 py-2">{item.tamanios ?? "-"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
@@ -181,7 +187,7 @@ export default async function ListasMayoristaPage({
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-gray-400">
+                  <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
                     Este proveedor no tiene una lista de precios importada.
                   </td>
                 </tr>
