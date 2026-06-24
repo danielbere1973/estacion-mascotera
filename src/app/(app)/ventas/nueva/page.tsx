@@ -4,7 +4,7 @@ import { ClienteSelector } from "./cliente-selector";
 import { VentaItems } from "./venta-items";
 
 export default async function NuevaVentaPage() {
-  const [clientes, productos, proveedores, comprasPorProducto, usuarios] = await Promise.all([
+  const [clientes, productos, proveedores, comprasPorProducto, usuarios, mediosPago] = await Promise.all([
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       where: { stockActual: { gt: 0 } },
@@ -27,6 +27,7 @@ export default async function NuevaVentaPage() {
       orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
       select: { id: true, nombre: true, apellido: true },
     }),
+    prisma.medioPago.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
   ]);
 
   const proveedorIdsPorProducto = new Map<number, number[]>();
@@ -80,12 +81,17 @@ export default async function NuevaVentaPage() {
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Medio de pago</label>
-            <input
+            <select
               name="medioPago"
               required
-              placeholder="Transferencia, Efectivo, Mercado Pago..."
+              defaultValue=""
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+            >
+              <option value="" disabled>Seleccionar...</option>
+              {mediosPago.map((m) => (
+                <option key={m.id} value={m.nombre}>{m.nombre}</option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-1">

@@ -335,6 +335,7 @@ export async function crearProducto(formData: FormData) {
   if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
     throw new Error("Faltan datos del producto.");
   }
+  if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
 
   const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
 
