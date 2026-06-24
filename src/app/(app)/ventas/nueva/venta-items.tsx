@@ -32,6 +32,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
   ]);
   const [nextKey, setNextKey] = useState(1);
   const [filtroProveedorId, setFiltroProveedorId] = useState("");
+  const [costoEnvio, setCostoEnvio] = useState(0);
 
   function addRow() {
     setRows((r) => [
@@ -250,15 +251,37 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
         + Agregar producto
       </button>
 
-      <div className="text-right text-sm">
-        {totalConDescuento !== totalBruto && (
-          <p className="text-gray-400 line-through">
-            {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(totalBruto)}
+      <div className="flex items-end justify-between gap-4 border-t border-gray-100 pt-3">
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Costo de envío</label>
+          <input
+            type="number"
+            name="costoEnvio"
+            min={0}
+            step="0.01"
+            value={costoEnvio}
+            onChange={(e) => setCostoEnvio(Number(e.target.value) || 0)}
+            className="w-36 rounded-md border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div className="text-right text-sm">
+          {totalConDescuento !== totalBruto && (
+            <p className="text-gray-400 line-through">
+              {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(totalBruto)}
+            </p>
+          )}
+          {costoEnvio > 0 && (
+            <p className="text-xs text-gray-500">
+              Productos: {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(totalConDescuento)}
+              {" + Envío: "}
+              {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(costoEnvio)}
+            </p>
+          )}
+          <p className="font-semibold text-gray-900 text-base">
+            Total: {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(totalConDescuento + costoEnvio)}
           </p>
-        )}
-        <p className="font-semibold text-gray-700">
-          Total a cobrar: {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(totalConDescuento)}
-        </p>
+        </div>
       </div>
     </div>
   );

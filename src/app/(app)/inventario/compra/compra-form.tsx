@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ProveedorSelector } from "../proveedor-selector";
 import { CompraItems } from "./compra-items";
+import { FacturadoField } from "@/components/facturado-field";
 import type { MayoristaItem } from "./mayorista-producto-selector";
 
 type Proveedor = { id: number; nombre: string };
@@ -84,15 +85,7 @@ export function CompraForm({
         </div>
 
         <div className="flex flex-col gap-2 justify-end">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <input type="checkbox" name="facturado" className="h-4 w-4" />
-            Facturado
-          </label>
-          <input
-            name="numeroFactura"
-            placeholder="N° de factura (opcional)"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
+          <FacturadoField />
         </div>
       </div>
 

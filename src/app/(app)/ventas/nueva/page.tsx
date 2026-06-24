@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { crearVenta } from "../actions";
 import { ClienteSelector } from "./cliente-selector";
 import { VentaItems } from "./venta-items";
+import { FacturadoField } from "@/components/facturado-field";
 
 export default async function NuevaVentaPage() {
   const [clientes, productos, proveedores, comprasPorProducto, usuarios, mediosPago] = await Promise.all([
@@ -125,34 +126,7 @@ export default async function NuevaVentaPage() {
 
         <VentaItems productos={productosPlain} proveedores={proveedores} />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Costo de envío</label>
-            <input
-              type="number"
-              name="costoEnvio"
-              min={0}
-              step="0.01"
-              defaultValue={0}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div className="flex items-end gap-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <input type="checkbox" name="facturado" className="h-4 w-4" />
-              Facturado
-            </label>
-          </div>
-
-          <div className="space-y-1 sm:col-span-2">
-            <label className="text-sm font-medium text-gray-700">N° de factura (opcional)</label>
-            <input
-              name="numeroFactura"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-        </div>
+        <FacturadoField />
 
         <button
           type="submit"
