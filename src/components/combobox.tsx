@@ -39,6 +39,7 @@ export function Combobox({
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLUListElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
@@ -48,7 +49,10 @@ export function Combobox({
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const inContainer = containerRef.current?.contains(target);
+      const inDropdown = dropdownRef.current?.contains(target);
+      if (!inContainer && !inDropdown) {
         setOpen(false);
         setQuery(selected?.label ?? "");
       }
@@ -78,6 +82,7 @@ export function Combobox({
 
   const dropdown = open ? (
     <ul
+      ref={dropdownRef}
       style={dropdownStyle}
       className="max-h-64 overflow-auto rounded-md border border-gray-200 bg-white text-sm shadow-lg"
     >
