@@ -23,6 +23,7 @@ const adminLinks = [
   { href: "/clientes", label: "Clientes" },
   { href: "/usuarios", label: "Usuarios" },
   { href: "/actividad", label: "Actividad" },
+  { href: "/admin/medios-pago", label: "Medios de pago" },
 ];
 
 export function Nav({
