@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { registrarVentaConsignacion } from "../actions";
+import { registrarVentaConsignacion, cerrarConsignacion } from "../actions";
 import { FacturadoField } from "@/components/facturado-field";
 
 const fmt = (n: number) =>
@@ -37,7 +37,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
           <Link href="/consignaciones" className="text-xs text-gray-400 hover:text-gray-600">← Consignaciones</Link>
           <h1 className="text-xl font-semibold text-gray-900 mt-1">
@@ -47,10 +47,20 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
             {new Date(cons.fecha).toLocaleDateString("es-AR")} · #{cons.id}
             {" · "}
             <span className={cons.estado === "ABIERTA" ? "text-green-600" : "text-gray-500"}>
-              {cons.estado}
+              {cons.estado === "ABIERTA" ? "Abierta" : "Cerrada"}
             </span>
           </p>
         </div>
+        {cons.estado === "ABIERTA" && (
+          <form action={cerrarConsignacion}>
+            <input type="hidden" name="id" value={cons.id} />
+            <button type="submit"
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+              onClick={(e) => { if (!confirm("¿Cerrar esta consignación?")) e.preventDefault(); }}>
+              Cerrar consignación
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Resumen */}

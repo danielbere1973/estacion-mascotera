@@ -84,6 +84,7 @@ export default async function InventarioPage() {
               <th className="px-3 py-2">Categoría</th>
               <th className="px-3 py-2">Contenido</th>
               <th className="px-3 py-2 text-right">Stock</th>
+              <th className="px-3 py-2 text-right text-orange-600">Consig.</th>
               <th className="px-3 py-2 text-right">Costo</th>
               <th className="px-3 py-2 text-right">Margen</th>
               <th className="px-3 py-2 text-right">Precio Lista</th>
@@ -109,6 +110,9 @@ export default async function InventarioPage() {
                   >
                     {p.stockActual}
                     {bajoStock && " ⚠"}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right text-orange-600">
+                    {p.stockEnConsignacion > 0 ? p.stockEnConsignacion : "—"}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     {formatCurrency(p.precioCostoUnitario.toString())}

@@ -79,7 +79,8 @@ model Producto {
   unidadMedida UnidadMedida @default(UNIDAD)
   contenido    Decimal      @default(1)
 
-  stockActual Int @default(0)
+  stockActual          Int @default(0)
+  stockEnConsignacion  Int @default(0) // unidades entregadas a socios, todavía no vendidas
 
   // Precios
   precioCostoUnitario Decimal @default(0)

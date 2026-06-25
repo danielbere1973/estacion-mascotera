@@ -78,13 +78,16 @@ export async function crearConsignacion(formData: FormData) {
     },
   });
 
-  // Si ENTREGAMOS: decrementar stock de nuestros productos
+  // Si ENTREGAMOS: mover stock de "disponible" a "en consignación"
   if (direccion === "ENTREGAMOS") {
     for (let i = 0; i < cantidades.length; i++) {
       if (productoIds[i]) {
         await prisma.producto.update({
           where: { id: Number(productoIds[i]) },
-          data: { stockActual: { decrement: cantidades[i] } },
+          data: {
+            stockActual: { decrement: cantidades[i] },
+            stockEnConsignacion: { increment: cantidades[i] },
+          },
         });
       }
     }
@@ -119,8 +122,13 @@ export async function registrarVentaConsignacion(formData: FormData) {
       where: { id: detalleId },
       data: { cantidadVendida: { increment: cantidad } },
     });
-    // Si RECIBIMOS y vendemos: no afecta nuestro stock (nunca entró)
-    // Si ENTREGAMOS y el socio vendió: tampoco afecta (ya salió al crear la consignación)
+    // Si ENTREGAMOS y el socio vendió: bajar stockEnConsignacion (ya salió del stock disponible al crear la consignación)
+    if (detalle.consignacion.direccion === "ENTREGAMOS" && detalle.productoId) {
+      await tx.producto.update({
+        where: { id: detalle.productoId },
+        data: { stockEnConsignacion: { decrement: cantidad } },
+      });
+    }
   });
 
   revalidatePath(`/consignaciones/${detalle.consignacionId}`);
@@ -173,6 +181,14 @@ export async function generarLiquidacion(formData: FormData) {
 
   revalidatePath("/consignaciones/liquidaciones");
   redirect(`/consignaciones/liquidaciones/${liquidacion.id}`);
+}
+
+export async function cerrarConsignacion(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  await prisma.consignacion.update({ where: { id }, data: { estado: "CERRADA" } });
+  revalidatePath(`/consignaciones/${id}`);
+  revalidatePath("/consignaciones");
 }
 
 export async function registrarPagoLiquidacion(formData: FormData) {
