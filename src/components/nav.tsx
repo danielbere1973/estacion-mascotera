@@ -10,6 +10,7 @@ const links = [
   { href: "/", label: "Dashboard" },
   { href: "/ventas", label: "Ventas" },
   { href: "/inventario", label: "Inventario" },
+  { href: "/consignaciones", label: "Consignaciones" },
   { href: "/gastos", label: "Gastos" },
   { href: "/reportes", label: "Reportes" },
 ];
