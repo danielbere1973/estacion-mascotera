@@ -76,7 +76,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           <p className="text-lg font-semibold text-gray-900">{totalVendido}</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-center">
-          <p className="text-xs text-gray-400">{esEntregamos ? "A cobrar (precio piso)" : "A pagar (precio piso)"}</p>
+          <p className="text-xs text-gray-400">{esEntregamos ? "A cobrar (costo + 1/3 ganancia)" : "A pagar (costo + 1/3 ganancia)"}</p>
           <p className="text-lg font-semibold text-blue-700">{fmt(montoLiquidar)}</p>
         </div>
       </div>
