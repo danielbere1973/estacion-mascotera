@@ -118,7 +118,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                     </div>
                     <div>
                       <label className="text-xs text-gray-400">Precio de venta</label>
-                      <input name="precioVentaReal" type="number" min={0} step={0.01} defaultValue={Number(item.precioCosto)}
+                      <input name="precioVentaReal" type="number" min={0} step={0.01} defaultValue={Number(item.precioPiso)}
                         className="w-32 rounded-md border border-gray-300 px-2 py-1 text-sm" />
                     </div>
                     <button type="submit"
