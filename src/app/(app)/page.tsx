@@ -52,6 +52,11 @@ export default async function DashboardPage({
       value: metrics.totalComprasMercaderia,
       hint: "Costo de los productos comprados en el período",
     },
+    {
+      label: "Ganancia Consignaciones",
+      value: metrics.gananciaConsignaciones,
+      hint: "2/3 de la ganancia en ventas por consignación",
+    },
   ];
 
   const gastosData = metrics.gastosPorCategoria.map((g) => ({

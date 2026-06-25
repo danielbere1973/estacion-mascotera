@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { registrarVentaConsignacion } from "../actions";
+import { FacturadoField } from "@/components/facturado-field";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -95,22 +96,25 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
 
               {/* Registrar venta */}
               {disponible > 0 && cons.estado === "ABIERTA" && (
-                <form action={registrarVentaConsignacion} className="flex gap-2 items-end mb-3">
+                <form action={registrarVentaConsignacion} className="space-y-2 mb-3">
                   <input type="hidden" name="detalleId" value={item.id} />
-                  <div>
-                    <label className="text-xs text-gray-400">Cant. vendida</label>
-                    <input name="cantidad" type="number" min={1} max={disponible} defaultValue={1}
-                      className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm" />
+                  <div className="flex gap-2 items-end flex-wrap">
+                    <div>
+                      <label className="text-xs text-gray-400">Cant. vendida</label>
+                      <input name="cantidad" type="number" min={1} max={disponible} defaultValue={1}
+                        className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400">Precio de venta</label>
+                      <input name="precioVentaReal" type="number" min={0} step={0.01} defaultValue={Number(item.precioCosto)}
+                        className="w-32 rounded-md border border-gray-300 px-2 py-1 text-sm" />
+                    </div>
+                    <button type="submit"
+                      className="rounded-md bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700">
+                      Registrar venta
+                    </button>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-400">Precio de venta</label>
-                    <input name="precioVentaReal" type="number" min={0} defaultValue={Number(item.precioPiso)}
-                      className="w-32 rounded-md border border-gray-300 px-2 py-1 text-sm" />
-                  </div>
-                  <button type="submit"
-                    className="rounded-md bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700">
-                    Registrar venta
-                  </button>
+                  <FacturadoField />
                 </form>
               )}
 

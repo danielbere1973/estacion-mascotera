@@ -19,7 +19,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   const fechaCompra = fechaWhere(rango);
   const fechaGasto = fechaWhere(rango);
 
-  const [detalles, ventasEnvio, compras, gastos, productos, ventasNoFact, comprasNoFact] =
+  const [detalles, ventasEnvio, compras, gastos, productos, ventasNoFact, comprasNoFact, ventasConsig] =
     await Promise.all([
       prisma.detalleVenta.findMany({
         where: fechaVenta ? { venta: { fechaVenta } } : undefined,
@@ -56,14 +56,35 @@ export async function getDashboardMetrics(rango: RangoFechas) {
         where: { ...(fechaCompra ? { fechaCompra } : {}), facturado: false },
         select: { cantidad: true, precioCostoUnitario: true, costoEnvio: true },
       }),
+      prisma.ventaConsignacion.findMany({
+        where: fechaVenta ? { fecha: fechaVenta } : undefined,
+        select: {
+          cantidad: true,
+          precioVentaReal: true,
+          detalle: { select: { precioCosto: true, consignacion: { select: { direccion: true } } } },
+        },
+      }),
     ]);
 
   let totalFacturado = 0;
   let costoMercaderiaVendida = 0;
+  let gananciaConsignaciones = 0;
 
   for (const d of detalles) {
     totalFacturado += d.cantidad * Number(d.precioVentaUnitario);
     costoMercaderiaVendida += d.cantidad * Number(d.producto.precioCostoUnitario);
+  }
+
+  // Consignaciones: nuestra ganancia = 2/3 de (precioVenta - costo)
+  for (const v of ventasConsig) {
+    const costo = Number(v.detalle.precioCosto);
+    const venta = Number(v.precioVentaReal);
+    const ganancia = venta - costo;
+    gananciaConsignaciones += (ganancia * 2 / 3) * v.cantidad;
+    // Si RECIBIMOS (nosotros vendemos), sumamos al facturado
+    if (v.detalle.consignacion.direccion === "RECIBIMOS") {
+      totalFacturado += venta * v.cantidad;
+    }
   }
 
   const costosEnvioVentas = Number(ventasEnvio._sum.costoEnvio ?? 0);
@@ -82,7 +103,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   const totalGastado = totalComprasMercaderia + totalGastosFijos;
 
   const rentabilidadNeta =
-    totalFacturado - costoMercaderiaVendida - costosEnvioVentas - totalGastosFijos;
+    totalFacturado - costoMercaderiaVendida - costosEnvioVentas - totalGastosFijos + gananciaConsignaciones;
 
   const valorStock = productos.reduce(
     (acc, p) => acc + p.stockActual * Number(p.precioCostoUnitario),
@@ -118,6 +139,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     gastosPorCategoria,
     ventasNoFacturadas,
     comprasNoFacturadas,
+    gananciaConsignaciones,
   };
 }
 
@@ -212,6 +234,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     gastosPorCategoria: [] as { categoria: CategoriaGasto; monto: number }[],
     ventasNoFacturadas,
     comprasNoFacturadas,
+    gananciaConsignaciones: 0,
   };
 }
 

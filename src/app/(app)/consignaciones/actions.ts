@@ -99,6 +99,8 @@ export async function registrarVentaConsignacion(formData: FormData) {
   const detalleId = Number(formData.get("detalleId"));
   const cantidad = Number(formData.get("cantidad"));
   const precioVentaReal = Number(formData.get("precioVentaReal"));
+  const facturado = formData.get("facturado") === "on";
+  const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
 
   const detalle = await prisma.detalleConsignacion.findUnique({
     where: { id: detalleId },
@@ -111,7 +113,7 @@ export async function registrarVentaConsignacion(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     await tx.ventaConsignacion.create({
-      data: { detalleConsignacionId: detalleId, cantidad, precioVentaReal },
+      data: { detalleConsignacionId: detalleId, cantidad, precioVentaReal, facturado, numeroFactura },
     });
     await tx.detalleConsignacion.update({
       where: { id: detalleId },

@@ -393,10 +393,9 @@ model VentaConsignacion {
   fecha                 DateTime @default(now())
 
   cantidad        Int
-  precioVentaReal Decimal // precio al que realmente se vendió
-  // montoALiquidar = precioPiso * cantidad (siempre fijo para el dueño)
-  // gananciaExtra  = max(0, precioVentaReal - precioPiso) * cantidad → 100% del vendedor
-  // perdidaAsumida = max(0, precioPiso - precioVentaReal) * cantidad → la absorbe el vendedor
+  precioVentaReal Decimal
+  facturado       Boolean @default(false)
+  numeroFactura   String?
 
   liquidacionId Int?
   liquidacion   LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])

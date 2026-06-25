@@ -42,15 +42,17 @@ export default async function ConsignacionesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {socios.map((socio) => {
-            // Calcular saldo pendiente
             let aCobrarnos = 0;
             let aCobrarles = 0;
             for (const c of socio.consignaciones) {
               for (const item of c.items) {
-                const vendido = item.ventas.reduce((s, v) => s + v.cantidad, 0);
-                const monto = vendido * Number(item.precioPiso);
-                if (c.direccion === "ENTREGAMOS") aCobrarnos += monto;
-                else aCobrarles += monto;
+                const costo = Number(item.precioCosto);
+                for (const v of item.ventas) {
+                  const ganancia = Number(v.precioVentaReal) - costo;
+                  const monto = (costo + ganancia / 3) * v.cantidad;
+                  if (c.direccion === "ENTREGAMOS") aCobrarnos += monto;
+                  else aCobrarles += monto;
+                }
               }
             }
             const saldo = aCobrarnos - aCobrarles;
