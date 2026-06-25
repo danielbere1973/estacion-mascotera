@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { actualizarVentaConsignacion } from "../actions";
+import { actualizarVentaConsignacion, eliminarVentaConsignacion } from "../actions";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -72,12 +72,18 @@ export function VentaRow({ venta }: Props) {
     <div className="flex justify-between items-center text-xs text-gray-600 group">
       <div className="flex items-center gap-2">
         <span>{new Date(venta.fecha).toLocaleDateString("es-AR")} · {venta.cantidad} u. a {fmt(venta.precioVentaReal)}</span>
-        {!venta.liquidacionId && (
-          <button onClick={() => setEditando(true)}
-            className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 transition-opacity">
-            Editar
+        <button onClick={() => setEditando(true)}
+          className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 transition-opacity">
+          Editar
+        </button>
+        <form action={eliminarVentaConsignacion}
+          onSubmit={(e) => { if (!confirm("¿Eliminar esta venta?")) e.preventDefault(); }}>
+          <input type="hidden" name="id" value={venta.id} />
+          <button type="submit"
+            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity">
+            Eliminar
           </button>
-        )}
+        </form>
       </div>
       <span className="text-gray-400">
         A liquidar: {fmt(montoLiq * venta.cantidad)} · {venta.liquidacionId ? "Liquidado" : "Pendiente"}

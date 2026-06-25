@@ -183,6 +183,33 @@ export async function generarLiquidacion(formData: FormData) {
   redirect(`/consignaciones/liquidaciones/${liquidacion.id}`);
 }
 
+export async function eliminarVentaConsignacion(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+
+  const venta = await prisma.ventaConsignacion.findUnique({
+    where: { id },
+    include: { detalle: { include: { consignacion: true } } },
+  });
+  if (!venta) throw new Error("Venta no encontrada.");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.ventaConsignacion.delete({ where: { id } });
+    await tx.detalleConsignacion.update({
+      where: { id: venta.detalleConsignacionId },
+      data: { cantidadVendida: { decrement: venta.cantidad } },
+    });
+    if (venta.detalle.consignacion.direccion === "ENTREGAMOS" && venta.detalle.productoId) {
+      await tx.producto.update({
+        where: { id: venta.detalle.productoId },
+        data: { stockEnConsignacion: { increment: venta.cantidad } },
+      });
+    }
+  });
+
+  revalidatePath(`/consignaciones/${venta.detalle.consignacionId}`);
+}
+
 export async function actualizarVentaConsignacion(formData: FormData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
