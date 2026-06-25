@@ -105,23 +105,25 @@ export function Nav({
           </button>
         </div>
 
-        <nav className="flex gap-1 overflow-x-auto items-center">
-          {visibleLinks.map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${
-                  active ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+        <div className="flex items-center gap-1">
+          <nav className="flex gap-1 overflow-x-auto items-center">
+            {visibleLinks.map((link) => {
+              const active = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${
+                    active ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
           {isAdmin && <AdminDropdown pathname={pathname} />}
-        </nav>
+        </div>
 
         <div className="hidden items-center gap-3 sm:flex">
           <span className="text-sm text-gray-500">{userName}</span>
