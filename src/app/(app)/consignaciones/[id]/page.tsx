@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { registrarVentaConsignacion, cerrarConsignacion } from "../actions";
 import { FacturadoField } from "@/components/facturado-field";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
+import { VentaRow } from "./venta-row";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -134,16 +135,17 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                 <div className="border-t border-gray-100 pt-2 mt-2 space-y-1">
                   <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ventas registradas</p>
                   {item.ventas.map((v) => (
-                    <div key={v.id} className="flex justify-between text-xs text-gray-600">
-                      <span>{new Date(v.fecha).toLocaleDateString("es-AR")} · {v.cantidad} u. a {fmt(Number(v.precioVentaReal))}</span>
-                      <span className="text-gray-400">
-                        {(() => {
-                          const c = Number(item.precioCosto);
-                          const g = Number(v.precioVentaReal) - c;
-                          return `A liquidar: ${fmt((c + g / 3) * v.cantidad)}`;
-                        })()} · {v.liquidacionId ? "Liquidado" : "Pendiente"}
-                      </span>
-                    </div>
+                    <VentaRow key={v.id} venta={{
+                      id: v.id,
+                      fecha: v.fecha,
+                      cantidad: v.cantidad,
+                      precioVentaReal: Number(v.precioVentaReal),
+                      precioCosto: Number(item.precioCosto),
+                      liquidacionId: v.liquidacionId,
+                      facturado: v.facturado,
+                      numeroFactura: v.numeroFactura,
+                      maxCantidad: item.cantidad,
+                    }} />
                   ))}
                 </div>
               )}

@@ -183,6 +183,49 @@ export async function generarLiquidacion(formData: FormData) {
   redirect(`/consignaciones/liquidaciones/${liquidacion.id}`);
 }
 
+export async function actualizarVentaConsignacion(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  const precioVentaReal = Number(formData.get("precioVentaReal"));
+  const cantidad = Number(formData.get("cantidad"));
+  const facturado = formData.get("facturado") === "on";
+  const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+
+  const venta = await prisma.ventaConsignacion.findUnique({
+    where: { id },
+    include: { detalle: { include: { consignacion: true } } },
+  });
+  if (!venta) throw new Error("Venta no encontrada.");
+
+  const otrasCantidades = await prisma.ventaConsignacion.aggregate({
+    where: { detalleConsignacionId: venta.detalleConsignacionId, id: { not: id } },
+    _sum: { cantidad: true },
+  });
+  const disponible = venta.detalle.cantidad - (Number(otrasCantidades._sum.cantidad) ?? 0);
+  if (cantidad > disponible) throw new Error(`Máximo disponible: ${disponible}`);
+
+  const diferenciaCantidad = cantidad - venta.cantidad;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.ventaConsignacion.update({
+      where: { id },
+      data: { precioVentaReal, cantidad, facturado, numeroFactura },
+    });
+    await tx.detalleConsignacion.update({
+      where: { id: venta.detalleConsignacionId },
+      data: { cantidadVendida: { increment: diferenciaCantidad } },
+    });
+    if (venta.detalle.consignacion.direccion === "ENTREGAMOS" && venta.detalle.productoId) {
+      await tx.producto.update({
+        where: { id: venta.detalle.productoId },
+        data: { stockEnConsignacion: { decrement: diferenciaCantidad } },
+      });
+    }
+  });
+
+  revalidatePath(`/consignaciones/${venta.detalle.consignacionId}`);
+}
+
 export async function cerrarConsignacion(formData: FormData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
