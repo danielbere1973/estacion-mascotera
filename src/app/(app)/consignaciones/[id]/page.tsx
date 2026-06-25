@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { registrarVentaConsignacion, cerrarConsignacion } from "../actions";
 import { FacturadoField } from "@/components/facturado-field";
+import { ConfirmSubmitButton } from "@/components/confirm-button";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -54,11 +55,11 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
         {cons.estado === "ABIERTA" && (
           <form action={cerrarConsignacion}>
             <input type="hidden" name="id" value={cons.id} />
-            <button type="submit"
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-              onClick={(e) => { if (!confirm("¿Cerrar esta consignación?")) e.preventDefault(); }}>
+            <ConfirmSubmitButton
+              confirmMessage="¿Cerrar esta consignación?"
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
               Cerrar consignación
-            </button>
+            </ConfirmSubmitButton>
           </form>
         )}
       </div>
