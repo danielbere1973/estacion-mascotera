@@ -92,6 +92,8 @@ model Producto {
   compras        Compra[]
   detalleVentas  DetalleVenta[]
   historialStock HistorialStockMayorista[]
+  detallesConsignacion DetalleConsignacion[]
+  ordenesDropshipping  OrdenDropshipping[]
 
   @@index([categoria])
 }
@@ -106,10 +108,11 @@ model Proveedor {
   direccion String?
   contacto  String?
 
-  compras           Compra[]
-  historialMayorista HistorialStockMayorista[]
+  compras              Compra[]
+  historialMayorista   HistorialStockMayorista[]
   usuariosRestringidos Usuario[] @relation("UsuarioProveedorRestricto")
-  productos         Producto[] @relation("ProductoProveedor")
+  productos            Producto[] @relation("ProductoProveedor")
+  sociosConsignacion   SocioConsignacion[]
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +158,8 @@ model Cliente {
   telefono  String
   email     String?
 
-  ventas Venta[]
+  ventas              Venta[]
+  ordenesDropshipping OrdenDropshipping[]
 }
 
 // ---------------------------------------------------------------------------
@@ -314,4 +318,150 @@ model HistorialStockMayorista {
   @@index([fechaImportacion])
   @@index([sku])
   @@index([proveedorId])
+}
+
+// ---------------------------------------------------------------------------
+// Módulo de Consignaciones y Dropshipping
+// ---------------------------------------------------------------------------
+
+model SocioConsignacion {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  contacto    String?
+  notas       String?
+
+  // Vínculo opcional con proveedor existente (hereda lista de precios como precios piso)
+  proveedorId Int?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+
+  consignaciones    Consignacion[]
+  liquidaciones     LiquidacionConsignacion[]
+  ordenesDropshipping OrdenDropshipping[]
+}
+
+enum DireccionConsignacion {
+  ENTREGAMOS  // nosotros le damos mercadería al socio
+  RECIBIMOS   // el socio nos da mercadería a nosotros
+}
+
+enum EstadoConsignacion {
+  ABIERTA
+  CERRADA
+}
+
+model Consignacion {
+  id      Int @id @default(autoincrement())
+  socioId Int
+
+  direccion DireccionConsignacion
+  estado    EstadoConsignacion @default(ABIERTA)
+  fecha     DateTime           @default(now())
+  notas     String?
+
+  socio       SocioConsignacion        @relation(fields: [socioId], references: [id])
+  items       DetalleConsignacion[]
+  liquidacion LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
+  liquidacionId Int?
+
+  @@index([socioId])
+  @@index([estado])
+}
+
+model DetalleConsignacion {
+  id             Int @id @default(autoincrement())
+  consignacionId Int
+
+  productoId  Int?    // producto del catálogo (si existe)
+  descripcion String? // descripción libre para productos sin SKU en el sistema
+
+  cantidad         Int
+  precioCosto      Decimal // costo real del dueño de la mercadería
+  precioPiso       Decimal // precio mínimo acordado — el dueño siempre cobra esto
+  cantidadVendida  Int     @default(0)
+
+  consignacion Consignacion @relation(fields: [consignacionId], references: [id])
+  producto     Producto?    @relation(fields: [productoId], references: [id])
+  ventas       VentaConsignacion[]
+
+  @@index([consignacionId])
+}
+
+model VentaConsignacion {
+  id                    Int      @id @default(autoincrement())
+  detalleConsignacionId Int
+  fecha                 DateTime @default(now())
+
+  cantidad        Int
+  precioVentaReal Decimal // precio al que realmente se vendió
+  // montoALiquidar = precioPiso * cantidad (siempre fijo para el dueño)
+  // gananciaExtra  = max(0, precioVentaReal - precioPiso) * cantidad → 100% del vendedor
+  // perdidaAsumida = max(0, precioPiso - precioVentaReal) * cantidad → la absorbe el vendedor
+
+  liquidacionId Int?
+  liquidacion   LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
+  detalle       DetalleConsignacion      @relation(fields: [detalleConsignacionId], references: [id])
+
+  @@index([detalleConsignacionId])
+  @@index([liquidacionId])
+}
+
+model LiquidacionConsignacion {
+  id      Int @id @default(autoincrement())
+  socioId Int
+
+  fechaDesde DateTime
+  fechaHasta DateTime
+  fecha      DateTime @default(now())
+
+  // Calculados al generar la liquidación
+  totalACobrarnos Decimal // ellos nos deben (vendieron nuestros productos)
+  totalACobrarles Decimal // nosotros les debemos (vendimos sus productos)
+  saldo           Decimal // positivo = nos deben, negativo = les debemos
+
+  pagado    Boolean   @default(false)
+  fechaPago DateTime?
+  notas     String?
+
+  socio          SocioConsignacion   @relation(fields: [socioId], references: [id])
+  consignaciones Consignacion[]
+  ventas         VentaConsignacion[]
+
+  @@index([socioId])
+}
+
+enum EstadoDropshipping {
+  PENDIENTE
+  DESPACHADO
+  ENTREGADO
+  CANCELADO
+}
+
+model OrdenDropshipping {
+  id      Int @id @default(autoincrement())
+  socioId Int // el proveedor que despacha
+
+  clienteId     Int?
+  clienteNombre String? // para clientes sin ficha en el sistema
+
+  fecha  DateTime           @default(now())
+  estado EstadoDropshipping @default(PENDIENTE)
+
+  productoId  Int?
+  descripcion String? // descripción libre si no está en el catálogo
+  cantidad    Int
+  precioCosto Decimal // lo que le pagamos al proveedor
+  precioVenta Decimal // lo que le cobramos al cliente
+
+  facturadoAlCliente    Boolean @default(false)
+  facturadoPorProveedor Boolean @default(false)
+  numeroFacturaCliente  String?
+  numeroFacturaProveedor String?
+  notas                 String?
+
+  socio    SocioConsignacion @relation(fields: [socioId], references: [id])
+  producto Producto?         @relation(fields: [productoId], references: [id])
+  cliente  Cliente?          @relation(fields: [clienteId], references: [id])
+
+  @@index([socioId])
+  @@index([estado])
 }
