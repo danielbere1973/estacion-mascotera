@@ -263,10 +263,58 @@ export async function cerrarConsignacion(formData: FormData) {
 
 export async function registrarPagoLiquidacion(formData: FormData) {
   await requireAdmin();
-  const id = Number(formData.get("id"));
-  await prisma.liquidacionConsignacion.update({
-    where: { id },
-    data: { pagado: true, fechaPago: new Date() },
+  const liquidacionId = Number(formData.get("liquidacionId"));
+  const monto = Number(formData.get("monto"));
+  const notas = formData.get("notas")?.toString().trim() || null;
+  const fecha = new Date(formData.get("fecha")?.toString() ?? new Date().toISOString());
+
+  if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.pagoLiquidacion.create({ data: { liquidacionId, monto, notas, fecha } });
+
+    // Verificar si el total pagado cubre el saldo
+    const liq = await tx.liquidacionConsignacion.findUnique({
+      where: { id: liquidacionId },
+      include: { pagos: true },
+    });
+    if (!liq) throw new Error("Liquidación no encontrada.");
+
+    const totalPagado = liq.pagos.reduce((s, p) => s + Number(p.monto), 0);
+    if (totalPagado >= Math.abs(Number(liq.saldo))) {
+      await tx.liquidacionConsignacion.update({
+        where: { id: liquidacionId },
+        data: { pagado: true, fechaPago: new Date() },
+      });
+    }
   });
+
+  revalidatePath(`/consignaciones/liquidaciones/${liquidacionId}`);
   revalidatePath("/consignaciones/liquidaciones");
+}
+
+export async function eliminarPagoLiquidacion(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  const pago = await prisma.pagoLiquidacion.findUnique({ where: { id }, include: { liquidacion: true } });
+  if (!pago) throw new Error("Pago no encontrado.");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.pagoLiquidacion.delete({ where: { id } });
+    // Recalcular si sigue pagada
+    const liq = await tx.liquidacionConsignacion.findUnique({
+      where: { id: pago.liquidacionId },
+      include: { pagos: true },
+    });
+    if (!liq) return;
+    const totalPagado = liq.pagos.reduce((s, p) => s + Number(p.monto), 0);
+    if (totalPagado < Math.abs(Number(liq.saldo))) {
+      await tx.liquidacionConsignacion.update({
+        where: { id: pago.liquidacionId },
+        data: { pagado: false, fechaPago: null },
+      });
+    }
+  });
+
+  revalidatePath(`/consignaciones/liquidaciones/${pago.liquidacionId}`);
 }

@@ -426,8 +426,21 @@ model LiquidacionConsignacion {
   socio          SocioConsignacion   @relation(fields: [socioId], references: [id])
   consignaciones Consignacion[]
   ventas         VentaConsignacion[]
+  pagos          PagoLiquidacion[]
 
   @@index([socioId])
+}
+
+model PagoLiquidacion {
+  id            Int      @id @default(autoincrement())
+  liquidacionId Int
+  fecha         DateTime @default(now())
+  monto         Decimal
+  notas         String?
+
+  liquidacion LiquidacionConsignacion @relation(fields: [liquidacionId], references: [id])
+
+  @@index([liquidacionId])
 }
 
 enum EstadoDropshipping {
