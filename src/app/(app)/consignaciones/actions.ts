@@ -145,7 +145,10 @@ export async function generarLiquidacion(formData: FormData) {
   let totalACobrarles = 0; // nosotros les debemos (vendimos sus productos - RECIBIMOS)
 
   for (const v of ventas) {
-    const montoLiquidar = Number(v.detalle.precioPiso) * v.cantidad;
+    const costo = Number(v.detalle.precioCosto);
+    const venta = Number(v.precioVentaReal);
+    // Dueño cobra: costo + 1/3 de la ganancia
+    const montoLiquidar = (costo + (venta - costo) / 3) * v.cantidad;
     if (v.detalle.consignacion.direccion === "ENTREGAMOS") {
       totalACobrarnos += montoLiquidar;
     } else {

@@ -29,20 +29,26 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
   // Calcular saldo pendiente (ventas no liquidadas)
   let aCobrarnos = 0;
   let aCobrarles = 0;
-  const ventasPendientes: Array<{ fecha: Date; descripcion: string; cantidad: number; precioVentaReal: number; precioPiso: number; direction: string }> = [];
+  const ventasPendientes: Array<{ fecha: Date; descripcion: string; cantidad: number; precioVentaReal: number; precioCosto: number; montoLiq: number; direction: string }> = [];
 
   for (const c of socio.consignaciones) {
     for (const item of c.items) {
+      const costo = Number(item.precioCosto);
       for (const v of item.ventas) {
-        const montoLiq = Number(item.precioPiso) * v.cantidad;
-        if (c.direccion === "ENTREGAMOS") aCobrarnos += montoLiq;
-        else aCobrarles += montoLiq;
+        const venta = Number(v.precioVentaReal);
+        // El dueño de la mercadería siempre cobra: costo + 1/3 de la ganancia
+        // Si vendemos por debajo del costo, el vendedor absorbe la pérdida
+        const ganancia = venta - costo;
+        const montoLiq = costo + ganancia / 3;
+        if (c.direccion === "ENTREGAMOS") aCobrarnos += montoLiq * v.cantidad;
+        else aCobrarles += montoLiq * v.cantidad;
         ventasPendientes.push({
           fecha: v.fecha,
           descripcion: item.descripcion ?? `Item #${item.id}`,
           cantidad: v.cantidad,
-          precioVentaReal: Number(v.precioVentaReal),
-          precioPiso: Number(item.precioPiso),
+          precioVentaReal: venta,
+          precioCosto: costo,
+          montoLiq,
           direction: c.direccion,
         });
       }
@@ -93,9 +99,9 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
                 </div>
                 <div className="text-right">
                   <span className={`font-medium ${v.direction === "ENTREGAMOS" ? "text-green-700" : "text-red-600"}`}>
-                    {v.direction === "ENTREGAMOS" ? "+" : "-"}{fmt(v.precioPiso * v.cantidad)}
+                    {v.direction === "ENTREGAMOS" ? "+" : "-"}{fmt(v.montoLiq * v.cantidad)}
                   </span>
-                  <span className="text-gray-400 ml-2 text-xs">{v.cantidad} u.</span>
+                  <span className="text-gray-400 ml-2 text-xs">{v.cantidad} u. · costo {fmt(v.precioCosto)} + 1/3 ganancia</span>
                 </div>
               </div>
             ))}

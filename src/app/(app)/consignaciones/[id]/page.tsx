@@ -24,10 +24,15 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
   if (!cons) notFound();
 
   const esEntregamos = cons.direccion === "ENTREGAMOS";
-  const totalPiso = cons.items.reduce((s, it) => s + Number(it.precioPiso) * it.cantidad, 0);
   const totalVendido = cons.items.reduce((s, it) => s + it.cantidadVendida, 0);
-  const montoLiquidar = cons.items.reduce((s, it) =>
-    s + Number(it.precioPiso) * it.cantidadVendida, 0);
+  // Monto a liquidar: costo + 1/3 de la ganancia por cada venta
+  const montoLiquidar = cons.items.reduce((s, it) => {
+    const costo = Number(it.precioCosto);
+    return s + it.ventas.reduce((sv, v) => {
+      const ganancia = Number(v.precioVentaReal) - costo;
+      return sv + (costo + ganancia / 3) * v.cantidad;
+    }, 0);
+  }, 0);
 
   return (
     <div className="space-y-4">
@@ -117,7 +122,11 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                     <div key={v.id} className="flex justify-between text-xs text-gray-600">
                       <span>{new Date(v.fecha).toLocaleDateString("es-AR")} · {v.cantidad} u. a {fmt(Number(v.precioVentaReal))}</span>
                       <span className="text-gray-400">
-                        Piso: {fmt(Number(item.precioPiso) * v.cantidad)} · {v.liquidacionId ? "Liquidado" : "Pendiente"}
+                        {(() => {
+                          const c = Number(item.precioCosto);
+                          const g = Number(v.precioVentaReal) - c;
+                          return `A liquidar: ${fmt((c + g / 3) * v.cantidad)}`;
+                        })()} · {v.liquidacionId ? "Liquidado" : "Pendiente"}
                       </span>
                     </div>
                   ))}
