@@ -320,6 +320,7 @@ export async function crearProducto(formData: FormData) {
   const session = await requireAdmin();
 
   const sku = formData.get("sku")?.toString().trim();
+  const skuInterno = formData.get("skuInterno")?.toString().trim() || null;
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim();
   const categoria = formData.get("categoria")?.toString().trim();
@@ -328,7 +329,7 @@ export async function crearProducto(formData: FormData) {
   const contenido = Number(formData.get("contenido") || 1);
   const margenPorcentaje = Number(formData.get("margenPorcentaje") || 30);
   const precioCostoUnitario = Number(formData.get("precioCostoUnitario") || 0);
-  const stockActual = 0; // El stock se mueve solo por compras, no al dar de alta
+  const stockActual = 0;
   const proveedorIdStr = formData.get("proveedorId")?.toString();
   const proveedorId = proveedorIdStr ? Number(proveedorIdStr) : null;
 
@@ -341,7 +342,7 @@ export async function crearProducto(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     const producto = await tx.producto.create({
-      data: { sku, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual, proveedorId },
+      data: { sku, skuInterno, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual, proveedorId },
     });
 
     await registrarLog(tx, {
@@ -365,6 +366,7 @@ export async function actualizarProducto(formData: FormData) {
   if (!id) throw new Error("Producto inválido.");
 
   const sku = formData.get("sku")?.toString().trim();
+  const skuInterno = formData.get("skuInterno")?.toString().trim() || null;
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim();
   const categoria = formData.get("categoria")?.toString().trim();
@@ -389,6 +391,7 @@ export async function actualizarProducto(formData: FormData) {
       where: { id },
       data: {
         sku,
+        skuInterno,
         nombre,
         marca,
         categoria,

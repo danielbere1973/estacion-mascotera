@@ -25,8 +25,13 @@ export default async function NuevoProductoPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">SKU</label>
+            <label className="text-sm font-medium text-gray-700">SKU proveedor</label>
             <input name="sku" required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">SKU interno <span className="font-normal text-gray-400">(opcional)</span></label>
+            <input name="skuInterno" placeholder="Código propio de EM" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
           </div>
 
           <div className="space-y-1">

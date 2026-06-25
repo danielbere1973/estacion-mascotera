@@ -65,8 +65,9 @@ enum UnidadMedida {
 
 model Producto {
   id        Int               @id @default(autoincrement())
-  sku       String            @unique
-  nombre    String
+  sku          String  @unique
+  skuInterno   String? // código interno propio de EM
+  nombre       String
   marca     String
   categoria String
   presentacion Presentacion
