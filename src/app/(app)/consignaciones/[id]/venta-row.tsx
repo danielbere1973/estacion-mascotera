@@ -73,14 +73,14 @@ export function VentaRow({ venta }: Props) {
       <div className="flex items-center gap-2">
         <span>{new Date(venta.fecha).toLocaleDateString("es-AR")} · {venta.cantidad} u. a {fmt(venta.precioVentaReal)}</span>
         <button onClick={() => setEditando(true)}
-          className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 transition-opacity">
+          className="text-blue-500 hover:text-blue-700 underline">
           Editar
         </button>
         <form action={eliminarVentaConsignacion}
-          onSubmit={(e) => { if (!confirm("¿Eliminar esta venta?")) e.preventDefault(); }}>
+          onSubmit={(e) => { if (!confirm("¿Eliminar esta venta?")) e.preventDefault(); }}
+          className="inline">
           <input type="hidden" name="id" value={venta.id} />
-          <button type="submit"
-            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity">
+          <button type="submit" className="text-red-400 hover:text-red-600 underline">
             Eliminar
           </button>
         </form>
