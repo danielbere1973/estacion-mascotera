@@ -261,60 +261,47 @@ export async function cerrarConsignacion(formData: FormData) {
   revalidatePath("/consignaciones");
 }
 
-export async function registrarPagoLiquidacion(formData: FormData) {
+export async function registrarPagoConsignacion(formData: FormData) {
   await requireAdmin();
-  const liquidacionId = Number(formData.get("liquidacionId"));
+  const consignacionId = Number(formData.get("consignacionId"));
   const monto = Number(formData.get("monto"));
   const notas = formData.get("notas")?.toString().trim() || null;
   const fecha = new Date(formData.get("fecha")?.toString() ?? new Date().toISOString());
 
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
 
-  await prisma.$transaction(async (tx) => {
-    await tx.pagoLiquidacion.create({ data: { liquidacionId, monto, notas, fecha } });
-
-    // Verificar si el total pagado cubre el saldo
-    const liq = await tx.liquidacionConsignacion.findUnique({
-      where: { id: liquidacionId },
-      include: { pagos: true },
-    });
-    if (!liq) throw new Error("Liquidación no encontrada.");
-
-    const totalPagado = liq.pagos.reduce((s, p) => s + Number(p.monto), 0);
-    if (totalPagado >= Math.abs(Number(liq.saldo))) {
-      await tx.liquidacionConsignacion.update({
-        where: { id: liquidacionId },
-        data: { pagado: true, fechaPago: new Date() },
-      });
-    }
+  // Calcular total owed de la consignación
+  const cons = await prisma.consignacion.findUnique({
+    where: { id: consignacionId },
+    include: {
+      items: { include: { ventas: true } },
+      pagos: true,
+    },
   });
+  if (!cons) throw new Error("Consignación no encontrada.");
 
-  revalidatePath(`/consignaciones/liquidaciones/${liquidacionId}`);
-  revalidatePath("/consignaciones/liquidaciones");
+  const totalOwe = cons.items.reduce((s, item) =>
+    s + item.ventas.reduce((sv, v) => {
+      const costo = Number(item.precioCosto);
+      const ganancia = Number(v.precioVentaReal) - costo;
+      return sv + (costo + ganancia / 3) * v.cantidad;
+    }, 0), 0);
+
+  const totalPagado = cons.pagos.reduce((s, p) => s + Number(p.monto), 0);
+  const pendiente = totalOwe - totalPagado;
+
+  if (monto > pendiente + 0.01) throw new Error(`El pago (${monto}) supera el saldo pendiente (${pendiente.toFixed(2)}).`);
+
+  await prisma.pagoConsignacion.create({ data: { consignacionId, monto, notas, fecha } });
+
+  revalidatePath(`/consignaciones/${consignacionId}`);
 }
 
-export async function eliminarPagoLiquidacion(formData: FormData) {
+export async function eliminarPagoConsignacion(formData: FormData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
-  const pago = await prisma.pagoLiquidacion.findUnique({ where: { id }, include: { liquidacion: true } });
+  const pago = await prisma.pagoConsignacion.findUnique({ where: { id } });
   if (!pago) throw new Error("Pago no encontrado.");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.pagoLiquidacion.delete({ where: { id } });
-    // Recalcular si sigue pagada
-    const liq = await tx.liquidacionConsignacion.findUnique({
-      where: { id: pago.liquidacionId },
-      include: { pagos: true },
-    });
-    if (!liq) return;
-    const totalPagado = liq.pagos.reduce((s, p) => s + Number(p.monto), 0);
-    if (totalPagado < Math.abs(Number(liq.saldo))) {
-      await tx.liquidacionConsignacion.update({
-        where: { id: pago.liquidacionId },
-        data: { pagado: false, fechaPago: null },
-      });
-    }
-  });
-
-  revalidatePath(`/consignaciones/liquidaciones/${pago.liquidacionId}`);
+  await prisma.pagoConsignacion.delete({ where: { id } });
+  revalidatePath(`/consignaciones/${pago.consignacionId}`);
 }

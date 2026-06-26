@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { registrarVentaConsignacion, cerrarConsignacion } from "../actions";
+import { registrarVentaConsignacion, cerrarConsignacion, registrarPagoConsignacion, eliminarPagoConsignacion } from "../actions";
 import { FacturadoField } from "@/components/facturado-field";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { VentaRow } from "./venta-row";
@@ -15,6 +15,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
     where: { id: Number(id) },
     include: {
       socio: true,
+      pagos: { orderBy: { fecha: "asc" } },
       items: {
         include: {
           producto: { select: { nombre: true, marca: true } },
@@ -28,7 +29,8 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
 
   const esEntregamos = cons.direccion === "ENTREGAMOS";
   const totalVendido = cons.items.reduce((s, it) => s + it.cantidadVendida, 0);
-  // Monto a liquidar: costo + 1/3 de la ganancia por cada venta
+
+  // Monto total a liquidar: costo + 1/3 ganancia por cada venta
   const montoLiquidar = cons.items.reduce((s, it) => {
     const costo = Number(it.precioCosto);
     return s + it.ventas.reduce((sv, v) => {
@@ -36,6 +38,10 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
       return sv + (costo + ganancia / 3) * v.cantidad;
     }, 0);
   }, 0);
+
+  const totalPagado = cons.pagos.reduce((s, p) => s + Number(p.monto), 0);
+  const pendiente = montoLiquidar - totalPagado;
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="space-y-4">
@@ -66,7 +72,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Resumen */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-center">
           <p className="text-xs text-gray-400">Unidades entregadas</p>
           <p className="text-lg font-semibold text-gray-900">{cons.items.reduce((s, it) => s + it.cantidad, 0)}</p>
@@ -76,9 +82,69 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           <p className="text-lg font-semibold text-gray-900">{totalVendido}</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-center">
-          <p className="text-xs text-gray-400">{esEntregamos ? "A cobrar (costo + 1/3 ganancia)" : "A pagar (costo + 1/3 ganancia)"}</p>
+          <p className="text-xs text-gray-400">{esEntregamos ? "A cobrar" : "A pagar"} (costo + 1/3 ganancia)</p>
           <p className="text-lg font-semibold text-blue-700">{fmt(montoLiquidar)}</p>
         </div>
+        <div className={`rounded-xl border p-3 text-center ${pendiente <= 0 ? "border-green-200 bg-green-50" : "border-orange-200 bg-orange-50"}`}>
+          <p className="text-xs text-gray-400">Pendiente de pago</p>
+          <p className={`text-lg font-semibold ${pendiente <= 0 ? "text-green-700" : "text-orange-600"}`}>
+            {pendiente <= 0 ? "Saldado ✓" : fmt(pendiente)}
+          </p>
+          {totalPagado > 0 && <p className="text-xs text-gray-400">Pagado: {fmt(totalPagado)}</p>}
+        </div>
+      </div>
+
+      {/* Pagos */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-gray-700">Pagos</h2>
+        <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
+          {cons.pagos.map((p) => (
+            <div key={p.id} className="flex items-center justify-between px-4 py-2.5">
+              <div>
+                <span className="text-sm font-medium text-gray-900">{fmt(Number(p.monto))}</span>
+                <span className="text-xs text-gray-400 ml-2">{new Date(p.fecha).toLocaleDateString("es-AR")}</span>
+                {p.notas && <span className="text-xs text-gray-400 ml-2">· {p.notas}</span>}
+              </div>
+              <form action={eliminarPagoConsignacion}>
+                <input type="hidden" name="id" value={p.id} />
+                <ConfirmSubmitButton
+                  confirmMessage={`¿Eliminar pago de ${fmt(Number(p.monto))}?`}
+                  className="text-xs text-red-400 hover:text-red-600">
+                  Eliminar
+                </ConfirmSubmitButton>
+              </form>
+            </div>
+          ))}
+          {cons.pagos.length === 0 && (
+            <p className="px-4 py-3 text-sm text-gray-400 text-center">Sin pagos registrados.</p>
+          )}
+        </div>
+
+        {/* Formulario nuevo pago */}
+        {montoLiquidar > 0 && pendiente > 0 && (
+          <form action={registrarPagoConsignacion} className="rounded-xl border border-blue-100 bg-blue-50 p-3 flex gap-3 items-end flex-wrap">
+            <input type="hidden" name="consignacionId" value={cons.id} />
+            <div>
+              <label className="text-xs text-blue-700">Fecha</label>
+              <input name="fecha" type="date" defaultValue={today}
+                className="block rounded-md border border-blue-200 bg-white px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-blue-700">Monto</label>
+              <input name="monto" type="number" min={0.01} step={0.01} defaultValue={pendiente.toFixed(2)}
+                className="block w-36 rounded-md border border-blue-200 bg-white px-2 py-1.5 text-sm" />
+            </div>
+            <div className="flex-1 min-w-[150px]">
+              <label className="text-xs text-blue-700">Notas (opcional)</label>
+              <input name="notas" placeholder="Transferencia, efectivo..."
+                className="block w-full rounded-md border border-blue-200 bg-white px-2 py-1.5 text-sm" />
+            </div>
+            <button type="submit"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 whitespace-nowrap">
+              Registrar pago
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Items */}
