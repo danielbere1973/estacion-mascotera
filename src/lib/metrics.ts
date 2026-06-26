@@ -140,6 +140,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     ventasNoFacturadas,
     comprasNoFacturadas,
     gananciaConsignaciones,
+    totalIngresosConsolidados: totalFacturado + gananciaConsignaciones,
   };
 }
 
@@ -235,6 +236,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     ventasNoFacturadas,
     comprasNoFacturadas,
     gananciaConsignaciones: 0,
+    totalIngresosConsolidados: totalFacturado,
   };
 }
 

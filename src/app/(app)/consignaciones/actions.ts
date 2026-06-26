@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { requireAdmin, requireAuth } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -98,12 +98,14 @@ export async function crearConsignacion(formData: FormData) {
 }
 
 export async function registrarVentaConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAuth();
   const detalleId = Number(formData.get("detalleId"));
   const cantidad = Number(formData.get("cantidad"));
   const precioVentaReal = Number(formData.get("precioVentaReal"));
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+  const fechaStr = formData.get("fecha")?.toString();
+  const fecha = fechaStr ? new Date(fechaStr) : new Date();
 
   const detalle = await prisma.detalleConsignacion.findUnique({
     where: { id: detalleId },
@@ -116,7 +118,7 @@ export async function registrarVentaConsignacion(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     await tx.ventaConsignacion.create({
-      data: { detalleConsignacionId: detalleId, cantidad, precioVentaReal, facturado, numeroFactura },
+      data: { detalleConsignacionId: detalleId, cantidad, precioVentaReal, facturado, numeroFactura, fecha },
     });
     await tx.detalleConsignacion.update({
       where: { id: detalleId },

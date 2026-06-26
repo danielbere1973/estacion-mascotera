@@ -6,3 +6,9 @@ export async function requireAdmin() {
   if (session.user.rol !== "ADMIN") throw new Error("No tenés permisos para esta acción.");
   return session;
 }
+
+export async function requireAuth() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+  return session;
+}

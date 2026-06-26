@@ -19,6 +19,7 @@ const linksRestringido = [
   { href: "/", label: "Dashboard" },
   { href: "/ventas", label: "Ventas" },
   { href: "/inventario/compras", label: "Compras" },
+  { href: "/consignaciones", label: "Consignaciones" },
 ];
 
 const adminLinks = [

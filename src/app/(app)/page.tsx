@@ -22,9 +22,10 @@ export default async function DashboardPage({
 
   const cards = [
     {
-      label: "Total Facturado",
-      value: metrics.totalFacturado,
-      hint: "Ventas del período",
+      label: "Total Ingresos",
+      value: metrics.totalIngresosConsolidados,
+      hint: "Ventas + ganancia consignaciones",
+      highlight: true,
     },
     {
       label: "Total Gastado",
@@ -34,13 +35,23 @@ export default async function DashboardPage({
     {
       label: "Rentabilidad Neta",
       value: metrics.rentabilidadNeta,
-      hint: "Ventas - costos - envíos - gastos",
+      hint: "Ingresos - costos - envíos - gastos fijos",
       highlight: true,
     },
     {
       label: "Valor de Stock",
       value: metrics.valorStock,
       hint: "Stock actual a precio de costo",
+    },
+    {
+      label: "Ventas directas",
+      value: metrics.totalFacturado,
+      hint: "Solo ventas normales e-commerce / local",
+    },
+    {
+      label: "Ganancia Consignaciones",
+      value: metrics.gananciaConsignaciones,
+      hint: "2/3 de la ganancia en ventas por consignación",
     },
     {
       label: "Costo Mercadería Vendida",
@@ -51,11 +62,6 @@ export default async function DashboardPage({
       label: "Costo Mercadería Comprada",
       value: metrics.totalComprasMercaderia,
       hint: "Costo de los productos comprados en el período",
-    },
-    {
-      label: "Ganancia Consignaciones",
-      value: metrics.gananciaConsignaciones,
-      hint: "2/3 de la ganancia en ventas por consignación",
     },
   ];
 
