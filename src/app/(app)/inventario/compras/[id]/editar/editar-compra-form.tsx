@@ -51,13 +51,19 @@ export function EditorCompraForm({
 
   const opciones = itemsFiltrados.map((i) => ({
     value: i.sku,
-    label: `${i.nombre ?? i.sku}${i.tamanios ? ` · ${i.tamanios}` : ""} — ${formatCurrency(i.precioConDescuento ?? i.precioCostoScraped)}`,
+    label: `${i.nombre ?? i.sku}${i.tamanios ? ` · ${i.tamanios}` : ""} — ${formatCurrency(i.precioConDescuento ?? i.precioCostoScraped)}${!i.productoId ? " ⚠ sin vincular" : ""}`,
     search: `${i.nombre ?? ""} ${i.sku} ${i.tamanios ?? ""}`,
   }));
 
   function seleccionarProducto(sku: string) {
     const item = itemsFiltrados.find((i) => i.sku === sku);
     if (!item) return;
+    if (!item.productoId) {
+      alert(`"${item.nombre ?? sku}" no está vinculado al catálogo. Vinculalo primero desde Lista de Precios → columna "Vincular".`);
+      setSkuSeleccionado("");
+      setLabelSeleccionado("");
+      return;
+    }
     setSkuSeleccionado(sku);
     setPrecio(item.precioConDescuento ?? item.precioCostoScraped);
     setLabelSeleccionado(`${item.nombre ?? sku}${item.tamanios ? ` · ${item.tamanios}` : ""}`);
