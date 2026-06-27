@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 type Compra = {
@@ -179,7 +180,11 @@ export function ComprasAgrupadas({
                           {formatCurrency(item.cantidad * Number(item.precioCostoUnitario) * (1 - Number(item.descuentoPorcentaje) / 100))}
                         </td>
                         {!esRestringido && (
-                          <td className="px-3 py-1.5 text-right">
+                          <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                            <Link href={`/inventario/compras/${item.id}/editar`}
+                              className="text-blue-500 hover:text-blue-700 text-xs mr-2">
+                              Editar
+                            </Link>
                             <form action={accionEliminar} className="inline">
                               <input type="hidden" name="id" value={item.id} />
                               <button
@@ -203,7 +208,19 @@ export function ComprasAgrupadas({
 
             {/* Si es un solo item, mostrar acciones inline */}
             {!esMultiple && !esRestringido && (
-              <div className="hidden" />
+              <div className="flex items-center gap-3 px-4 pb-2 pl-11">
+                <Link href={`/inventario/compras/${g.items[0].id}/editar`}
+                  className="text-xs text-blue-500 hover:text-blue-700">
+                  Editar
+                </Link>
+                <form action={accionEliminar} className="inline">
+                  <input type="hidden" name="id" value={g.items[0].id} />
+                  <button type="submit" className="text-xs text-red-400 hover:text-red-600"
+                    onClick={(e) => { if (!confirm("¿Eliminar esta compra? Se revertirá el stock.")) e.preventDefault(); }}>
+                    Eliminar
+                  </button>
+                </form>
+              </div>
             )}
           </div>
         );

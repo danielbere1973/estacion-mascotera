@@ -199,27 +199,44 @@ export async function actualizarCompra(formData: FormData) {
     throw new Error("El descuento debe estar entre 0 y 100.");
   }
 
+  const nuevoProductoId = Number(formData.get("productoId"));
+  if (!nuevoProductoId) throw new Error("Debe seleccionar un producto.");
+
   const precioCostoUnitario = precioListaUnitario * (1 - descuentoPorcentaje / 100);
 
   await prisma.$transaction(async (tx) => {
     const compra = await tx.compra.findUniqueOrThrow({ where: { id } });
-    const producto = await tx.producto.findUniqueOrThrow({ where: { id: compra.productoId } });
 
-    const deltaCantidad = cantidad - compra.cantidad;
-    const precioVenta = precioCostoUnitario * (1 + Number(producto.margenPorcentaje) / 100);
+    if (nuevoProductoId !== compra.productoId) {
+      // Revertir stock del producto original
+      await tx.producto.update({
+        where: { id: compra.productoId },
+        data: { stockActual: { decrement: compra.cantidad } },
+      });
+      // Agregar stock y actualizar precio en el nuevo producto
+      const nuevoProducto = await tx.producto.findUniqueOrThrow({ where: { id: nuevoProductoId } });
+      const precioVenta = precioCostoUnitario * (1 + Number(nuevoProducto.margenPorcentaje) / 100);
+      await tx.producto.update({
+        where: { id: nuevoProductoId },
+        data: { stockActual: { increment: cantidad }, precioCostoUnitario, precioVenta },
+      });
+    } else {
+      // Mismo producto: ajustar delta y actualizar precio
+      const producto = await tx.producto.findUniqueOrThrow({ where: { id: compra.productoId } });
+      const deltaCantidad = cantidad - compra.cantidad;
+      const precioVenta = precioCostoUnitario * (1 + Number(producto.margenPorcentaje) / 100);
+      await tx.producto.update({
+        where: { id: compra.productoId },
+        data: { stockActual: { increment: deltaCantidad }, precioCostoUnitario, precioVenta },
+      });
+    }
 
-    await tx.producto.update({
-      where: { id: producto.id },
-      data: {
-        stockActual: { increment: deltaCantidad },
-        precioCostoUnitario,
-        precioVenta,
-      },
-    });
+    const productoFinal = await tx.producto.findUniqueOrThrow({ where: { id: nuevoProductoId } });
 
     await tx.compra.update({
       where: { id },
       data: {
+        productoId: nuevoProductoId,
         proveedorId,
         cantidad,
         precioCostoUnitario,
@@ -236,7 +253,7 @@ export async function actualizarCompra(formData: FormData) {
       accion: "ACTUALIZAR",
       entidad: "COMPRA",
       entidadId: id,
-      detalle: `${producto.nombre} x${cantidad}`,
+      detalle: `${productoFinal.nombre} x${cantidad}`,
     });
   });
 
