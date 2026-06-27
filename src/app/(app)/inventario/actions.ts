@@ -199,15 +199,16 @@ export async function actualizarCompra(formData: FormData) {
     throw new Error("El descuento debe estar entre 0 y 100.");
   }
 
-  const nuevoProductoId = Number(formData.get("productoId"));
-  if (!nuevoProductoId) throw new Error("Debe seleccionar un producto.");
+  const productoIdStr = formData.get("productoId")?.toString();
+  const nuevoProductoId = productoIdStr ? Number(productoIdStr) : null;
 
   const precioCostoUnitario = precioListaUnitario * (1 - descuentoPorcentaje / 100);
 
   await prisma.$transaction(async (tx) => {
     const compra = await tx.compra.findUniqueOrThrow({ where: { id } });
+    const productoFinalId = nuevoProductoId ?? compra.productoId;
 
-    if (nuevoProductoId !== compra.productoId) {
+    if (nuevoProductoId && nuevoProductoId !== compra.productoId) {
       // Revertir stock del producto original
       await tx.producto.update({
         where: { id: compra.productoId },
@@ -231,12 +232,12 @@ export async function actualizarCompra(formData: FormData) {
       });
     }
 
-    const productoFinal = await tx.producto.findUniqueOrThrow({ where: { id: nuevoProductoId } });
+    const productoFinal = await tx.producto.findUniqueOrThrow({ where: { id: productoFinalId } });
 
     await tx.compra.update({
       where: { id },
       data: {
-        productoId: nuevoProductoId,
+        productoId: productoFinalId,
         proveedorId,
         cantidad,
         precioCostoUnitario,

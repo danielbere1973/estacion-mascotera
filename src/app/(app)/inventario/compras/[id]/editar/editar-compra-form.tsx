@@ -41,8 +41,9 @@ export function EditorCompraForm({
   mayoristaItems: MayoristaItem[];
 }) {
   const [proveedorId, setProveedorId] = useState(String(compra.proveedorId));
-  const [productoId, setProductoId] = useState(String(compra.productoId));
-  const [productoLabel, setProductoLabel] = useState(`${compra.productoSku} · ${compra.productoNombre}`);
+  // Empieza vacío para que el combobox muestre TODA la lista al abrirse
+  const [productoId, setProductoId] = useState("");
+  const [productoLabel, setProductoLabel] = useState("");
   const [precio, setPrecio] = useState(String(compra.precioListaUnitario));
 
   const itemsFiltrados = useMemo(
@@ -83,22 +84,26 @@ export function EditorCompraForm({
 
       {/* Producto desde lista del proveedor */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">Producto (lista del proveedor)</label>
+        <label className="text-sm font-medium text-gray-700">Producto</label>
+        <p className="text-xs text-gray-400 mb-1">
+          Actual: <span className="font-medium text-gray-700">{compra.productoSku} · {compra.productoNombre}</span>
+          {!productoId && " (se mantiene si no elegís otro)"}
+        </p>
         {itemsFiltrados.length > 0 ? (
           <>
             <Combobox
               options={opciones}
               value={productoId}
-              placeholder="Buscar por nombre, SKU o tamaño..."
+              placeholder="Buscar por nombre, SKU o tamaño para cambiar..."
               onSelect={seleccionarProducto}
             />
             {productoLabel && (
-              <p className="text-xs text-gray-500 mt-1">Seleccionado: <span className="font-medium">{productoLabel}</span></p>
+              <p className="text-xs text-green-700 mt-1">Nuevo producto: <span className="font-medium">{productoLabel}</span></p>
             )}
           </>
         ) : (
           <p className="text-sm text-gray-400 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
-            No hay lista de precios cargada para este proveedor. El producto actual se mantiene.
+            No hay lista de precios cargada para este proveedor.
           </p>
         )}
       </div>
