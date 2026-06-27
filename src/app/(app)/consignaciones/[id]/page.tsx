@@ -190,7 +190,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
               </div>
 
               {/* Registrar venta */}
-              {disponible > 0 && cons.estado === "ABIERTA" && (
+              {!esRestringido && disponible > 0 && cons.estado === "ABIERTA" && (
                 <form action={registrarVentaConsignacion} className="space-y-2 mb-3">
                   <input type="hidden" name="detalleId" value={item.id} />
                   <div className="flex gap-2 items-end flex-wrap">

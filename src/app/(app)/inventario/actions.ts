@@ -130,12 +130,13 @@ export async function actualizarItemMayorista(formData: FormData) {
   const precioConDescuentoStr = formData.get("precioConDescuento")?.toString().trim();
   const precioConDescuento = precioConDescuentoStr ? Number(precioConDescuentoStr) : null;
   const tamanios = formData.get("tamanios")?.toString().trim() || null;
+  const tipoProducto = formData.get("tipoProducto")?.toString().trim() || null;
 
   if (precioCostoScraped < 0) throw new Error("El precio no es válido.");
 
   await prisma.historialStockMayorista.update({
     where: { id },
-    data: { nombre, skuInterno, precioCostoScraped, precioConDescuento, tamanios },
+    data: { nombre, skuInterno, precioCostoScraped, precioConDescuento, tamanios, tipoProducto },
   });
 
   revalidatePath("/inventario/listas");
@@ -143,24 +144,6 @@ export async function actualizarItemMayorista(formData: FormData) {
   redirect(`/inventario/listas?proveedorId=${proveedorId}`);
 }
 
-export async function vincularItemMayorista(formData: FormData) {
-  await requireAdmin();
-
-  const id = Number(formData.get("id"));
-  const productoId = formData.get("productoId")?.toString().trim();
-  const proveedorId = formData.get("proveedorId")?.toString();
-
-  if (!id) throw new Error("Item inválido.");
-
-  await prisma.historialStockMayorista.update({
-    where: { id },
-    data: { productoId: productoId ? Number(productoId) : null },
-  });
-
-  revalidatePath("/inventario/listas");
-  revalidatePath("/inventario/compra");
-  redirect(`/inventario/listas?proveedorId=${proveedorId}`);
-}
 
 export async function eliminarItemMayorista(formData: FormData) {
   const session = await requireAdmin();
@@ -206,7 +189,7 @@ export async function actualizarCompra(formData: FormData) {
     // Buscar si ya existe en el catálogo vía historialStockMayorista
     const mayorItem = await prisma.historialStockMayorista.findFirst({
       where: { sku: itemSku, proveedorId },
-      select: { productoId: true, nombre: true, tamanios: true, precioCostoScraped: true, precioConDescuento: true },
+      select: { productoId: true, nombre: true, tamanios: true, precioCostoScraped: true, precioConDescuento: true, tipoProducto: true },
     });
 
     if (mayorItem?.productoId) {
@@ -216,12 +199,13 @@ export async function actualizarCompra(formData: FormData) {
       const proveedor = await prisma.proveedor.findUniqueOrThrow({ where: { id: proveedorId } });
       const precioBase = Number(mayorItem?.precioConDescuento ?? mayorItem?.precioCostoScraped ?? precioListaUnitario);
       const nombre = [mayorItem?.nombre, mayorItem?.tamanios].filter(Boolean).join(" · ") || itemSku;
+      const categoria = mayorItem?.tipoProducto ?? "Sin categorizar";
       const nuevo = await prisma.producto.create({
         data: {
           sku: itemSku,
           nombre,
           marca: proveedor.nombre,
-          categoria: "Sin categorizar",
+          categoria,
           presentacion: "INDIVIDUAL",
           proveedorId,
           precioCostoUnitario: precioBase,
@@ -229,7 +213,6 @@ export async function actualizarCompra(formData: FormData) {
         },
       });
       nuevoProductoId = nuevo.id;
-      // Vincular en historialStockMayorista
       await prisma.historialStockMayorista.updateMany({
         where: { sku: itemSku, proveedorId },
         data: { productoId: nuevo.id },

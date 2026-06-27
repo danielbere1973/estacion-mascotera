@@ -309,6 +309,7 @@ model HistorialStockMayorista {
   precioCostoScraped   Decimal
   precioConDescuento   Decimal?
   tamanios             String?
+  tipoProducto         String?
   // Stock que tiene el MAYORISTA disponible (informativo, no es nuestro stock)
   estadoStockMayorista String?
 
