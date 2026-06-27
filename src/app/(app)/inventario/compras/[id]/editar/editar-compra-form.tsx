@@ -1,26 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Combobox } from "@/components/combobox";
-import { formatCurrency } from "@/lib/format";
 import { actualizarCompra } from "../../../actions";
 
-type MayoristaItem = {
-  proveedorId: number;
-  sku: string;
-  nombre: string | null;
-  tamanios: string | null;
-  precioCostoScraped: string;
-  precioConDescuento: string | null;
-  productoId: number | null;
-};
-
+type Producto = { id: number; sku: string; nombre: string; marca: string };
 type Proveedor = { id: number; nombre: string };
 
 export function EditorCompraForm({
   compra,
   proveedores,
-  mayoristaItems,
+  productos,
 }: {
   compra: {
     id: number;
@@ -37,77 +27,39 @@ export function EditorCompraForm({
     numeroFactura: string | null;
   };
   proveedores: Proveedor[];
-  mayoristaItems: MayoristaItem[];
+  productos: Producto[];
 }) {
-  const [proveedorId, setProveedorId] = useState(String(compra.proveedorId));
-  const [skuSeleccionado, setSkuSeleccionado] = useState("");
-  const [precio, setPrecio] = useState(String(compra.precioListaUnitario));
-  const [labelSeleccionado, setLabelSeleccionado] = useState("");
+  const [productoId, setProductoId] = useState(String(compra.productoId));
 
-  const itemsFiltrados = useMemo(
-    () => mayoristaItems.filter((i) => String(i.proveedorId) === proveedorId),
-    [proveedorId, mayoristaItems]
-  );
-
-  const opciones = itemsFiltrados.map((i) => ({
-    value: i.sku,
-    label: `${i.nombre ?? i.sku}${i.tamanios ? ` · ${i.tamanios}` : ""} — ${formatCurrency(i.precioConDescuento ?? i.precioCostoScraped)}${!i.productoId ? " ⚠ sin vincular" : ""}`,
-    search: `${i.nombre ?? ""} ${i.sku} ${i.tamanios ?? ""}`,
+  const opciones = productos.map((p) => ({
+    value: String(p.id),
+    label: `${p.sku} · ${p.marca} ${p.nombre}`,
+    search: `${p.sku} ${p.nombre} ${p.marca}`,
   }));
-
-  function seleccionarProducto(sku: string) {
-    const item = itemsFiltrados.find((i) => i.sku === sku);
-    if (!item) return;
-    if (!item.productoId) {
-      alert(`"${item.nombre ?? sku}" no está vinculado al catálogo. Vinculalo primero desde Lista de Precios → columna "Vincular".`);
-      setSkuSeleccionado("");
-      setLabelSeleccionado("");
-      return;
-    }
-    setSkuSeleccionado(sku);
-    setPrecio(item.precioConDescuento ?? item.precioCostoScraped);
-    setLabelSeleccionado(`${item.nombre ?? sku}${item.tamanios ? ` · ${item.tamanios}` : ""}`);
-  }
 
   return (
     <form action={actualizarCompra} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
       <input type="hidden" name="id" value={compra.id} />
-      <input type="hidden" name="itemSku" value={skuSeleccionado} />
+      <input type="hidden" name="productoId" value={productoId} />
+
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-gray-700">Producto</label>
+        <Combobox
+          options={opciones}
+          value={productoId}
+          placeholder="Buscar por SKU o nombre..."
+          onSelect={(v) => setProductoId(v)}
+        />
+      </div>
 
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Proveedor</label>
-        <select name="proveedorId" required value={proveedorId}
-          onChange={(e) => { setProveedorId(e.target.value); setSkuSeleccionado(""); setLabelSeleccionado(""); }}
+        <select name="proveedorId" required defaultValue={compra.proveedorId}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
           {proveedores.map((p) => (
             <option key={p.id} value={p.id}>{p.nombre}</option>
           ))}
         </select>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">Producto</label>
-        <p className="text-xs text-gray-500 mb-1">
-          Actual: <span className="font-medium">{compra.productoSku} · {compra.productoNombre}</span>
-          {!skuSeleccionado && <span className="text-gray-400"> — buscá abajo para cambiar</span>}
-        </p>
-        {itemsFiltrados.length > 0 ? (
-          <>
-            <Combobox
-              options={opciones}
-              value={skuSeleccionado}
-              placeholder="Buscar por nombre, SKU o tamaño..."
-              onSelect={seleccionarProducto}
-            />
-            {labelSeleccionado && (
-              <p className="text-xs text-green-700 mt-1">Nuevo: <span className="font-medium">{labelSeleccionado}</span></p>
-            )}
-          </>
-        ) : (
-          <p className="text-sm text-gray-400 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
-            No hay lista de precios cargada para este proveedor.
-          </p>
-        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -120,12 +72,12 @@ export function EditorCompraForm({
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Precio de costo (lista)</label>
           <input type="number" name="precioCostoUnitario" min={0} step="0.01" required
-            value={precio} onChange={(e) => setPrecio(e.target.value)}
+            defaultValue={compra.precioListaUnitario}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Descuento del proveedor (%)</label>
+          <label className="text-sm font-medium text-gray-700">Descuento (%)</label>
           <input type="number" name="descuentoPorcentaje" min={0} max={100} step="0.01"
             defaultValue={compra.descuentoPorcentaje}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
@@ -139,7 +91,7 @@ export function EditorCompraForm({
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">N° de pedido (opcional)</label>
+          <label className="text-sm font-medium text-gray-700">N° de pedido</label>
           <input name="numeroPedido" defaultValue={compra.numeroPedido ?? ""}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
@@ -152,7 +104,7 @@ export function EditorCompraForm({
         </div>
 
         <div className="space-y-1 sm:col-span-2">
-          <label className="text-sm font-medium text-gray-700">N° de factura (opcional)</label>
+          <label className="text-sm font-medium text-gray-700">N° de factura</label>
           <input name="numeroFactura" defaultValue={compra.numeroFactura ?? ""}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>

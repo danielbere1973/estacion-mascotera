@@ -199,17 +199,9 @@ export async function actualizarCompra(formData: FormData) {
     throw new Error("El descuento debe estar entre 0 y 100.");
   }
 
-  const itemSku = formData.get("itemSku")?.toString().trim() || null;
-  // Buscar el productoId por SKU en la lista del proveedor (si cambió el producto)
-  let nuevoProductoId: number | null = null;
-  if (itemSku) {
-    const item = await prisma.historialStockMayorista.findFirst({
-      where: { sku: itemSku, proveedorId },
-      select: { productoId: true },
-    });
-    nuevoProductoId = item?.productoId ?? null;
-    if (!nuevoProductoId) throw new Error(`El producto con SKU ${itemSku} no está vinculado al catálogo. Vinculalo desde la lista de precios.`);
-  }
+  const productoIdStr = formData.get("productoId")?.toString();
+  const nuevoProductoId = productoIdStr ? Number(productoIdStr) : null;
+  if (!nuevoProductoId) throw new Error("Debe seleccionar un producto.");
 
   const precioCostoUnitario = precioListaUnitario * (1 - descuentoPorcentaje / 100);
 
