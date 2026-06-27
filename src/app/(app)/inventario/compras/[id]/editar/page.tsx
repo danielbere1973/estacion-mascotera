@@ -9,15 +9,24 @@ export default async function EditarCompraPage({
 }) {
   const { id } = await params;
 
-  const [compra, proveedores, productos] = await Promise.all([
+  const [compra, proveedores, mayoristaItems] = await Promise.all([
     prisma.compra.findUnique({
       where: { id: Number(id) },
       include: { producto: { select: { id: true, sku: true, nombre: true } } },
     }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
-    prisma.producto.findMany({
-      orderBy: [{ marca: "asc" }, { nombre: "asc" }],
-      select: { id: true, sku: true, nombre: true, marca: true },
+    prisma.historialStockMayorista.findMany({
+      orderBy: [{ proveedorId: "asc" }, { nombre: "asc" }],
+      select: {
+        proveedorId: true,
+        sku: true,
+        nombre: true,
+        tamanios: true,
+        precioCostoScraped: true,
+        precioConDescuento: true,
+        productoId: true,
+      },
+      distinct: ["proveedorId", "sku"],
     }),
   ]);
 
@@ -46,7 +55,15 @@ export default async function EditarCompraPage({
           numeroFactura: compra.numeroFactura,
         }}
         proveedores={proveedores}
-        productos={productos}
+        mayoristaItems={mayoristaItems.map((i) => ({
+          proveedorId: i.proveedorId ?? 0,
+          sku: i.sku,
+          nombre: i.nombre ?? null,
+          tamanios: i.tamanios ?? null,
+          precioCostoScraped: i.precioCostoScraped.toString(),
+          precioConDescuento: i.precioConDescuento?.toString() ?? null,
+          productoId: i.productoId ?? null,
+        }))}
       />
     </div>
   );

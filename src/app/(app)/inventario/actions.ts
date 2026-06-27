@@ -199,9 +199,43 @@ export async function actualizarCompra(formData: FormData) {
     throw new Error("El descuento debe estar entre 0 y 100.");
   }
 
-  const productoIdStr = formData.get("productoId")?.toString();
-  const nuevoProductoId = productoIdStr ? Number(productoIdStr) : null;
-  if (!nuevoProductoId) throw new Error("Debe seleccionar un producto.");
+  const itemSku = formData.get("itemSku")?.toString().trim() || null;
+  let nuevoProductoId: number | null = null;
+
+  if (itemSku) {
+    // Buscar si ya existe en el catálogo vía historialStockMayorista
+    const mayorItem = await prisma.historialStockMayorista.findFirst({
+      where: { sku: itemSku, proveedorId },
+      select: { productoId: true, nombre: true, tamanios: true, precioCostoScraped: true, precioConDescuento: true },
+    });
+
+    if (mayorItem?.productoId) {
+      nuevoProductoId = mayorItem.productoId;
+    } else {
+      // Crear el producto automáticamente con los datos de la lista
+      const proveedor = await prisma.proveedor.findUniqueOrThrow({ where: { id: proveedorId } });
+      const precioBase = Number(mayorItem?.precioConDescuento ?? mayorItem?.precioCostoScraped ?? precioListaUnitario);
+      const nombre = [mayorItem?.nombre, mayorItem?.tamanios].filter(Boolean).join(" · ") || itemSku;
+      const nuevo = await prisma.producto.create({
+        data: {
+          sku: itemSku,
+          nombre,
+          marca: proveedor.nombre,
+          categoria: "Sin categorizar",
+          presentacion: "INDIVIDUAL",
+          proveedorId,
+          precioCostoUnitario: precioBase,
+          precioVenta: precioBase * 1.3,
+        },
+      });
+      nuevoProductoId = nuevo.id;
+      // Vincular en historialStockMayorista
+      await prisma.historialStockMayorista.updateMany({
+        where: { sku: itemSku, proveedorId },
+        data: { productoId: nuevo.id },
+      });
+    }
+  }
 
   const precioCostoUnitario = precioListaUnitario * (1 - descuentoPorcentaje / 100);
 
