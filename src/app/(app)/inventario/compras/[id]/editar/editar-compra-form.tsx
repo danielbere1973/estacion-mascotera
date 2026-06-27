@@ -13,7 +13,6 @@ type MayoristaItem = {
   precioCostoScraped: string;
   precioConDescuento: string | null;
   productoId: number | null;
-  productoSku: string | null;
 };
 
 type Proveedor = { id: number; nombre: string };
@@ -41,40 +40,38 @@ export function EditorCompraForm({
   mayoristaItems: MayoristaItem[];
 }) {
   const [proveedorId, setProveedorId] = useState(String(compra.proveedorId));
-  // Empieza vacío para que el combobox muestre TODA la lista al abrirse
-  const [productoId, setProductoId] = useState("");
-  const [productoLabel, setProductoLabel] = useState("");
+  const [skuSeleccionado, setSkuSeleccionado] = useState("");
   const [precio, setPrecio] = useState(String(compra.precioListaUnitario));
+  const [labelSeleccionado, setLabelSeleccionado] = useState("");
 
   const itemsFiltrados = useMemo(
-    () => mayoristaItems.filter((i) => String(i.proveedorId) === proveedorId && i.productoId),
+    () => mayoristaItems.filter((i) => String(i.proveedorId) === proveedorId),
     [proveedorId, mayoristaItems]
   );
 
   const opciones = itemsFiltrados.map((i) => ({
-    value: String(i.productoId),
-    label: `${i.productoSku ?? i.sku} · ${i.nombre ?? ""}${i.tamanios ? ` · ${i.tamanios}` : ""} — ${formatCurrency(i.precioConDescuento ?? i.precioCostoScraped)}`,
-    search: `${i.nombre ?? ""} ${i.sku} ${i.productoSku ?? ""} ${i.tamanios ?? ""}`,
+    value: i.sku,
+    label: `${i.nombre ?? i.sku}${i.tamanios ? ` · ${i.tamanios}` : ""} — ${formatCurrency(i.precioConDescuento ?? i.precioCostoScraped)}`,
+    search: `${i.nombre ?? ""} ${i.sku} ${i.tamanios ?? ""}`,
   }));
 
-  function seleccionarProducto(value: string) {
-    const item = itemsFiltrados.find((i) => String(i.productoId) === value);
+  function seleccionarProducto(sku: string) {
+    const item = itemsFiltrados.find((i) => i.sku === sku);
     if (!item) return;
-    setProductoId(value);
-    setProductoLabel(`${item.productoSku ?? item.sku} · ${item.nombre ?? ""}`);
+    setSkuSeleccionado(sku);
     setPrecio(item.precioConDescuento ?? item.precioCostoScraped);
+    setLabelSeleccionado(`${item.nombre ?? sku}${item.tamanios ? ` · ${item.tamanios}` : ""}`);
   }
 
   return (
     <form action={actualizarCompra} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
       <input type="hidden" name="id" value={compra.id} />
-      <input type="hidden" name="productoId" value={productoId} />
+      <input type="hidden" name="itemSku" value={skuSeleccionado} />
 
-      {/* Proveedor */}
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Proveedor</label>
         <select name="proveedorId" required value={proveedorId}
-          onChange={(e) => { setProveedorId(e.target.value); setProductoId(""); setProductoLabel(""); }}
+          onChange={(e) => { setProveedorId(e.target.value); setSkuSeleccionado(""); setLabelSeleccionado(""); }}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
           {proveedores.map((p) => (
             <option key={p.id} value={p.id}>{p.nombre}</option>
@@ -82,23 +79,22 @@ export function EditorCompraForm({
         </select>
       </div>
 
-      {/* Producto desde lista del proveedor */}
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Producto</label>
-        <p className="text-xs text-gray-400 mb-1">
-          Actual: <span className="font-medium text-gray-700">{compra.productoSku} · {compra.productoNombre}</span>
-          {!productoId && " (se mantiene si no elegís otro)"}
+        <p className="text-xs text-gray-500 mb-1">
+          Actual: <span className="font-medium">{compra.productoSku} · {compra.productoNombre}</span>
+          {!skuSeleccionado && <span className="text-gray-400"> — buscá abajo para cambiar</span>}
         </p>
         {itemsFiltrados.length > 0 ? (
           <>
             <Combobox
               options={opciones}
-              value={productoId}
-              placeholder="Buscar por nombre, SKU o tamaño para cambiar..."
+              value={skuSeleccionado}
+              placeholder="Buscar por nombre, SKU o tamaño..."
               onSelect={seleccionarProducto}
             />
-            {productoLabel && (
-              <p className="text-xs text-green-700 mt-1">Nuevo producto: <span className="font-medium">{productoLabel}</span></p>
+            {labelSeleccionado && (
+              <p className="text-xs text-green-700 mt-1">Nuevo: <span className="font-medium">{labelSeleccionado}</span></p>
             )}
           </>
         ) : (

@@ -16,7 +16,6 @@ export default async function EditarCompraPage({
     }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     prisma.historialStockMayorista.findMany({
-      where: { productoId: { not: null } },
       orderBy: [{ proveedorId: "asc" }, { nombre: "asc" }],
       select: {
         proveedorId: true,
@@ -26,7 +25,6 @@ export default async function EditarCompraPage({
         precioCostoScraped: true,
         precioConDescuento: true,
         productoId: true,
-        producto: { select: { sku: true } },
       },
       distinct: ["proveedorId", "sku"],
     }),
@@ -64,8 +62,7 @@ export default async function EditarCompraPage({
           tamanios: i.tamanios ?? null,
           precioCostoScraped: i.precioCostoScraped.toString(),
           precioConDescuento: i.precioConDescuento?.toString() ?? null,
-          productoId: i.productoId,
-          productoSku: i.producto?.sku ?? null,
+          productoId: i.productoId ?? null,
         }))}
       />
     </div>
