@@ -97,6 +97,19 @@ export async function crearConsignacion(formData: FormData) {
   redirect(`/consignaciones/${consignacion.id}`);
 }
 
+export async function editarConsignacion(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  const direccion = formData.get("direccion")?.toString() as "ENTREGAMOS" | "RECIBIMOS";
+  const fecha = new Date(formData.get("fecha")?.toString() ?? new Date().toISOString());
+  const notas = formData.get("notas")?.toString().trim() || null;
+
+  if (!direccion) throw new Error("Faltan datos.");
+
+  await prisma.consignacion.update({ where: { id }, data: { direccion, fecha, notas } });
+  revalidatePath(`/consignaciones/${id}`);
+}
+
 export async function registrarVentaConsignacion(formData: FormData) {
   await requireAuth();
   const detalleId = Number(formData.get("detalleId"));

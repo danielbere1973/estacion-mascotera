@@ -6,6 +6,7 @@ import { registrarVentaConsignacion, cerrarConsignacion, registrarPagoConsignaci
 import { FacturadoField } from "@/components/facturado-field";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { VentaRow } from "./venta-row";
+import { EditarConsignacionForm } from "./editar-consignacion-form";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -68,15 +69,25 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
             </span>
           </p>
         </div>
-        {!esRestringido && cons.estado === "ABIERTA" && (
-          <form action={cerrarConsignacion}>
-            <input type="hidden" name="id" value={cons.id} />
-            <ConfirmSubmitButton
-              confirmMessage="¿Cerrar esta consignación?"
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
-              Cerrar consignación
-            </ConfirmSubmitButton>
-          </form>
+        {!esRestringido && (
+          <div className="flex gap-2">
+            <EditarConsignacionForm
+              id={cons.id}
+              direccion={cons.direccion}
+              fecha={new Date(cons.fecha).toISOString().split("T")[0]}
+              notas={cons.notas}
+            />
+            {cons.estado === "ABIERTA" && (
+              <form action={cerrarConsignacion}>
+                <input type="hidden" name="id" value={cons.id} />
+                <ConfirmSubmitButton
+                  confirmMessage="¿Cerrar esta consignación?"
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+                  Cerrar consignación
+                </ConfirmSubmitButton>
+              </form>
+            )}
+          </div>
         )}
       </div>
 
