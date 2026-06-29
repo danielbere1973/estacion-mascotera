@@ -168,20 +168,37 @@ export async function generarLiquidacion(formData: FormData) {
 
   let totalACobrarnos = 0; // ellos nos deben (vendieron nuestros productos - ENTREGAMOS)
   let totalACobrarles = 0; // nosotros les debemos (vendimos sus productos - RECIBIMOS)
+  const consignacionIds = new Set<number>();
 
   for (const v of ventas) {
     const costo = Number(v.detalle.precioCosto);
     const venta = Number(v.precioVentaReal);
-    // Dueño cobra: costo + 1/3 de la ganancia
     const montoLiquidar = (costo + (venta - costo) / 3) * v.cantidad;
     if (v.detalle.consignacion.direccion === "ENTREGAMOS") {
       totalACobrarnos += montoLiquidar;
     } else {
       totalACobrarles += montoLiquidar;
     }
+    consignacionIds.add(v.detalle.consignacionId);
   }
 
-  const saldo = totalACobrarnos - totalACobrarles;
+  // Pagos no liquidados de las consignaciones incluidas
+  const pagos = consignacionIds.size > 0
+    ? await prisma.pagoConsignacion.findMany({
+        where: { liquidacionId: null, consignacionId: { in: Array.from(consignacionIds) } },
+        include: { consignacion: { select: { direccion: true } } },
+      })
+    : [];
+
+  let pagosRecibidos = 0; // pagos en consig ENTREGAMOS (ellos nos pagaron)
+  let pagosRealizados = 0; // pagos en consig RECIBIMOS (nosotros les pagamos)
+  for (const p of pagos) {
+    if (p.consignacion.direccion === "ENTREGAMOS") pagosRecibidos += Number(p.monto);
+    else pagosRealizados += Number(p.monto);
+  }
+
+  // Saldo neto real descontando pagos ya realizados
+  const saldo = (totalACobrarnos - pagosRecibidos) - (totalACobrarles - pagosRealizados);
 
   const liquidacion = await prisma.$transaction(async (tx) => {
     const liq = await tx.liquidacionConsignacion.create({
@@ -191,6 +208,12 @@ export async function generarLiquidacion(formData: FormData) {
       where: { id: { in: ventas.map(v => v.id) } },
       data: { liquidacionId: liq.id },
     });
+    if (pagos.length > 0) {
+      await tx.pagoConsignacion.updateMany({
+        where: { id: { in: pagos.map(p => p.id) } },
+        data: { liquidacionId: liq.id },
+      });
+    }
     return liq;
   });
 
