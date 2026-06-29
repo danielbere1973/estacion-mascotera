@@ -292,7 +292,7 @@ export async function registrarPagoConsignacion(formData: FormData) {
   const totalPagado = cons.pagos.reduce((s, p) => s + Number(p.monto), 0);
   const pendiente = totalOwe - totalPagado;
 
-  if (monto > pendiente + 0.01) throw new Error(`El pago (${monto}) supera el saldo pendiente (${pendiente.toFixed(2)}).`);
+  // Se permite pagar de más (ej: se entregó todo al socio); el saldo negativo queda como deuda del socio hacia nosotros
 
   await prisma.pagoConsignacion.create({ data: { consignacionId, monto, notas, fecha } });
 

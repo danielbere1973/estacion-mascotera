@@ -96,10 +96,12 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
               <p className="text-xs text-gray-400">{esEntregamos ? "A cobrar" : "A pagar"} (costo + 1/3 ganancia)</p>
               <p className="text-lg font-semibold text-blue-700">{fmt(montoLiquidar)}</p>
             </div>
-            <div className={`rounded-xl border p-3 text-center ${pendiente <= 0 ? "border-green-200 bg-green-50" : "border-orange-200 bg-orange-50"}`}>
-              <p className="text-xs text-gray-400">Pendiente de pago</p>
-              <p className={`text-lg font-semibold ${pendiente <= 0 ? "text-green-700" : "text-orange-600"}`}>
-                {pendiente <= 0 ? "Saldado ✓" : fmt(pendiente)}
+            <div className={`rounded-xl border p-3 text-center ${pendiente < 0 ? "border-purple-200 bg-purple-50" : pendiente === 0 ? "border-green-200 bg-green-50" : "border-orange-200 bg-orange-50"}`}>
+              <p className="text-xs text-gray-400">
+                {pendiente < 0 ? "Socio nos debe" : "Pendiente de pago"}
+              </p>
+              <p className={`text-lg font-semibold ${pendiente < 0 ? "text-purple-700" : pendiente === 0 ? "text-green-700" : "text-orange-600"}`}>
+                {pendiente < 0 ? fmt(Math.abs(pendiente)) : pendiente === 0 ? "Saldado ✓" : fmt(pendiente)}
               </p>
               {totalPagado > 0 && <p className="text-xs text-gray-400">Pagado: {fmt(totalPagado)}</p>}
             </div>
