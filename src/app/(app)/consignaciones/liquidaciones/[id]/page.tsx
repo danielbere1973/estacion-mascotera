@@ -131,19 +131,33 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
           {liq.ventas.map((v) => {
             const esEntregamos = v.detalle.consignacion.direccion === "ENTREGAMOS";
             const costo = Number(v.detalle.precioCosto);
-            const ganancia = Number(v.precioVentaReal) - costo;
-            const montoLiq = (costo + ganancia / 3) * v.cantidad;
+            const precioVenta = Number(v.precioVentaReal);
+            const ganancia = precioVenta - costo;
+            const comisionNuestra = ganancia * 2 / 3;
+            const partedueno = costo + ganancia / 3;
+            const montoLiq = partedueno * v.cantidad;
             return (
-              <div key={v.id} className="flex justify-between items-center px-4 py-2.5 text-sm">
-                <div>
-                  <span className="text-gray-900">{v.detalle.descripcion ?? `Item #${v.detalle.id}`}</span>
-                  <span className="text-gray-400 ml-2 text-xs">
-                    {new Date(v.fecha).toLocaleDateString("es-AR")} · {v.cantidad} u. · Consig. #{v.detalle.consignacionId}
+              <div key={v.id} className="px-4 py-3 text-sm">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="font-medium text-gray-900">{v.detalle.descripcion ?? `Item #${v.detalle.id}`}</span>
+                    <span className="text-gray-400 ml-2 text-xs">
+                      {new Date(v.fecha).toLocaleDateString("es-AR")} · {v.cantidad} u. · Consig. #{v.detalle.consignacionId}
+                    </span>
+                  </div>
+                  <span className={`font-semibold ${esEntregamos ? "text-green-700" : "text-red-600"}`}>
+                    {esEntregamos ? "+" : "-"}{fmt(montoLiq)}
                   </span>
                 </div>
-                <span className={`font-medium ${esEntregamos ? "text-green-700" : "text-red-600"}`}>
-                  {esEntregamos ? "+" : "-"}{fmt(montoLiq)}
-                </span>
+                <div className="mt-1 text-xs text-gray-400 space-y-0.5">
+                  <div>Venta: {fmt(precioVenta)} · Costo: {fmt(costo)} · Ganancia: {fmt(ganancia)}</div>
+                  <div>
+                    {esEntregamos
+                      ? `Nos corresponde: costo ${fmt(costo)} + 1/3 ganancia ${fmt(ganancia / 3)} = ${fmt(partedueno)} × ${v.cantidad} u.`
+                      : `Les corresponde: costo ${fmt(costo)} + 1/3 ganancia ${fmt(ganancia / 3)} = ${fmt(partedueno)} × ${v.cantidad} u. · Nuestra comisión: ${fmt(comisionNuestra * v.cantidad)}`
+                    }
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -160,10 +174,13 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
           <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
             {liq.pagos.map((p) => {
               const esEntregamos = p.consignacion.direccion === "ENTREGAMOS";
+              const quien = esEntregamos
+                ? `${liq.socio.nombre} nos pagó`
+                : `Nosotros le pagamos a ${liq.socio.nombre}`;
               return (
                 <div key={p.id} className="flex justify-between items-center px-4 py-2.5 text-sm">
                   <div>
-                    <span className="text-gray-900">{esEntregamos ? "Pago recibido" : "Pago realizado"}</span>
+                    <span className="text-gray-900">{quien}</span>
                     <span className="text-gray-400 ml-2 text-xs">
                       {new Date(p.fecha).toLocaleDateString("es-AR")} · Consig. #{p.consignacionId}
                       {p.notas && ` · ${p.notas}`}
