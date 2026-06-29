@@ -221,6 +221,23 @@ export async function generarLiquidacion(formData: FormData) {
   redirect(`/consignaciones/liquidaciones/${liquidacion.id}`);
 }
 
+export async function anularLiquidacion(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  const socioId = Number(formData.get("socioId"));
+
+  await prisma.$transaction(async (tx) => {
+    await tx.consignacion.updateMany({ where: { liquidacionId: id }, data: { liquidacionId: null } });
+    await tx.ventaConsignacion.updateMany({ where: { liquidacionId: id }, data: { liquidacionId: null } });
+    await tx.pagoConsignacion.updateMany({ where: { liquidacionId: id }, data: { liquidacionId: null } });
+    await tx.liquidacionConsignacion.delete({ where: { id } });
+  });
+
+  revalidatePath("/consignaciones/liquidaciones");
+  revalidatePath(`/consignaciones/cuenta-corriente/${socioId}`);
+  redirect("/consignaciones/liquidaciones");
+}
+
 export async function eliminarVentaConsignacion(formData: FormData) {
   await requireAdmin();
   const id = Number(formData.get("id"));

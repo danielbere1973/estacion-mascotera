@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { anularLiquidacion } from "../../actions";
+import { ConfirmSubmitButton } from "@/components/confirm-button";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -40,12 +42,23 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
 
   return (
     <div className="space-y-4">
-      <div>
-        <Link href="/consignaciones/liquidaciones" className="text-xs text-gray-400 hover:text-gray-600">← Liquidaciones</Link>
-        <h1 className="text-xl font-semibold text-gray-900 mt-1">Liquidación #{liq.id} — {liq.socio.nombre}</h1>
-        <p className="text-sm text-gray-400">
-          Período: {new Date(liq.fechaDesde).toLocaleDateString("es-AR")} → {new Date(liq.fechaHasta).toLocaleDateString("es-AR")}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <Link href="/consignaciones/liquidaciones" className="text-xs text-gray-400 hover:text-gray-600">← Liquidaciones</Link>
+          <h1 className="text-xl font-semibold text-gray-900 mt-1">Liquidación #{liq.id} — {liq.socio.nombre}</h1>
+          <p className="text-sm text-gray-400">
+            Período: {new Date(liq.fechaDesde).toLocaleDateString("es-AR")} → {new Date(liq.fechaHasta).toLocaleDateString("es-AR")}
+          </p>
+        </div>
+        <form action={anularLiquidacion}>
+          <input type="hidden" name="id" value={liq.id} />
+          <input type="hidden" name="socioId" value={liq.socioId} />
+          <ConfirmSubmitButton
+            confirmMessage="¿Anular esta liquidación? Las ventas y pagos volverán a quedar pendientes."
+            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">
+            Anular liquidación
+          </ConfirmSubmitButton>
+        </form>
       </div>
 
       {/* Desglose ENTREGAMOS */}
