@@ -11,19 +11,13 @@ import { Presentacion, UnidadMedida } from "@prisma/client";
 export async function crearCompra(formData: FormData) {
   const session = await requireAdmin();
 
-  let proveedorId = formData.get("proveedorId")?.toString();
-  if (proveedorId === "nuevo") {
-    const nombre = formData.get("proveedorNombre")?.toString().trim();
-    if (!nombre) throw new Error("Falta el nombre del proveedor.");
-    const direccion = formData.get("proveedorDireccion")?.toString().trim() || null;
-    const contacto = formData.get("proveedorContacto")?.toString().trim() || null;
-
-    const proveedor = await prisma.proveedor.create({
-      data: { nombre, direccion, contacto },
-    });
-    proveedorId = String(proveedor.id);
-  }
-  if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
+  const proveedorIdRaw = formData.get("proveedorId")?.toString();
+  const esProveedorNuevo = proveedorIdRaw === "nuevo";
+  const proveedorNombre = formData.get("proveedorNombre")?.toString().trim();
+  const proveedorDireccion = formData.get("proveedorDireccion")?.toString().trim() || null;
+  const proveedorContacto = formData.get("proveedorContacto")?.toString().trim() || null;
+  if (esProveedorNuevo && !proveedorNombre) throw new Error("Falta el nombre del proveedor.");
+  if (!esProveedorNuevo && !proveedorIdRaw) throw new Error("Debe seleccionar un proveedor.");
 
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const numeroPedido = formData.get("numeroPedido")?.toString().trim() || null;
@@ -53,6 +47,14 @@ export async function crearCompra(formData: FormData) {
   if (items.length === 0) throw new Error("Agregá al menos un producto.");
 
   await prisma.$transaction(async (tx) => {
+    let proveedorId = proveedorIdRaw;
+    if (esProveedorNuevo) {
+      const proveedor = await tx.proveedor.create({
+        data: { nombre: proveedorNombre!, direccion: proveedorDireccion, contacto: proveedorContacto },
+      });
+      proveedorId = String(proveedor.id);
+    }
+
     const tipoDefault = await tx.tipoProducto.findFirst({ orderBy: { nombre: "asc" } });
 
     for (let i = 0; i < items.length; i++) {

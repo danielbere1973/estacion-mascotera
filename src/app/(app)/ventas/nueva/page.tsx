@@ -3,9 +3,10 @@ import { crearVenta } from "../actions";
 import { ClienteSelector } from "./cliente-selector";
 import { VentaItems } from "./venta-items";
 import { FacturadoField } from "@/components/facturado-field";
+import { CostosVenta } from "../costos-venta";
 
 export default async function NuevaVentaPage() {
-  const [clientes, productos, proveedores, comprasPorProducto, usuarios, mediosPago] = await Promise.all([
+  const [clientes, productos, proveedores, comprasPorProducto, usuarios, mediosPago, itemsConsignados] = await Promise.all([
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       where: { stockActual: { gt: 0 } },
@@ -29,6 +30,14 @@ export default async function NuevaVentaPage() {
       select: { id: true, nombre: true, apellido: true },
     }),
     prisma.medioPago.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
+    // Productos que el socio nos dio en consignación (RECIBIMOS) y todavía tienen unidades sin vender
+    prisma.detalleConsignacion.findMany({
+      where: {
+        productoId: { not: null },
+        consignacion: { direccion: "RECIBIMOS", estado: "ABIERTA" },
+      },
+      include: { consignacion: { include: { socio: true } } },
+    }),
   ]);
 
   const proveedorIdsPorProducto = new Map<number, number[]>();
@@ -38,10 +47,29 @@ export default async function NuevaVentaPage() {
     proveedorIdsPorProducto.set(c.productoId, lista);
   }
 
+  const consignadosPorProducto = new Map<
+    number,
+    { detalleConsignacionId: number; consignacionId: number; socioNombre: string; disponible: number; precioPiso: string }[]
+  >();
+  for (const item of itemsConsignados) {
+    const disponible = item.cantidad - item.cantidadVendida;
+    if (disponible <= 0 || !item.productoId) continue;
+    const lista = consignadosPorProducto.get(item.productoId) ?? [];
+    lista.push({
+      detalleConsignacionId: item.id,
+      consignacionId: item.consignacionId,
+      socioNombre: item.consignacion.socio.nombre,
+      disponible,
+      precioPiso: item.precioPiso.toString(),
+    });
+    consignadosPorProducto.set(item.productoId, lista);
+  }
+
   const productosPlain = productos.map((p) => ({
     ...p,
     precioVenta: p.precioVenta.toString(),
     proveedorIds: proveedorIdsPorProducto.get(p.id) ?? [],
+    consignados: consignadosPorProducto.get(p.id) ?? [],
   }));
 
   return (
@@ -125,6 +153,8 @@ export default async function NuevaVentaPage() {
         </div>
 
         <VentaItems productos={productosPlain} proveedores={proveedores} />
+
+        <CostosVenta />
 
         <FacturadoField />
 

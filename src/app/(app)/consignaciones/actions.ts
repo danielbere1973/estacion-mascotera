@@ -61,39 +61,97 @@ export async function crearConsignacion(formData: FormData) {
   const pisos = formData.getAll("itemPiso").map(Number);
   const productoIds = formData.getAll("itemProductoId").map(String);
 
+  const nuevoSkus = formData.getAll("itemNuevoSku").map(String);
+  const nuevoNombres = formData.getAll("itemNuevoNombre").map(String);
+  const nuevoMarcas = formData.getAll("itemNuevoMarca").map(String);
+  const nuevoCategorias = formData.getAll("itemNuevoCategoria").map(String);
+  const nuevoPresentaciones = formData.getAll("itemNuevoPresentacion").map(String);
+  const nuevoUnidades = formData.getAll("itemNuevoUnidadMedida").map(String);
+  const nuevoContenidos = formData.getAll("itemNuevoContenido").map(String);
+  const nuevoProveedorIds = formData.getAll("itemNuevoProveedorId").map(String);
+
   if (!socioId || !direccion || cantidades.length === 0) throw new Error("Faltan datos.");
 
-  const consignacion = await prisma.consignacion.create({
-    data: {
-      socioId, direccion, fecha, notas,
-      items: {
-        create: cantidades.map((_, i) => ({
-          productoId: productoIds[i] ? Number(productoIds[i]) : null,
-          descripcion: descripciones[i] || skus[i] || null,
-          cantidad: cantidades[i],
-          precioCosto: costos[i],
-          precioPiso: pisos[i],
-        })),
-      },
-    },
-  });
-
-  // Si ENTREGAMOS: mover stock de "disponible" a "en consignación"
-  if (direccion === "ENTREGAMOS") {
+  const consignacion = await prisma.$transaction(async (tx) => {
+    // Resolver productoId por ítem: el existente seleccionado, o uno recién creado en Inventario.
+    const resolvedProductoIds: (number | null)[] = [];
     for (let i = 0; i < cantidades.length; i++) {
       if (productoIds[i]) {
-        await prisma.producto.update({
-          where: { id: Number(productoIds[i]) },
+        resolvedProductoIds.push(Number(productoIds[i]));
+        continue;
+      }
+      if (nuevoSkus[i]) {
+        if (direccion === "ENTREGAMOS") {
+          throw new Error(`No se puede crear un producto nuevo en una consignación ENTREGAMOS (el ítem ${i + 1}): no tenemos ese producto en stock para entregar.`);
+        }
+        if (!nuevoNombres[i] || !nuevoMarcas[i] || !nuevoCategorias[i] || !nuevoPresentaciones[i]) {
+          throw new Error(`Faltan datos del producto nuevo en el ítem ${i + 1}.`);
+        }
+        const proveedorId = nuevoProveedorIds[i] ? Number(nuevoProveedorIds[i]) : null;
+        if (!proveedorId) throw new Error(`Falta el proveedor del producto nuevo en el ítem ${i + 1}.`);
+        const nuevo = await tx.producto.create({
+          data: {
+            sku: nuevoSkus[i],
+            nombre: nuevoNombres[i],
+            marca: nuevoMarcas[i],
+            categoria: nuevoCategorias[i],
+            presentacion: nuevoPresentaciones[i] as "BOLSA_CERRADA" | "CAJA_CERRADA" | "INDIVIDUAL",
+            unidadMedida: (nuevoUnidades[i] || "UNIDAD") as "KILOGRAMOS" | "GRAMOS" | "LITROS" | "MILILITROS" | "UNIDAD",
+            contenido: nuevoContenidos[i] ? Number(nuevoContenidos[i]) : 1,
+            proveedorId,
+            precioCostoUnitario: costos[i] || 0,
+            margenPorcentaje: 30,
+            precioVenta: (costos[i] || 0) * 1.3,
+            stockActual: 0,
+          },
+        });
+        resolvedProductoIds.push(nuevo.id);
+      } else {
+        resolvedProductoIds.push(null);
+      }
+    }
+
+    const creada = await tx.consignacion.create({
+      data: {
+        socioId, direccion, fecha, notas,
+        items: {
+          create: cantidades.map((_, i) => ({
+            productoId: resolvedProductoIds[i],
+            descripcion: descripciones[i] || skus[i] || nuevoNombres[i] || null,
+            cantidad: cantidades[i],
+            precioCosto: costos[i],
+            precioPiso: pisos[i],
+          })),
+        },
+      },
+    });
+
+    for (let i = 0; i < cantidades.length; i++) {
+      const productoId = resolvedProductoIds[i];
+      if (!productoId) continue;
+      if (direccion === "ENTREGAMOS") {
+        // Mover stock de "disponible" a "en consignación"
+        await tx.producto.update({
+          where: { id: productoId },
           data: {
             stockActual: { decrement: cantidades[i] },
             stockEnConsignacion: { increment: cantidades[i] },
           },
         });
+      } else {
+        // RECIBIMOS: la mercadería del socio entra a nuestro stock disponible (como una compra)
+        await tx.producto.update({
+          where: { id: productoId },
+          data: { stockActual: { increment: cantidades[i] } },
+        });
       }
     }
-  }
+
+    return creada;
+  });
 
   revalidatePath("/consignaciones");
+  revalidatePath("/inventario");
   redirect(`/consignaciones/${consignacion.id}`);
 }
 
@@ -106,8 +164,85 @@ export async function editarConsignacion(formData: FormData) {
 
   if (!direccion) throw new Error("Faltan datos.");
 
-  await prisma.consignacion.update({ where: { id }, data: { direccion, fecha, notas } });
+  const cons = await prisma.consignacion.findUniqueOrThrow({ where: { id }, include: { items: true } });
+
+  if (cons.direccion !== direccion) {
+    // Si ya hay ventas registradas, el cambio de dirección dejaría el stock/comisiones inconsistentes
+    if (cons.items.some((it) => it.cantidadVendida > 0)) {
+      throw new Error("No se puede cambiar la dirección: ya hay ventas registradas en esta consignación.");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of cons.items) {
+        if (!item.productoId) continue;
+        // Revertir el movimiento de stock de la dirección anterior
+        if (cons.direccion === "ENTREGAMOS") {
+          await tx.producto.update({
+            where: { id: item.productoId },
+            data: { stockActual: { increment: item.cantidad }, stockEnConsignacion: { decrement: item.cantidad } },
+          });
+        } else {
+          await tx.producto.update({
+            where: { id: item.productoId },
+            data: { stockActual: { decrement: item.cantidad } },
+          });
+        }
+        // Aplicar el movimiento de stock de la nueva dirección
+        if (direccion === "ENTREGAMOS") {
+          await tx.producto.update({
+            where: { id: item.productoId },
+            data: { stockActual: { decrement: item.cantidad }, stockEnConsignacion: { increment: item.cantidad } },
+          });
+        } else {
+          await tx.producto.update({
+            where: { id: item.productoId },
+            data: { stockActual: { increment: item.cantidad } },
+          });
+        }
+      }
+      await tx.consignacion.update({ where: { id }, data: { direccion, fecha, notas } });
+    });
+  } else {
+    await prisma.consignacion.update({ where: { id }, data: { direccion, fecha, notas } });
+  }
+
   revalidatePath(`/consignaciones/${id}`);
+}
+
+export async function eliminarConsignacion(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+
+  const cons = await prisma.consignacion.findUniqueOrThrow({
+    where: { id },
+    include: { items: true, pagos: true },
+  });
+
+  if (cons.pagos.length > 0 || cons.items.some((it) => it.cantidadVendida > 0)) {
+    throw new Error("No se puede eliminar: esta consignación ya tiene ventas o pagos registrados.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of cons.items) {
+      if (!item.productoId) continue;
+      if (cons.direccion === "ENTREGAMOS") {
+        await tx.producto.update({
+          where: { id: item.productoId },
+          data: { stockActual: { increment: item.cantidad }, stockEnConsignacion: { decrement: item.cantidad } },
+        });
+      } else {
+        await tx.producto.update({
+          where: { id: item.productoId },
+          data: { stockActual: { decrement: item.cantidad } },
+        });
+      }
+    }
+    await tx.detalleConsignacion.deleteMany({ where: { consignacionId: id } });
+    await tx.consignacion.delete({ where: { id } });
+  });
+
+  revalidatePath("/consignaciones");
+  redirect("/consignaciones");
 }
 
 export async function registrarVentaConsignacion(formData: FormData) {

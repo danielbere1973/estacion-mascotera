@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { Combobox } from "@/components/combobox";
 
+type ItemConsignado = {
+  detalleConsignacionId: number;
+  consignacionId: number;
+  socioNombre: string;
+  disponible: number;
+  precioPiso: string;
+};
+
 type Producto = {
   id: number;
   sku: string;
@@ -10,6 +18,7 @@ type Producto = {
   precioVenta: string;
   stockActual: number;
   proveedorIds: number[];
+  consignados: ItemConsignado[];
 };
 
 type Proveedor = {
@@ -24,11 +33,12 @@ type Row = {
   precio: string;
   descuento: string;  // porcentaje (lo que se envía al servidor)
   descuentoMonto: string;
+  detalleConsignacionId: string; // "" = stock propio
 };
 
 export function VentaItems({ productos, proveedores }: { productos: Producto[]; proveedores: Proveedor[] }) {
   const [rows, setRows] = useState<Row[]>([
-    { key: 0, productoId: "", cantidad: "1", precio: "", descuento: "0", descuentoMonto: "0" },
+    { key: 0, productoId: "", cantidad: "1", precio: "", descuento: "0", descuentoMonto: "0", detalleConsignacionId: "" },
   ]);
   const [nextKey, setNextKey] = useState(1);
   const [filtroProveedorId, setFiltroProveedorId] = useState("");
@@ -37,7 +47,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
   function addRow() {
     setRows((r) => [
       ...r,
-      { key: nextKey, productoId: "", cantidad: "1", precio: "", descuento: "0", descuentoMonto: "0" },
+      { key: nextKey, productoId: "", cantidad: "1", precio: "", descuento: "0", descuentoMonto: "0", detalleConsignacionId: "" },
     ]);
     setNextKey((k) => k + 1);
   }
@@ -58,12 +68,22 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
       cantidad: "1",
       descuento: "0",
       descuentoMonto: "0",
+      detalleConsignacionId: "",
     });
   }
 
-  function onCantidadChange(key: number, value: string, row: Row, stockActual: number) {
+  function onConsignacionChange(key: number, detalleConsignacionId: string, producto: Producto | undefined) {
+    const consignado = producto?.consignados.find((c) => String(c.detalleConsignacionId) === detalleConsignacionId);
+    updateRow(key, {
+      detalleConsignacionId,
+      precio: consignado ? consignado.precioPiso : (producto ? producto.precioVenta : ""),
+      cantidad: "1",
+    });
+  }
+
+  function onCantidadChange(key: number, value: string, row: Row, maxCantidad: number) {
     const cantidad = Number(value);
-    const cantidadFinal = Number.isFinite(cantidad) && cantidad > stockActual ? stockActual : cantidad;
+    const cantidadFinal = Number.isFinite(cantidad) && cantidad > maxCantidad ? maxCantidad : cantidad;
     const valorBruto = cantidadFinal * (Number(row.precio) || 0);
     const pct = Number(row.descuento) || 0;
     const monto = valorBruto > 0 ? (valorBruto * pct / 100).toFixed(2) : "0";
@@ -153,6 +173,8 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
 
       {rows.map((row) => {
         const producto = productos.find((p) => String(p.id) === row.productoId);
+        const consignado = producto?.consignados.find((c) => String(c.detalleConsignacionId) === row.detalleConsignacionId);
+        const maxCantidad = consignado ? Math.min(consignado.disponible, producto!.stockActual) : (producto?.stockActual ?? Infinity);
         return (
           <div key={row.key} className="flex flex-wrap items-center gap-2">
             <div className="min-w-[180px] flex-1">
@@ -165,6 +187,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
               />
             </div>
             <input type="hidden" name="productoId" value={row.productoId} />
+            <input type="hidden" name="detalleConsignacionId" value={row.detalleConsignacionId} />
 
             <div className="space-y-0.5">
               <label className="block text-xs text-gray-400 sm:hidden">Cantidad</label>
@@ -172,10 +195,10 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 type="number"
                 name="cantidad"
                 min={1}
-                max={producto?.stockActual}
+                max={maxCantidad}
                 required
                 value={row.cantidad}
-                onChange={(e) => onCantidadChange(row.key, e.target.value, row, producto?.stockActual ?? Infinity)}
+                onChange={(e) => onCantidadChange(row.key, e.target.value, row, maxCantidad)}
                 className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                 placeholder="Cant."
               />
@@ -234,9 +257,29 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
               ✕
             </button>
 
+            {producto && producto.consignados.length > 0 && (
+              <div className="basis-full space-y-0.5">
+                <label className="block text-xs text-gray-400">Origen</label>
+                <select
+                  value={row.detalleConsignacionId}
+                  onChange={(e) => onConsignacionChange(row.key, e.target.value, producto)}
+                  className="w-full max-w-md rounded-md border border-gray-300 px-2 py-1 text-xs"
+                >
+                  <option value="">Stock propio</option>
+                  {producto.consignados.map((c) => (
+                    <option key={c.detalleConsignacionId} value={c.detalleConsignacionId}>
+                      Consignación de {c.socioNombre} (#{c.consignacionId}) — disponible: {c.disponible}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {producto && (
               <span className="basis-full text-xs text-gray-400">
-                Stock disponible: {producto.stockActual}
+                {consignado
+                  ? `Producto consignado por ${consignado.socioNombre} · disponible: ${consignado.disponible} · stock propio: ${producto.stockActual}`
+                  : `Stock disponible: ${producto.stockActual}`}
               </span>
             )}
           </div>

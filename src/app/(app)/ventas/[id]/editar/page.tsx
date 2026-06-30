@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { actualizarVenta } from "../../actions";
 import { EditarVentaItems } from "./editar-venta-items";
+import { CostosVenta } from "../../costos-venta";
 
 export default async function EditarVentaPage({
   params,
@@ -10,13 +11,27 @@ export default async function EditarVentaPage({
 }) {
   const { id } = await params;
 
-  const venta = await prisma.venta.findUnique({
-    where: { id: Number(id) },
-    include: {
-      cliente: true,
-      detalles: { include: { producto: true } },
-    },
-  });
+  const [venta, productos, itemsConsignados] = await Promise.all([
+    prisma.venta.findUnique({
+      where: { id: Number(id) },
+      include: {
+        cliente: true,
+        detalles: { include: { producto: true } },
+        costos: true,
+      },
+    }),
+    prisma.producto.findMany({
+      orderBy: { nombre: "asc" },
+      select: { id: true, sku: true, nombre: true, precioVenta: true, stockActual: true },
+    }),
+    prisma.detalleConsignacion.findMany({
+      where: {
+        productoId: { not: null },
+        consignacion: { direccion: "RECIBIMOS", estado: "ABIERTA" },
+      },
+      include: { consignacion: { include: { socio: true } } },
+    }),
+  ]);
 
   if (!venta) notFound();
 
@@ -28,6 +43,37 @@ export default async function EditarVentaPage({
     cantidad: d.cantidad,
     precioVentaUnitario: d.precioVentaUnitario.toString(),
     descuentoPorcentaje: d.descuentoPorcentaje.toString(),
+  }));
+
+  const consignadosPorProducto = new Map<
+    number,
+    { detalleConsignacionId: number; consignacionId: number; socioNombre: string; disponible: number; precioPiso: string }[]
+  >();
+  for (const item of itemsConsignados) {
+    const disponible = item.cantidad - item.cantidadVendida;
+    if (disponible <= 0 || !item.productoId) continue;
+    const lista = consignadosPorProducto.get(item.productoId) ?? [];
+    lista.push({
+      detalleConsignacionId: item.id,
+      consignacionId: item.consignacionId,
+      socioNombre: item.consignacion.socio.nombre,
+      disponible,
+      precioPiso: item.precioPiso.toString(),
+    });
+    consignadosPorProducto.set(item.productoId, lista);
+  }
+
+  const productosPlain = productos.map((p) => ({
+    ...p,
+    precioVenta: p.precioVenta.toString(),
+    consignados: consignadosPorProducto.get(p.id) ?? [],
+  }));
+
+  const costosIniciales = venta.costos.map((c) => ({
+    concepto: c.concepto,
+    esPorcentaje: c.esPorcentaje,
+    valor: c.valor.toString(),
+    incluyeEnvio: c.incluyeEnvio,
   }));
 
   return (
@@ -71,7 +117,7 @@ export default async function EditarVentaPage({
           </div>
         </div>
 
-        <EditarVentaItems detalles={detalles} />
+        <EditarVentaItems detalles={detalles} productos={productosPlain} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
@@ -102,6 +148,8 @@ export default async function EditarVentaPage({
             />
           </div>
         </div>
+
+        <CostosVenta costosIniciales={costosIniciales} />
 
         <button
           type="submit"

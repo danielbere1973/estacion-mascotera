@@ -19,7 +19,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   const fechaCompra = fechaWhere(rango);
   const fechaGasto = fechaWhere(rango);
 
-  const [detalles, ventasEnvio, compras, gastos, productos, ventasNoFact, comprasNoFact, ventasConsig] =
+  const [detalles, ventasEnvio, costosCobranzaAgg, compras, gastos, productos, ventasNoFact, comprasNoFact, ventasConsig] =
     await Promise.all([
       prisma.detalleVenta.findMany({
         where: fechaVenta ? { venta: { fechaVenta } } : undefined,
@@ -32,6 +32,10 @@ export async function getDashboardMetrics(rango: RangoFechas) {
       prisma.venta.aggregate({
         where: fechaVenta ? { fechaVenta } : undefined,
         _sum: { costoEnvio: true },
+      }),
+      prisma.costoVenta.aggregate({
+        where: fechaVenta ? { venta: { fechaVenta } } : undefined,
+        _sum: { montoCalculado: true },
       }),
       prisma.compra.aggregate({
         where: fechaCompra ? { fechaCompra } : undefined,
@@ -61,6 +65,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
         select: {
           cantidad: true,
           precioVentaReal: true,
+          detalleVentaId: true,
           detalle: { select: { precioCosto: true, consignacion: { select: { direccion: true } } } },
         },
       }),
@@ -81,13 +86,16 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     const venta = Number(v.precioVentaReal);
     const ganancia = venta - costo;
     gananciaConsignaciones += (ganancia * 2 / 3) * v.cantidad;
-    // Si RECIBIMOS (nosotros vendemos), sumamos al facturado
-    if (v.detalle.consignacion.direccion === "RECIBIMOS") {
+    // Si RECIBIMOS y la venta no vino de "Nueva venta" (no tiene DetalleVenta vinculado),
+    // sumamos al facturado acá porque si no, no está contada en ningún lado.
+    // Las que sí vienen de "Nueva venta" ya se contaron arriba vía detalleVenta.
+    if (v.detalle.consignacion.direccion === "RECIBIMOS" && !v.detalleVentaId) {
       totalFacturado += venta * v.cantidad;
     }
   }
 
   const costosEnvioVentas = Number(ventasEnvio._sum.costoEnvio ?? 0);
+  const costosCobranzaVentas = Number(costosCobranzaAgg._sum.montoCalculado ?? 0);
 
   const totalComprasMercaderia =
     Number(compras._sum.precioCostoUnitario ?? 0) +
@@ -103,7 +111,12 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   const totalGastado = totalComprasMercaderia + totalGastosFijos;
 
   const rentabilidadNeta =
-    totalFacturado - costoMercaderiaVendida - costosEnvioVentas - totalGastosFijos + gananciaConsignaciones;
+    totalFacturado -
+    costoMercaderiaVendida -
+    costosEnvioVentas -
+    costosCobranzaVentas -
+    totalGastosFijos +
+    gananciaConsignaciones;
 
   const valorStock = productos.reduce(
     (acc, p) => acc + p.stockActual * Number(p.precioCostoUnitario),
@@ -135,6 +148,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     rentabilidadNeta,
     valorStock,
     costoMercaderiaVendida,
+    costosCobranzaVentas,
     totalComprasMercaderia,
     gastosPorCategoria,
     ventasNoFacturadas,

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { registrarVentaConsignacion, cerrarConsignacion, registrarPagoConsignacion, eliminarPagoConsignacion } from "../actions";
+import { registrarVentaConsignacion, cerrarConsignacion, registrarPagoConsignacion, eliminarPagoConsignacion, eliminarConsignacion } from "../actions";
 import { FacturadoField } from "@/components/facturado-field";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { VentaRow } from "./venta-row";
@@ -40,6 +40,8 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
 
   const esEntregamos = cons.direccion === "ENTREGAMOS";
   const totalVendido = cons.items.reduce((s, it) => s + it.cantidadVendida, 0);
+  const totalItems = cons.items.reduce((s, it) => s + it.cantidad, 0);
+  const pendienteLiquidacion = cons.estado === "ABIERTA" && totalItems > 0 && totalVendido === totalItems;
 
   const montoLiquidar = cons.items.reduce((s, it) => {
     const costo = Number(it.precioCosto);
@@ -64,8 +66,8 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           <p className="text-sm text-gray-400">
             {new Date(cons.fecha).toLocaleDateString("es-AR")} · #{cons.id}
             {" · "}
-            <span className={cons.estado === "ABIERTA" ? "text-green-600" : "text-gray-500"}>
-              {cons.estado === "ABIERTA" ? "Abierta" : "Cerrada"}
+            <span className={pendienteLiquidacion ? "text-orange-600" : cons.estado === "ABIERTA" ? "text-green-600" : "text-gray-500"}>
+              {pendienteLiquidacion ? "Pendiente liquidación" : cons.estado === "ABIERTA" ? "Abierta" : "Cerrada"}
             </span>
           </p>
         </div>
@@ -84,6 +86,16 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                   confirmMessage="¿Cerrar esta consignación?"
                   className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
                   Cerrar consignación
+                </ConfirmSubmitButton>
+              </form>
+            )}
+            {totalVendido === 0 && cons.pagos.length === 0 && (
+              <form action={eliminarConsignacion}>
+                <input type="hidden" name="id" value={cons.id} />
+                <ConfirmSubmitButton
+                  confirmMessage="¿Eliminar esta consignación? Se revertirá el stock que generó."
+                  className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">
+                  Eliminar
                 </ConfirmSubmitButton>
               </form>
             )}
@@ -107,12 +119,12 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
               <p className="text-xs text-gray-400">{esEntregamos ? "A cobrar" : "A pagar"} (costo + 1/3 ganancia)</p>
               <p className="text-lg font-semibold text-blue-700">{fmt(montoLiquidar)}</p>
             </div>
-            <div className={`rounded-xl border p-3 text-center ${pendiente < 0 ? "border-purple-200 bg-purple-50" : pendiente === 0 ? "border-green-200 bg-green-50" : "border-orange-200 bg-orange-50"}`}>
+            <div className={`rounded-xl border p-3 text-center ${pendiente < 0 ? "border-purple-200 bg-purple-50" : pendiente === 0 ? (totalVendido === 0 ? "border-gray-200 bg-gray-50" : "border-green-200 bg-green-50") : "border-orange-200 bg-orange-50"}`}>
               <p className="text-xs text-gray-400">
                 {pendiente < 0 ? "Socio nos debe" : "Pendiente de pago"}
               </p>
-              <p className={`text-lg font-semibold ${pendiente < 0 ? "text-purple-700" : pendiente === 0 ? "text-green-700" : "text-orange-600"}`}>
-                {pendiente < 0 ? fmt(Math.abs(pendiente)) : pendiente === 0 ? "Saldado ✓" : fmt(pendiente)}
+              <p className={`text-lg font-semibold ${pendiente < 0 ? "text-purple-700" : pendiente === 0 ? (totalVendido === 0 ? "text-gray-400" : "text-green-700") : "text-orange-600"}`}>
+                {pendiente < 0 ? fmt(Math.abs(pendiente)) : pendiente === 0 ? (totalVendido === 0 ? "Venta pendiente" : "Saldado ✓") : fmt(pendiente)}
               </p>
               {totalPagado > 0 && <p className="text-xs text-gray-400">Pagado: {fmt(totalPagado)}</p>}
             </div>
@@ -202,8 +214,9 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                 )}
               </div>
 
-              {/* Registrar venta */}
-              {!esRestringido && disponible > 0 && cons.estado === "ABIERTA" && (
+              {/* Registrar venta: solo para ENTREGAMOS (el socio vende a su propio cliente).
+                  Los items RECIBIMOS se venden desde "Nueva venta" porque son ventas a nuestro cliente. */}
+              {!esRestringido && esEntregamos && disponible > 0 && cons.estado === "ABIERTA" && (
                 <form action={registrarVentaConsignacion} className="space-y-2 mb-3">
                   <input type="hidden" name="detalleId" value={item.id} />
                   <div className="flex gap-2 items-end flex-wrap">
@@ -229,6 +242,12 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                   </div>
                   {!esRestringido && <FacturadoField />}
                 </form>
+              )}
+              {!esRestringido && !esEntregamos && disponible > 0 && cons.estado === "ABIERTA" && (
+                <p className="text-xs text-gray-400 mb-3 italic">
+                  Las ventas de este producto se cargan desde{" "}
+                  <Link href="/ventas/nueva" className="text-blue-600 hover:underline">Nueva venta</Link>.
+                </p>
               )}
 
               {/* Historial de ventas */}

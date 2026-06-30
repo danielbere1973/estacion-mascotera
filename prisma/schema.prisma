@@ -196,9 +196,27 @@ model Venta {
   vendidoPor Usuario?       @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
   cobradoPor Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
   detalles   DetalleVenta[]
+  costos     CostoVenta[]
 
   @@index([fechaVenta])
   @@index([clienteId])
+}
+
+// Costos de cobranza del proveedor de pagos (gestión de cobro, comisión de venta,
+// financiación, etc.) que se descuentan de la ganancia de la venta.
+model CostoVenta {
+  id      Int @id @default(autoincrement())
+  ventaId Int
+
+  concepto       String
+  esPorcentaje   Boolean @default(false)
+  valor          Decimal // monto $ si esPorcentaje=false; valor % si esPorcentaje=true
+  incluyeEnvio   Boolean @default(false) // si esPorcentaje: si la base incluye el costo de envío
+  montoCalculado Decimal // monto $ resultante, calculado al guardar
+
+  venta Venta @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+
+  @@index([ventaId])
 }
 
 model DetalleVenta {
@@ -213,6 +231,8 @@ model DetalleVenta {
 
   venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
   producto Producto @relation(fields: [productoId], references: [id])
+
+  ventaConsignacion VentaConsignacion?
 
   @@index([ventaId])
   @@index([productoId])
@@ -403,6 +423,10 @@ model VentaConsignacion {
   liquidacionId Int?
   liquidacion   LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
   detalle       DetalleConsignacion      @relation(fields: [detalleConsignacionId], references: [id])
+
+  // Si la venta se cargó desde Nueva Venta (venta a cliente real), queda vinculada al renglón de esa venta
+  detalleVentaId Int?         @unique
+  detalleVenta   DetalleVenta? @relation(fields: [detalleVentaId], references: [id])
 
   @@index([detalleConsignacionId])
   @@index([liquidacionId])

@@ -92,7 +92,7 @@ export function CompraForm({
       {/* Items */}
       <div className="border-t border-gray-100 pt-4">
         <p className="mb-2 text-sm font-medium text-gray-700">Productos</p>
-        {proveedorId && proveedorId !== "nuevo" ? (
+        {proveedorId ? (
           <CompraItems items={itemsDelProveedor} />
         ) : (
           <p className="text-sm text-gray-400">Seleccioná un proveedor para cargar productos.</p>

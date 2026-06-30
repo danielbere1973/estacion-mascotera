@@ -19,7 +19,7 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
             },
           },
         },
-        orderBy: { fecha: "desc" },
+        orderBy: { id: "desc" },
       },
       liquidaciones: { orderBy: { fecha: "desc" } },
     },
@@ -149,6 +149,7 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
           {socio.consignaciones.map((c) => {
             const totalItems = c.items.reduce((s, it) => s + it.cantidad, 0);
             const totalVendido = c.items.reduce((s, it) => s + it.cantidadVendida, 0);
+            const pendienteLiquidacion = c.estado === "ABIERTA" && totalItems > 0 && totalVendido === totalItems;
             return (
               <Link key={c.id} href={`/consignaciones/${c.id}`}
                 className="flex justify-between items-center px-4 py-3 hover:bg-gray-50">
@@ -160,8 +161,8 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
                 </div>
                 <div className="text-right text-xs text-gray-500">
                   {totalVendido}/{totalItems} vendidas
-                  <span className={`ml-2 ${c.estado === "ABIERTA" ? "text-green-600" : "text-gray-400"}`}>
-                    {c.estado}
+                  <span className={`ml-2 ${pendienteLiquidacion ? "text-orange-600" : c.estado === "ABIERTA" ? "text-green-600" : "text-gray-400"}`}>
+                    {pendienteLiquidacion ? "Pendiente liquidación" : c.estado === "ABIERTA" ? "Abierta" : "Cerrada"}
                   </span>
                 </div>
               </Link>
