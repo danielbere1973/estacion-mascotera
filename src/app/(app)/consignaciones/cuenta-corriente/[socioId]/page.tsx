@@ -16,6 +16,7 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
           items: {
             include: {
               ventas: { where: { liquidacionId: null }, orderBy: { fecha: "desc" } },
+              _count: { select: { ventas: { where: { liquidacionId: { not: null } } } } },
             },
           },
         },
@@ -150,6 +151,8 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
             const totalItems = c.items.reduce((s, it) => s + it.cantidad, 0);
             const totalVendido = c.items.reduce((s, it) => s + it.cantidadVendida, 0);
             const pendienteLiquidacion = c.estado === "ABIERTA" && totalItems > 0 && totalVendido === totalItems;
+            const tieneVentasLiquidadas = c.items.some((it) => it._count.ventas > 0);
+            const liquidadaParcialmente = c.estado === "ABIERTA" && tieneVentasLiquidadas && !pendienteLiquidacion;
             return (
               <Link key={c.id} href={`/consignaciones/${c.id}`}
                 className="flex justify-between items-center px-4 py-3 hover:bg-gray-50">
@@ -161,8 +164,8 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
                 </div>
                 <div className="text-right text-xs text-gray-500">
                   {totalVendido}/{totalItems} vendidas
-                  <span className={`ml-2 ${pendienteLiquidacion ? "text-orange-600" : c.estado === "ABIERTA" ? "text-green-600" : "text-gray-400"}`}>
-                    {pendienteLiquidacion ? "Pendiente liquidación" : c.estado === "ABIERTA" ? "Abierta" : "Cerrada"}
+                  <span className={`ml-2 ${pendienteLiquidacion ? "text-orange-600" : liquidadaParcialmente ? "text-blue-600" : c.estado === "ABIERTA" ? "text-green-600" : "text-gray-400"}`}>
+                    {pendienteLiquidacion ? "Pendiente liquidación" : liquidadaParcialmente ? "Liquidada parcialmente" : c.estado === "ABIERTA" ? "Abierta" : "Cerrada"}
                   </span>
                 </div>
               </Link>

@@ -42,6 +42,8 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
   const totalVendido = cons.items.reduce((s, it) => s + it.cantidadVendida, 0);
   const totalItems = cons.items.reduce((s, it) => s + it.cantidad, 0);
   const pendienteLiquidacion = cons.estado === "ABIERTA" && totalItems > 0 && totalVendido === totalItems;
+  const tieneVentasLiquidadas = cons.items.some((it) => it.ventas.some((v) => v.liquidacionId !== null));
+  const liquidadaParcialmente = cons.estado === "ABIERTA" && tieneVentasLiquidadas && !pendienteLiquidacion;
 
   const montoLiquidar = cons.items.reduce((s, it) => {
     const costo = Number(it.precioCosto);
@@ -66,8 +68,8 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           <p className="text-sm text-gray-400">
             {new Date(cons.fecha).toLocaleDateString("es-AR")} · #{cons.id}
             {" · "}
-            <span className={pendienteLiquidacion ? "text-orange-600" : cons.estado === "ABIERTA" ? "text-green-600" : "text-gray-500"}>
-              {pendienteLiquidacion ? "Pendiente liquidación" : cons.estado === "ABIERTA" ? "Abierta" : "Cerrada"}
+            <span className={pendienteLiquidacion ? "text-orange-600" : liquidadaParcialmente ? "text-blue-600" : cons.estado === "ABIERTA" ? "text-green-600" : "text-gray-500"}>
+              {pendienteLiquidacion ? "Pendiente liquidación" : liquidadaParcialmente ? "Liquidada parcialmente" : cons.estado === "ABIERTA" ? "Abierta" : "Cerrada"}
             </span>
           </p>
         </div>
