@@ -167,36 +167,32 @@ export async function editarConsignacion(formData: FormData) {
   const cons = await prisma.consignacion.findUniqueOrThrow({ where: { id }, include: { items: true } });
 
   if (cons.direccion !== direccion) {
-    // Si ya hay ventas registradas, el cambio de dirección dejaría el stock/comisiones inconsistentes
-    if (cons.items.some((it) => it.cantidadVendida > 0)) {
-      throw new Error("No se puede cambiar la dirección: ya hay ventas registradas en esta consignación.");
-    }
-
     await prisma.$transaction(async (tx) => {
       for (const item of cons.items) {
         if (!item.productoId) continue;
-        // Revertir el movimiento de stock de la dirección anterior
+        // Ajuste de stock considerando unidades ya vendidas.
+        // ENTREGAMOS → RECIBIMOS:
+        //   stockActual actual: -cantidad; target: +(cantidad - cantidadVendida)
+        //   delta: +2*cantidad - cantidadVendida
+        //   stockEnConsignacion actual: +(cantidad - cantidadVendida); target: 0
+        //   delta: -(cantidad - cantidadVendida)
+        // RECIBIMOS → ENTREGAMOS: inverso exacto.
+        const noVendidas = item.cantidad - item.cantidadVendida;
         if (cons.direccion === "ENTREGAMOS") {
           await tx.producto.update({
             where: { id: item.productoId },
-            data: { stockActual: { increment: item.cantidad }, stockEnConsignacion: { decrement: item.cantidad } },
+            data: {
+              stockActual: { increment: 2 * item.cantidad - item.cantidadVendida },
+              stockEnConsignacion: { decrement: noVendidas },
+            },
           });
         } else {
           await tx.producto.update({
             where: { id: item.productoId },
-            data: { stockActual: { decrement: item.cantidad } },
-          });
-        }
-        // Aplicar el movimiento de stock de la nueva dirección
-        if (direccion === "ENTREGAMOS") {
-          await tx.producto.update({
-            where: { id: item.productoId },
-            data: { stockActual: { decrement: item.cantidad }, stockEnConsignacion: { increment: item.cantidad } },
-          });
-        } else {
-          await tx.producto.update({
-            where: { id: item.productoId },
-            data: { stockActual: { increment: item.cantidad } },
+            data: {
+              stockActual: { decrement: 2 * item.cantidad - item.cantidadVendida },
+              stockEnConsignacion: { increment: noVendidas },
+            },
           });
         }
       }
