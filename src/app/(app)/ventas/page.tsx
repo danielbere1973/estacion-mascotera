@@ -57,7 +57,7 @@ export default async function VentasPage({
       where,
       include: {
         cliente: true,
-        detalles: { include: { producto: { select: { precioCostoUnitario: true } } } },
+        detalles: { select: { cantidad: true, precioVentaUnitario: true, descuentoPorcentaje: true, precioCostoUnitario: true, producto: { select: { precioCostoUnitario: true } } } },
         costos: true,
       },
       orderBy: { fechaVenta: "desc" },
@@ -154,7 +154,7 @@ export default async function VentasPage({
                 0
               );
               const costoMercaderia = venta.detalles.reduce(
-                (acc, d) => acc + d.cantidad * Number(d.producto.precioCostoUnitario),
+                (acc, d) => acc + d.cantidad * Number(d.precioCostoUnitario ?? d.producto.precioCostoUnitario),
                 0
               );
               const costosCobranza = venta.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0);

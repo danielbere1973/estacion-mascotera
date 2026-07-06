@@ -228,6 +228,8 @@ model DetalleVenta {
   precioVentaUnitario Decimal
   // Descuento aplicado a este producto en la venta
   descuentoPorcentaje Decimal  @default(0)
+  // Precio de costo al momento de la venta (foto fija, no cambia con aumentos futuros)
+  precioCostoUnitario Decimal?
 
   venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
   producto Producto @relation(fields: [productoId], references: [id])

@@ -95,6 +95,13 @@ export async function crearVenta(formData: FormData) {
     0
   );
 
+  // Foto de los precios de costo al momento de la venta
+  const productosCosto = await prisma.producto.findMany({
+    where: { id: { in: items.map((i) => i.productoId) } },
+    select: { id: true, precioCostoUnitario: true },
+  });
+  const preciosCosto = new Map(productosCosto.map((p) => [p.id, p.precioCostoUnitario]));
+
   await prisma.$transaction(async (tx) => {
     for (const item of items) {
       const producto = await tx.producto.findUniqueOrThrow({ where: { id: item.productoId } });
@@ -128,6 +135,7 @@ export async function crearVenta(formData: FormData) {
             cantidad: item.cantidad,
             precioVentaUnitario: item.precioVentaUnitario,
             descuentoPorcentaje: item.descuentoPorcentaje,
+            precioCostoUnitario: preciosCosto.get(item.productoId),
           })),
         },
       },
@@ -318,7 +326,7 @@ export async function actualizarVenta(formData: FormData) {
         }
 
         const nuevoDetalle = await tx.detalleVenta.create({
-          data: { ventaId: id, productoId, cantidad, precioVentaUnitario: precio, descuentoPorcentaje: descuento },
+          data: { ventaId: id, productoId, cantidad, precioVentaUnitario: precio, descuentoPorcentaje: descuento, precioCostoUnitario: producto.precioCostoUnitario },
         });
 
         await tx.producto.update({

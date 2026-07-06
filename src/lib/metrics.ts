@@ -26,6 +26,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
         select: {
           cantidad: true,
           precioVentaUnitario: true,
+          precioCostoUnitario: true,
           producto: { select: { precioCostoUnitario: true } },
         },
       }),
@@ -77,7 +78,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
 
   for (const d of detalles) {
     totalFacturado += d.cantidad * Number(d.precioVentaUnitario);
-    costoMercaderiaVendida += d.cantidad * Number(d.producto.precioCostoUnitario);
+    costoMercaderiaVendida += d.cantidad * Number(d.precioCostoUnitario ?? d.producto.precioCostoUnitario);
   }
 
   // Consignaciones: nuestra ganancia = 2/3 de (precioVenta - costo)
