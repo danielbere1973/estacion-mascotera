@@ -50,15 +50,24 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
             Período: {new Date(liq.fechaDesde).toLocaleDateString("es-AR")} → {new Date(liq.fechaHasta).toLocaleDateString("es-AR")}
           </p>
         </div>
-        <form action={anularLiquidacion}>
-          <input type="hidden" name="id" value={liq.id} />
-          <input type="hidden" name="socioId" value={liq.socioId} />
-          <ConfirmSubmitButton
-            confirmMessage="¿Anular esta liquidación? Las ventas y pagos volverán a quedar pendientes."
-            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">
-            Anular liquidación
-          </ConfirmSubmitButton>
-        </form>
+        <div className="flex gap-2">
+          <Link
+            href={`/consignaciones/liquidaciones/${liq.id}/imprimir`}
+            target="_blank"
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            Imprimir / PDF
+          </Link>
+          <form action={anularLiquidacion}>
+            <input type="hidden" name="id" value={liq.id} />
+            <input type="hidden" name="socioId" value={liq.socioId} />
+            <ConfirmSubmitButton
+              confirmMessage="¿Anular esta liquidación? Las ventas y pagos volverán a quedar pendientes."
+              className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">
+              Anular liquidación
+            </ConfirmSubmitButton>
+          </form>
+        </div>
       </div>
 
       {/* Desglose ENTREGAMOS */}
