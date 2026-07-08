@@ -19,7 +19,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   const fechaCompra = fechaWhere(rango);
   const fechaGasto = fechaWhere(rango);
 
-  const [detalles, ventasEnvio, costosCobranzaAgg, compras, gastos, productos, ventasNoFact, comprasNoFact, ventasConsig] =
+  const [detalles, ventasEnvio, costosCobranzaAgg, compras, gastos, productos, todasLasCompras, ventasNoFact, comprasNoFact, ventasConsig] =
     await Promise.all([
       prisma.detalleVenta.findMany({
         where: fechaVenta ? { venta: { fechaVenta } } : undefined,
@@ -48,7 +48,11 @@ export async function getDashboardMetrics(rango: RangoFechas) {
         _sum: { monto: true },
       }),
       prisma.producto.findMany({
-        select: { stockActual: true, precioCostoUnitario: true },
+        select: { id: true, stockActual: true, precioCostoUnitario: true },
+      }),
+      // Todas las compras históricas para calcular costo promedio real por producto
+      prisma.compra.findMany({
+        select: { productoId: true, cantidad: true, precioCostoUnitario: true },
       }),
       prisma.venta.findMany({
         where: { ...(fechaVenta ? { fechaVenta } : {}), facturado: false },
@@ -119,10 +123,23 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     totalGastosFijos +
     gananciaConsignaciones;
 
-  const valorStock = productos.reduce(
-    (acc, p) => acc + p.stockActual * Number(p.precioCostoUnitario),
-    0
-  );
+  // Costo promedio ponderado por producto a partir de las compras reales.
+  // Así el valor del stock no cambia cuando se actualiza la lista de precios.
+  const costoPorProducto = new Map<number, { totalCosto: number; totalCantidad: number }>();
+  for (const c of todasLasCompras) {
+    const prev = costoPorProducto.get(c.productoId) ?? { totalCosto: 0, totalCantidad: 0 };
+    costoPorProducto.set(c.productoId, {
+      totalCosto: prev.totalCosto + Number(c.precioCostoUnitario) * c.cantidad,
+      totalCantidad: prev.totalCantidad + c.cantidad,
+    });
+  }
+  const valorStock = productos.reduce((acc, p) => {
+    const data = costoPorProducto.get(p.id);
+    const costoPromedio = data && data.totalCantidad > 0
+      ? data.totalCosto / data.totalCantidad
+      : Number(p.precioCostoUnitario);
+    return acc + p.stockActual * costoPromedio;
+  }, 0);
 
   const ventasNoFacturadas = {
     cantidad: ventasNoFact.length,
@@ -170,7 +187,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
   });
   const productoIds = comprasDelProveedor.map((c) => c.productoId);
 
-  const [detalles, compras, productos, ventasNoFact, comprasNoFact] = await Promise.all([
+  const [detalles, compras, productos, comprasHistoricas, ventasNoFact, comprasNoFact] = await Promise.all([
     prisma.detalleVenta.findMany({
       where: {
         productoId: { in: productoIds },
@@ -189,7 +206,11 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     }),
     prisma.producto.findMany({
       where: { id: { in: productoIds } },
-      select: { stockActual: true, precioCostoUnitario: true },
+      select: { id: true, stockActual: true, precioCostoUnitario: true },
+    }),
+    prisma.compra.findMany({
+      where: { proveedorId },
+      select: { productoId: true, cantidad: true, precioCostoUnitario: true },
     }),
     prisma.detalleVenta.findMany({
       where: {
@@ -219,10 +240,21 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
 
   const rentabilidadNeta = totalFacturado - costoMercaderiaVendida;
 
-  const valorStock = productos.reduce(
-    (acc, p) => acc + p.stockActual * Number(p.precioCostoUnitario),
-    0
-  );
+  const costoPorProductoR = new Map<number, { totalCosto: number; totalCantidad: number }>();
+  for (const c of comprasHistoricas) {
+    const prev = costoPorProductoR.get(c.productoId) ?? { totalCosto: 0, totalCantidad: 0 };
+    costoPorProductoR.set(c.productoId, {
+      totalCosto: prev.totalCosto + Number(c.precioCostoUnitario) * c.cantidad,
+      totalCantidad: prev.totalCantidad + c.cantidad,
+    });
+  }
+  const valorStock = productos.reduce((acc, p) => {
+    const data = costoPorProductoR.get(p.id);
+    const costoPromedio = data && data.totalCantidad > 0
+      ? data.totalCosto / data.totalCantidad
+      : Number(p.precioCostoUnitario);
+    return acc + p.stockActual * costoPromedio;
+  }, 0);
 
   const ventasNoFacturadas = {
     cantidad: new Set(ventasNoFact.map((d) => d.ventaId)).size,
