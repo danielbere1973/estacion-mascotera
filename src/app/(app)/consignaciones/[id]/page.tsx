@@ -7,6 +7,7 @@ import { FacturadoField } from "@/components/facturado-field";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { VentaRow } from "./venta-row";
 import { EditarConsignacionForm } from "./editar-consignacion-form";
+import { AgregarItemForm } from "./agregar-item-form";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -17,20 +18,26 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
   const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
   const proveedorRestrictoId = session?.user?.proveedorRestrictoId;
 
-  const cons = await prisma.consignacion.findUnique({
-    where: { id: Number(id) },
-    include: {
-      socio: true,
-      pagos: { orderBy: { fecha: "asc" } },
-      items: {
-        include: {
-          producto: { select: { nombre: true, marca: true } },
-          ventas: { orderBy: { fecha: "desc" } },
+  const [cons, productos] = await Promise.all([
+    prisma.consignacion.findUnique({
+      where: { id: Number(id) },
+      include: {
+        socio: true,
+        pagos: { orderBy: { fecha: "asc" } },
+        items: {
+          include: {
+            producto: { select: { nombre: true, marca: true } },
+            ventas: { orderBy: { fecha: "desc" } },
+          },
         },
+        liquidacion: true,
       },
-      liquidacion: true,
-    },
-  });
+    }),
+    prisma.producto.findMany({
+      select: { id: true, nombre: true, marca: true, stockActual: true },
+      orderBy: { nombre: "asc" },
+    }),
+  ]);
   if (!cons) notFound();
 
   // Restringido solo puede ver consignaciones de su socio vinculado
@@ -281,6 +288,14 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           );
         })}
       </div>
+
+      {!esRestringido && cons.estado === "ABIERTA" && (
+        <AgregarItemForm
+          consignacionId={cons.id}
+          direccion={cons.direccion}
+          productos={productos}
+        />
+      )}
 
       {cons.notas && (
         <div className="rounded-lg bg-yellow-50 border border-yellow-100 px-3 py-2 text-sm text-yellow-800">

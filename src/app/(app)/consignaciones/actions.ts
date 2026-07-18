@@ -491,3 +491,40 @@ export async function eliminarPagoConsignacion(formData: FormData) {
   await prisma.pagoConsignacion.delete({ where: { id } });
   revalidatePath(`/consignaciones/${pago.consignacionId}`);
 }
+
+export async function agregarItemConsignacion(formData: FormData) {
+  await requireAdmin();
+  const consignacionId = Number(formData.get("consignacionId"));
+  const productoIdStr = formData.get("productoId")?.toString();
+  const productoId = productoIdStr ? Number(productoIdStr) : null;
+  const descripcion = formData.get("descripcion")?.toString().trim() || null;
+  const cantidad = Number(formData.get("cantidad"));
+  const costo = Number(formData.get("costo"));
+  const piso = Number(formData.get("piso"));
+
+  if (!cantidad || cantidad <= 0) throw new Error("La cantidad debe ser mayor a 0.");
+
+  const cons = await prisma.consignacion.findUniqueOrThrow({ where: { id: consignacionId } });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.detalleConsignacion.create({
+      data: { consignacionId, productoId, descripcion, cantidad, precioCosto: costo, precioPiso: piso },
+    });
+    if (productoId) {
+      if (cons.direccion === "ENTREGAMOS") {
+        await tx.producto.update({
+          where: { id: productoId },
+          data: { stockActual: { decrement: cantidad }, stockEnConsignacion: { increment: cantidad } },
+        });
+      } else {
+        await tx.producto.update({
+          where: { id: productoId },
+          data: { stockActual: { increment: cantidad } },
+        });
+      }
+    }
+  });
+
+  revalidatePath(`/consignaciones/${consignacionId}`);
+  revalidatePath("/inventario");
+}
