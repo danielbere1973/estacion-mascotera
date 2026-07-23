@@ -12,6 +12,7 @@ type Row = {
   precio: string;
   cantidad: string;
   descuento: string;
+  modoManual: boolean;
 };
 
 function costoFinal(precio: string, descuento: string) {
@@ -22,7 +23,7 @@ function costoFinal(precio: string, descuento: string) {
 
 export function CompraItems({ items }: { items: MayoristaItem[] }) {
   const [rows, setRows] = useState<Row[]>([
-    { id: Date.now(), sku: "", nombre: "", precio: "", cantidad: "1", descuento: "0" },
+    { id: Date.now(), sku: "", nombre: "", precio: "", cantidad: "1", descuento: "0", modoManual: false },
   ]);
 
   const opciones = items.map((i) => ({
@@ -50,8 +51,14 @@ export function CompraItems({ items }: { items: MayoristaItem[] }) {
   function agregarFila() {
     setRows((prev) => [
       ...prev,
-      { id: Date.now(), sku: "", nombre: "", precio: "", cantidad: "1", descuento: "0" },
+      { id: Date.now(), sku: "", nombre: "", precio: "", cantidad: "1", descuento: "0", modoManual: false },
     ]);
+  }
+
+  function toggleModoManual(id: number) {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, modoManual: !r.modoManual, sku: "", nombre: "" } : r))
+    );
   }
 
   function quitarFila(id: number) {
@@ -76,7 +83,7 @@ export function CompraItems({ items }: { items: MayoristaItem[] }) {
             {rows.map((row) => (
               <tr key={row.id} className="align-top">
                 <td className="py-1.5 pr-2">
-                  {items.length > 0 ? (
+                  {items.length > 0 && !row.modoManual ? (
                     <div className="space-y-1">
                       <Combobox
                         options={opciones}
@@ -87,22 +94,37 @@ export function CompraItems({ items }: { items: MayoristaItem[] }) {
                       {row.sku && (
                         <p className="text-xs text-gray-400 font-mono">{row.sku}</p>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => toggleModoManual(row.id)}
+                        className="text-xs text-gray-400 hover:text-blue-600"
+                      >
+                        No está en la lista → ingresar SKU manualmente
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-1">
                       <input
-                        placeholder="SKU"
+                        placeholder="SKU (ej: KFRCPINS...)"
                         value={row.sku}
                         onChange={(e) => update(row.id, "sku", e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm font-mono"
+                      />
+                      <input
+                        placeholder="Nombre del producto"
+                        value={row.nombre}
+                        onChange={(e) => update(row.id, "nombre", e.target.value)}
                         className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                       />
-                      <a
-                        href="/inventario/productos/nuevo"
-                        target="_blank"
-                        className="text-xs text-blue-600 hover:underline"
-                      >
-                        + Crear producto nuevo
-                      </a>
+                      {items.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleModoManual(row.id)}
+                          className="text-xs text-gray-400 hover:text-blue-600"
+                        >
+                          ← Volver a buscar en la lista
+                        </button>
+                      )}
                     </div>
                   )}
                   {/* campos hidden para enviar al server */}
