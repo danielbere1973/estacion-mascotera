@@ -383,6 +383,19 @@ export async function crearProducto(formData: FormData) {
       data: { sku, skuInterno, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual, proveedorId },
     });
 
+    // Agregar al historial del proveedor para que aparezca en futuras compras.
+    // Primero eliminar cualquier entrada previa con el mismo proveedor+sku para evitar duplicados.
+    await tx.historialStockMayorista.deleteMany({ where: { proveedorId, sku } });
+    await tx.historialStockMayorista.create({
+      data: {
+        proveedorId,
+        sku,
+        nombre,
+        precioCostoScraped: precioCostoUnitario,
+        productoId: producto.id,
+      },
+    });
+
     await registrarLog(tx, {
       usuarioId: Number(session.user.id),
       accion: "CREAR",
