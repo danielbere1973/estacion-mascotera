@@ -366,6 +366,7 @@ model HistorialStockMayorista {
   producto  Producto?  @relation(fields: [productoId], references: [id])
   proveedor Proveedor? @relation(fields: [proveedorId], references: [id])
 
+  @@unique([proveedorId, sku], map: "HistorialStockMayorista_proveedorId_sku_key")
   @@index([fechaImportacion])
   @@index([sku])
   @@index([proveedorId])
