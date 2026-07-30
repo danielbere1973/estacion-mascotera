@@ -543,9 +543,11 @@ function corregirEncoding(s: string): string {
   }
 }
 
-// Saca el primer cero de un SKU si empieza con uno (ej: "06443-0.355" → "6443-0.355").
+// Normaliza un SKU: saca el primer cero si empieza con uno y convierte a minúsculas.
+// Así "06443-0.355" → "6443-0.355" y "6410-12KG" → "6410-12kg" (evita duplicados por capitalización).
 function normalizarSku(sku: string): string {
-  return sku.startsWith("0") ? sku.slice(1) : sku;
+  const s = sku.startsWith("0") ? sku.slice(1) : sku;
+  return s.toLowerCase();
 }
 
 // Convierte precios con formato argentino ("$ 24.100,00") a número (24100).
@@ -688,6 +690,50 @@ export async function importarExcel(formData: FormData) {
   let sinCoincidencia = 0;
   const ahora = new Date();
 
+  // SKUs presentes en esta importación
+  const skusImportados = new Set(filasPorSku.keys());
+
+  // Ítems del proveedor que YA estaban en la lista pero NO vienen en esta importación
+  const itemsAnteriores = await prisma.historialStockMayorista.findMany({
+    where: { proveedorId: Number(proveedorId) },
+    select: { id: true, sku: true, productoId: true, nombre: true, tamanios: true },
+  });
+  const itemsObsoletos = itemsAnteriores.filter((i) => !skusImportados.has(i.sku));
+
+  // Para cada ítem obsoleto que tenga un Producto vinculado, intentar reasignar
+  // el SKU del producto al nuevo código del proveedor (match por nombre+tamaño).
+  const skusReasignados = new Map<string, string>(); // skuViejo → skuNuevo
+  for (const obsoleto of itemsObsoletos) {
+    if (!obsoleto.productoId) continue;
+    const claveNombre = normalizarNombre(obsoleto.nombre ?? "");
+    const tamanioObs = (obsoleto.tamanios ?? "").trim().toUpperCase();
+
+    // Buscar en el nuevo Excel un ítem con mismo nombre normalizado y mismo tamaño
+    for (const [skuNuevo, fila] of filasPorSku) {
+      const nombreNuevo = normalizarNombre(String(fila["Nombre"] ?? "").trim());
+      const tamanioNuevo = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim().toUpperCase();
+      if (nombreNuevo === claveNombre && tamanioNuevo === tamanioObs) {
+        skusReasignados.set(obsoleto.sku, skuNuevo);
+        // Actualizar el SKU del producto en inventario
+        await prisma.producto.update({
+          where: { id: obsoleto.productoId },
+          data: { sku: skuNuevo },
+        });
+        break;
+      }
+    }
+  }
+
+  // Eliminar ítems obsoletos (SKU ya no aparece en la lista del proveedor)
+  if (itemsObsoletos.length > 0) {
+    await prisma.historialStockMayorista.deleteMany({
+      where: {
+        proveedorId: Number(proveedorId),
+        sku: { in: itemsObsoletos.map((i) => i.sku) },
+      },
+    });
+  }
+
   for (const [sku, fila] of filasPorSku) {
     const nombre = String(fila["Nombre"] ?? "").trim();
     const precioCosto = parsearPrecio(fila["Precio Lista"]);
@@ -712,8 +758,18 @@ export async function importarExcel(formData: FormData) {
       sinCoincidencia++;
     }
 
-    await prisma.historialStockMayorista.create({
-      data: {
+    await prisma.historialStockMayorista.upsert({
+      where: { proveedorId_sku: { proveedorId: Number(proveedorId), sku } },
+      update: {
+        nombre,
+        precioCostoScraped: precioCosto,
+        precioConDescuento,
+        tamanios,
+        estadoStockMayorista,
+        fechaImportacion: ahora,
+        ...(producto?.id ? { productoId: producto.id } : {}),
+      },
+      create: {
         productoId: producto?.id ?? null,
         proveedorId: Number(proveedorId),
         sku,
@@ -731,5 +787,7 @@ export async function importarExcel(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/ventas/nueva");
 
-  return { total: filasPorSku.size, actualizados, sinCoincidencia };
+  const reasignados = skusReasignados.size;
+  const eliminados = itemsObsoletos.length - reasignados;
+  return { total: filasPorSku.size, actualizados, sinCoincidencia, eliminados, reasignados };
 }

@@ -74,6 +74,47 @@ export default async function EditarClientePage({
           </div>
         </div>
 
+        <div className="border-t border-gray-100 pt-4 space-y-3">
+          <p className="text-sm font-medium text-gray-700">Reposición</p>
+
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              name="esRecurrente"
+              defaultChecked={cliente.esRecurrente}
+              className="rounded border-gray-300"
+            />
+            Cliente recurrente (recibe recordatorios de reposición)
+          </label>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                Período de reposición (días)
+                <span className="ml-1 text-xs text-gray-400 font-normal">— se calcula automáticamente del historial</span>
+              </label>
+              <input
+                name="periodoReposicionDias"
+                type="number"
+                min={1}
+                defaultValue={cliente.periodoReposicionDias ?? ""}
+                placeholder="Ej: 30"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Notas de reposición</label>
+              <input
+                name="notasReposicion"
+                defaultValue={cliente.notasReposicion ?? ""}
+                placeholder="Ej: prefiere que lo llamen"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+
         <button
           type="submit"
           className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"

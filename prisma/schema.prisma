@@ -96,6 +96,7 @@ model Producto {
   historialStock HistorialStockMayorista[]
   detallesConsignacion DetalleConsignacion[]
   ordenesDropshipping  OrdenDropshipping[]
+  recordatorios  RecordatorioReposicion[]
 
   @@index([categoria])
 }
@@ -160,8 +161,33 @@ model Cliente {
   telefono  String
   email     String?
 
+  // Reposición
+  esRecurrente          Boolean @default(false)
+  periodoReposicionDias Int?    // calculado del historial, editable manualmente
+  notasReposicion       String?
+
   ventas              Venta[]
   ordenesDropshipping OrdenDropshipping[]
+  recordatorios       RecordatorioReposicion[]
+}
+
+model RecordatorioReposicion {
+  id         Int      @id @default(autoincrement())
+  clienteId  Int
+  productoId Int
+  fechaUltimaCompra DateTime
+  fechaEstimadaReposicion DateTime
+  mensaje    String   // mensaje pre-armado listo para copiar/enviar
+  enviado    Boolean  @default(false)
+  fechaEnvio DateTime?
+  creadoAt   DateTime @default(now())
+
+  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@index([clienteId])
+  @@index([fechaEstimadaReposicion])
+  @@index([enviado])
 }
 
 // ---------------------------------------------------------------------------
