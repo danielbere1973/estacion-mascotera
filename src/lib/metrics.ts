@@ -309,5 +309,6 @@ export const CATEGORIAS_GASTO_SUGERIDAS = [
   "Teléfono",
   "Community Manager",
   "Soporte IT",
+  "Logística",
   "Otros",
 ];
