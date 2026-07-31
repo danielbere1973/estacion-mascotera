@@ -19,12 +19,21 @@ export default async function VentasPage({
     hasta?: string;
     clienteId?: string;
     facturado?: string;
+    canal?: string | string[];
+    pago?: string | string[];
   }>;
 }) {
   const params = await searchParams;
 
   const session = await auth();
   const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
+
+  const canalesSeleccionados = params.canal
+    ? Array.isArray(params.canal) ? params.canal : [params.canal]
+    : [];
+  const pagosSeleccionados = params.pago
+    ? Array.isArray(params.pago) ? params.pago : [params.pago]
+    : [];
 
   const where: Record<string, unknown> = {};
 
@@ -42,6 +51,14 @@ export default async function VentasPage({
   if (params.facturado === "si") where.facturado = true;
   if (params.facturado === "no") where.facturado = false;
 
+  if (canalesSeleccionados.length > 0) {
+    where.canalVenta = { in: canalesSeleccionados };
+  }
+
+  if (pagosSeleccionados.length > 0) {
+    where.medioPago = { in: pagosSeleccionados };
+  }
+
   if (esRestringido) {
     const comprasDelProveedor = await prisma.compra.findMany({
       where: { proveedorId: session?.user?.proveedorRestrictoId ?? -1 },
@@ -52,7 +69,7 @@ export default async function VentasPage({
     where.detalles = { some: { productoId: { in: productoIds } } };
   }
 
-  const [ventas, clientes] = await Promise.all([
+  const [ventas, clientes, mediosPagoDistintos] = await Promise.all([
     prisma.venta.findMany({
       where,
       include: {
@@ -64,7 +81,14 @@ export default async function VentasPage({
       take: 100,
     }),
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.venta.findMany({
+      select: { medioPago: true },
+      distinct: ["medioPago"],
+      orderBy: { medioPago: "asc" },
+    }),
   ]);
+
+  const mediosPago = mediosPagoDistintos.map((v) => v.medioPago);
 
   return (
     <div className="w-full space-y-4">
@@ -80,46 +104,88 @@ export default async function VentasPage({
         )}
       </div>
 
-      <form className="flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm">
-        <input
-          type="date"
-          name="desde"
-          defaultValue={params.desde}
-          className="rounded-md border border-gray-300 px-2 py-1"
-        />
-        <input
-          type="date"
-          name="hasta"
-          defaultValue={params.hasta}
-          className="rounded-md border border-gray-300 px-2 py-1"
-        />
-        <select
-          name="clienteId"
-          defaultValue={params.clienteId ?? ""}
-          className="rounded-md border border-gray-300 px-2 py-1"
-        >
-          <option value="">Todos los clientes</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre} {c.apellido}
-            </option>
-          ))}
-        </select>
-        <select
-          name="facturado"
-          defaultValue={params.facturado ?? ""}
-          className="rounded-md border border-gray-300 px-2 py-1"
-        >
-          <option value="">Facturado: todos</option>
-          <option value="si">Facturado: sí</option>
-          <option value="no">Facturado: no</option>
-        </select>
-        <button
-          type="submit"
-          className="rounded-md bg-gray-800 px-3 py-1 text-white hover:bg-gray-900"
-        >
-          Filtrar
-        </button>
+      <form className="rounded-xl border border-gray-200 bg-white p-3 text-sm space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="date"
+            name="desde"
+            defaultValue={params.desde}
+            className="rounded-md border border-gray-300 px-2 py-1"
+          />
+          <input
+            type="date"
+            name="hasta"
+            defaultValue={params.hasta}
+            className="rounded-md border border-gray-300 px-2 py-1"
+          />
+          <select
+            name="clienteId"
+            defaultValue={params.clienteId ?? ""}
+            className="rounded-md border border-gray-300 px-2 py-1"
+          >
+            <option value="">Todos los clientes</option>
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} {c.apellido}
+              </option>
+            ))}
+          </select>
+          <select
+            name="facturado"
+            defaultValue={params.facturado ?? ""}
+            className="rounded-md border border-gray-300 px-2 py-1"
+          >
+            <option value="">Facturado: todos</option>
+            <option value="si">Facturado: sí</option>
+            <option value="no">Facturado: no</option>
+          </select>
+          <button
+            type="submit"
+            className="rounded-md bg-gray-800 px-3 py-1 text-white hover:bg-gray-900"
+          >
+            Filtrar
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-gray-100 pt-3">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Canal</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {(["TIENDANUBE", "WHATSAPP", "TELEFONO"] as const).map((c) => (
+                <label key={c} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="canal"
+                    value={c}
+                    defaultChecked={canalesSeleccionados.includes(c)}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span>{CANAL_LABELS[c]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {mediosPago.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Pago</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {mediosPago.map((mp) => (
+                  <label key={mp} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="pago"
+                      value={mp}
+                      defaultChecked={pagosSeleccionados.includes(mp)}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span>{mp}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
