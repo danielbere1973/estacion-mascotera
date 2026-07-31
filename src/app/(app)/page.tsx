@@ -28,15 +28,26 @@ export default async function DashboardPage({
       highlight: true,
     },
     {
-      label: "Total Gastado",
-      value: metrics.totalGastado,
-      hint: "Compras + gastos fijos",
+      label: "Rentabilidad Operativa",
+      value: metrics.rentabilidadSinFijos,
+      hint: "Ingresos − costo mercadería − envíos − gastos variables (sin gastos fijos)",
+      highlight: true,
     },
     {
       label: "Rentabilidad Neta",
       value: metrics.rentabilidadNeta,
-      hint: "Ingresos - costos - envíos - gastos fijos",
+      hint: "Rentabilidad operativa − gastos fijos del período",
       highlight: true,
+    },
+    {
+      label: "Gastos Fijos del período",
+      value: metrics.totalGastosFijosDelPeriodo,
+      hint: "Monotributo, sueldos, etc. — impactan en rentabilidad neta",
+    },
+    {
+      label: "Total Gastado",
+      value: metrics.totalGastado,
+      hint: "Compras + todos los gastos",
     },
     {
       label: "Valor de Stock",

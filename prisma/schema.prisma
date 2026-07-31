@@ -97,6 +97,7 @@ model Producto {
   detallesConsignacion DetalleConsignacion[]
   ordenesDropshipping  OrdenDropshipping[]
   recordatorios  RecordatorioReposicion[]
+  clientesRecurrentes ClienteProductoRecurrente[]
 
   @@index([categoria])
 }
@@ -161,14 +162,27 @@ model Cliente {
   telefono  String
   email     String?
 
-  // Reposición
-  esRecurrente          Boolean @default(false)
-  periodoReposicionDias Int?    // calculado del historial, editable manualmente
-  notasReposicion       String?
-
   ventas              Venta[]
   ordenesDropshipping OrdenDropshipping[]
   recordatorios       RecordatorioReposicion[]
+  productosRecurrentes ClienteProductoRecurrente[]
+}
+
+model ClienteProductoRecurrente {
+  id         Int @id @default(autoincrement())
+  clienteId  Int
+  productoId Int
+
+  periodoDias Int
+  notas       String?
+  activo      Boolean @default(true)
+  creadoAt    DateTime @default(now())
+
+  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@unique([clienteId, productoId])
+  @@index([clienteId])
 }
 
 model RecordatorioReposicion {
@@ -292,6 +306,7 @@ enum CategoriaGasto {
 model Gasto {
   id             Int            @id @default(autoincrement())
   categoriaGasto CategoriaGasto
+  esFijo         Boolean        @default(false)
   monto          Decimal
   descripcion    String?
   fechaGasto     DateTime       @default(now())

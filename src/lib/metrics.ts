@@ -42,10 +42,9 @@ export async function getDashboardMetrics(rango: RangoFechas) {
         where: fechaCompra ? { fechaCompra } : undefined,
         _sum: { precioCostoUnitario: true, costoEnvio: true, cantidad: true },
       }),
-      prisma.gasto.groupBy({
-        by: ["categoriaGasto"],
+      prisma.gasto.findMany({
         where: fechaGasto ? { fechaGasto } : undefined,
-        _sum: { monto: true },
+        select: { categoriaGasto: true, esFijo: true, monto: true },
       }),
       prisma.producto.findMany({
         select: { id: true, stockActual: true, precioCostoUnitario: true },
@@ -108,20 +107,27 @@ export async function getDashboardMetrics(rango: RangoFechas) {
 
   const gastosPorCategoria = gastos.map((g) => ({
     categoria: g.categoriaGasto,
-    monto: Number(g._sum.monto ?? 0),
+    esFijo: g.esFijo,
+    monto: Number(g.monto),
   }));
 
-  const totalGastosFijos = gastosPorCategoria.reduce((acc, g) => acc + g.monto, 0);
+  const totalGastosFijosDelPeriodo = gastosPorCategoria.filter((g) => g.esFijo).reduce((acc, g) => acc + g.monto, 0);
+  const totalGastosVariables = gastosPorCategoria.filter((g) => !g.esFijo).reduce((acc, g) => acc + g.monto, 0);
+  const totalGastos = totalGastosFijosDelPeriodo + totalGastosVariables;
 
-  const totalGastado = totalComprasMercaderia + totalGastosFijos;
+  const totalGastado = totalComprasMercaderia + totalGastos;
 
-  const rentabilidadNeta =
+  // Rentabilidad antes de descontar gastos fijos (operativa pura)
+  const rentabilidadSinFijos =
     totalFacturado -
     costoMercaderiaVendida -
     costosEnvioVentas -
     costosCobranzaVentas -
-    totalGastosFijos +
+    totalGastosVariables +
     gananciaConsignaciones;
+
+  const rentabilidadNeta =
+    rentabilidadSinFijos - totalGastosFijosDelPeriodo;
 
   // Costo promedio ponderado por producto a partir de las compras reales.
   // Así el valor del stock no cambia cuando se actualiza la lista de precios.
@@ -164,6 +170,9 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     totalFacturado,
     totalGastado,
     rentabilidadNeta,
+    rentabilidadSinFijos,
+    totalGastosFijosDelPeriodo,
+    totalGastosVariables,
     valorStock,
     costoMercaderiaVendida,
     costosCobranzaVentas,
@@ -276,10 +285,14 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     totalFacturado,
     totalGastado,
     rentabilidadNeta,
+    rentabilidadSinFijos: rentabilidadNeta,
+    totalGastosFijosDelPeriodo: 0,
+    totalGastosVariables: 0,
     valorStock,
     costoMercaderiaVendida,
+    costosCobranzaVentas: 0,
     totalComprasMercaderia,
-    gastosPorCategoria: [] as { categoria: CategoriaGasto; monto: number }[],
+    gastosPorCategoria: [] as { categoria: CategoriaGasto; esFijo: boolean; monto: number }[],
     ventasNoFacturadas,
     comprasNoFacturadas,
     gananciaConsignaciones: 0,

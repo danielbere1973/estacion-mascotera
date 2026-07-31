@@ -16,10 +16,6 @@ export async function actualizarCliente(formData: FormData) {
   const direccion = formData.get("direccion")?.toString().trim();
   const telefono = formData.get("telefono")?.toString().trim();
   const email = formData.get("email")?.toString().trim() || null;
-  const esRecurrente = formData.get("esRecurrente") === "on";
-  const periodoReposicionDiasStr = formData.get("periodoReposicionDias")?.toString().trim();
-  const periodoReposicionDias = periodoReposicionDiasStr ? Number(periodoReposicionDiasStr) : null;
-  const notasReposicion = formData.get("notasReposicion")?.toString().trim() || null;
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
@@ -27,7 +23,7 @@ export async function actualizarCliente(formData: FormData) {
 
   await prisma.cliente.update({
     where: { id },
-    data: { nombre, apellido, direccion, telefono, email, esRecurrente, periodoReposicionDias, notasReposicion },
+    data: { nombre, apellido, direccion, telefono, email },
   });
 
   revalidatePath("/clientes");
@@ -35,76 +31,54 @@ export async function actualizarCliente(formData: FormData) {
   redirect("/clientes");
 }
 
-// Genera o actualiza recordatorios para todos los clientes recurrentes,
-// basándose en el historial real de ventas por producto.
-export async function generarRecordatorios() {
-  const clientes = await prisma.cliente.findMany({
-    where: { esRecurrente: true },
+export async function agregarProductoRecurrente(formData: FormData) {
+  await requireAdmin();
+
+  const clienteId = Number(formData.get("clienteId"));
+  const productoId = Number(formData.get("productoId"));
+  const periodoDias = Number(formData.get("periodoDias"));
+  const notas = formData.get("notas")?.toString().trim() || null;
+
+  if (!clienteId || !productoId || !periodoDias) throw new Error("Datos inválidos.");
+
+  await prisma.clienteProductoRecurrente.upsert({
+    where: { clienteId_productoId: { clienteId, productoId } },
+    update: { periodoDias, notas, activo: true },
+    create: { clienteId, productoId, periodoDias, notas },
   });
 
-  for (const cliente of clientes) {
-    // Obtener todas las ventas del cliente, agrupadas por producto
-    const detalles = await prisma.detalleVenta.findMany({
-      where: { venta: { clienteId: cliente.id } },
-      include: {
-        venta: { select: { fechaVenta: true } },
-        producto: { select: { id: true, nombre: true } },
-      },
-      orderBy: { venta: { fechaVenta: "asc" } },
-    });
+  revalidatePath(`/clientes/${clienteId}/editar`);
+  revalidatePath("/clientes/reposicion");
+}
 
-    // Agrupar por producto
-    const porProducto = new Map<number, { productoId: number; nombreProducto: string; fechas: Date[] }>();
-    for (const d of detalles) {
-      if (!d.productoId) continue;
-      const entry = porProducto.get(d.productoId) ?? { productoId: d.productoId, nombreProducto: d.producto?.nombre ?? "", fechas: [] };
-      entry.fechas.push(d.venta.fechaVenta);
-      porProducto.set(d.productoId, entry);
-    }
+export async function editarProductoRecurrente(formData: FormData) {
+  await requireAdmin();
 
-    for (const { productoId, nombreProducto, fechas } of porProducto.values()) {
-      if (fechas.length < 1) continue;
+  const id = Number(formData.get("id"));
+  const periodoDias = Number(formData.get("periodoDias"));
+  const notas = formData.get("notas")?.toString().trim() || null;
+  const activo = formData.get("activo") !== "false";
 
-      const ultimaCompra = fechas[fechas.length - 1];
+  if (!id || !periodoDias) throw new Error("Datos inválidos.");
 
-      // Calcular período: promedio de días entre compras, o usar el período manual del cliente
-      let periodoDias = cliente.periodoReposicionDias;
-      if (!periodoDias && fechas.length >= 2) {
-        const intervalos: number[] = [];
-        for (let i = 1; i < fechas.length; i++) {
-          const dias = Math.round((fechas[i].getTime() - fechas[i - 1].getTime()) / (1000 * 60 * 60 * 24));
-          if (dias > 0) intervalos.push(dias);
-        }
-        if (intervalos.length > 0) {
-          periodoDias = Math.round(intervalos.reduce((a, b) => a + b, 0) / intervalos.length);
-        }
-      }
+  const rec = await prisma.clienteProductoRecurrente.update({
+    where: { id },
+    data: { periodoDias, notas, activo },
+  });
 
-      if (!periodoDias) continue; // sin período calculable todavía
+  revalidatePath(`/clientes/${rec.clienteId}/editar`);
+  revalidatePath("/clientes/reposicion");
+}
 
-      const fechaEstimada = new Date(ultimaCompra);
-      fechaEstimada.setDate(fechaEstimada.getDate() + periodoDias);
+export async function eliminarProductoRecurrente(formData: FormData) {
+  await requireAdmin();
 
-      const mensaje = `Hola ${cliente.nombre}! Te recordamos que el ${ultimaCompra.toLocaleDateString("es-AR")} compraste ${nombreProducto}. Si ya se te está terminando, avisanos y te lo preparamos. ¡Saludos!`;
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Inválido.");
 
-      // Upsert: un recordatorio por cliente+producto no enviado
-      const existente = await prisma.recordatorioReposicion.findFirst({
-        where: { clienteId: cliente.id, productoId, enviado: false },
-      });
+  const rec = await prisma.clienteProductoRecurrente.delete({ where: { id } });
 
-      if (existente) {
-        await prisma.recordatorioReposicion.update({
-          where: { id: existente.id },
-          data: { fechaUltimaCompra: ultimaCompra, fechaEstimadaReposicion: fechaEstimada, mensaje },
-        });
-      } else {
-        await prisma.recordatorioReposicion.create({
-          data: { clienteId: cliente.id, productoId, fechaUltimaCompra: ultimaCompra, fechaEstimadaReposicion: fechaEstimada, mensaje },
-        });
-      }
-    }
-  }
-
+  revalidatePath(`/clientes/${rec.clienteId}/editar`);
   revalidatePath("/clientes/reposicion");
 }
 

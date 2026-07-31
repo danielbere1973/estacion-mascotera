@@ -98,6 +98,19 @@ export default async function EditarGastoPage({
           </select>
         </div>
 
+        <div className="flex items-center gap-2 sm:col-span-2">
+          <input
+            type="checkbox"
+            name="esFijo"
+            id="esFijo-editar"
+            defaultChecked={gasto.esFijo}
+            className="rounded border-gray-300"
+          />
+          <label htmlFor="esFijo-editar" className="text-sm text-gray-700 cursor-pointer">
+            Gasto fijo (se excluye del cálculo de rentabilidad variable)
+          </label>
+        </div>
+
         <div className="sm:col-span-2">
           <button
             type="submit"

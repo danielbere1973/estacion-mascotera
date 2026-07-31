@@ -15,6 +15,7 @@ export async function crearGasto(formData: FormData) {
   const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const fechaGastoStr = formData.get("fechaGasto")?.toString();
   const pagadoPorIdStr = formData.get("pagadoPorId")?.toString();
+  const esFijo = formData.get("esFijo") === "on";
 
   if (!categoriaGasto) throw new Error("Seleccioná una categoría.");
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
@@ -23,6 +24,7 @@ export async function crearGasto(formData: FormData) {
     const gasto = await tx.gasto.create({
       data: {
         categoriaGasto,
+        esFijo,
         monto,
         descripcion,
         fechaGasto: fechaGastoStr ? new Date(fechaGastoStr) : new Date(),
@@ -55,6 +57,7 @@ export async function actualizarGasto(formData: FormData) {
   const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const fechaGastoStr = formData.get("fechaGasto")?.toString();
   const pagadoPorIdStr = formData.get("pagadoPorId")?.toString();
+  const esFijo = formData.get("esFijo") === "on";
 
   if (!categoriaGasto) throw new Error("Seleccioná una categoría.");
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
@@ -64,6 +67,7 @@ export async function actualizarGasto(formData: FormData) {
       where: { id },
       data: {
         categoriaGasto,
+        esFijo,
         monto,
         descripcion,
         fechaGasto: fechaGastoStr ? new Date(fechaGastoStr) : new Date(),

@@ -95,6 +95,18 @@ export default async function GastosPage() {
           </select>
         </div>
 
+        <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-4">
+          <input
+            type="checkbox"
+            name="esFijo"
+            id="esFijo-nuevo"
+            className="rounded border-gray-300"
+          />
+          <label htmlFor="esFijo-nuevo" className="text-sm text-gray-700 cursor-pointer">
+            Gasto fijo (se excluye del cálculo de rentabilidad variable)
+          </label>
+        </div>
+
         <div className="sm:col-span-2 lg:col-span-4">
           <button
             type="submit"
@@ -111,6 +123,7 @@ export default async function GastosPage() {
             <tr>
               <th className="px-3 py-2">Fecha</th>
               <th className="px-3 py-2">Tipo</th>
+              <th className="px-3 py-2">Fijo/Var.</th>
               <th className="px-3 py-2 text-right">Monto</th>
               <th className="px-3 py-2">Notas</th>
               <th className="px-3 py-2">Cargado por</th>
@@ -124,6 +137,11 @@ export default async function GastosPage() {
                 <td className="whitespace-nowrap px-3 py-2">{formatDate(g.fechaGasto)}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {CATEGORIA_GASTO_LABELS[g.categoriaGasto]}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${g.esFijo ? "bg-gray-100 text-gray-600" : "bg-blue-50 text-blue-600"}`}>
+                    {g.esFijo ? "Fijo" : "Variable"}
+                  </span>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
                   {formatCurrency(g.monto.toString())}
@@ -158,7 +176,7 @@ export default async function GastosPage() {
             ))}
             {gastos.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
                   No hay gastos registrados.
                 </td>
               </tr>
