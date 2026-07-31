@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/auth";
-import { getDashboardMetrics, getDashboardMetricsRestringido, CATEGORIA_GASTO_LABELS } from "@/lib/metrics";
+import { getDashboardMetrics, getDashboardMetricsRestringido } from "@/lib/metrics";
 import { getRangoFechas, parsePeriodo, PERIODOS, type PeriodoKey } from "@/lib/periodo";
 import { formatCurrency } from "@/lib/format";
 import { GastosPieChart } from "@/components/gastos-pie-chart";
@@ -77,7 +77,7 @@ export default async function DashboardPage({
   ];
 
   const gastosData = metrics.gastosPorCategoria.map((g) => ({
-    categoria: CATEGORIA_GASTO_LABELS[g.categoria],
+    categoria: g.categoria,
     monto: g.monto,
   }));
 

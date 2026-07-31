@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { CATEGORIA_GASTO_LABELS } from "@/lib/metrics";
+import { CATEGORIAS_GASTO_SUGERIDAS } from "@/lib/metrics";
 import { actualizarGasto } from "../../actions";
 
 export default async function EditarGastoPage({
@@ -46,18 +46,18 @@ export default async function EditarGastoPage({
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Tipo</label>
-          <select
+          <input
             name="categoriaGasto"
+            list="categorias-gasto"
             required
             defaultValue={gasto.categoriaGasto}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            {Object.entries(CATEGORIA_GASTO_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+          />
+          <datalist id="categorias-gasto">
+            {CATEGORIAS_GASTO_SUGERIDAS.map((c) => (
+              <option key={c} value={c} />
             ))}
-          </select>
+          </datalist>
         </div>
 
         <div className="space-y-1">

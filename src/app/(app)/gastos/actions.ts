@@ -5,12 +5,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
-import { CategoriaGasto } from "@prisma/client";
 
 export async function crearGasto(formData: FormData) {
   const session = await requireAdmin();
 
-  const categoriaGasto = formData.get("categoriaGasto")?.toString() as CategoriaGasto;
+  const categoriaGasto = formData.get("categoriaGasto")?.toString().trim();
   const monto = Number(formData.get("monto"));
   const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const fechaGastoStr = formData.get("fechaGasto")?.toString();
@@ -52,7 +51,7 @@ export async function actualizarGasto(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Gasto inválido.");
 
-  const categoriaGasto = formData.get("categoriaGasto")?.toString() as CategoriaGasto;
+  const categoriaGasto = formData.get("categoriaGasto")?.toString().trim();
   const monto = Number(formData.get("monto"));
   const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const fechaGastoStr = formData.get("fechaGasto")?.toString();

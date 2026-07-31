@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { CategoriaGasto } from "@prisma/client";
 
 interface RangoFechas {
   desde?: Date;
@@ -292,7 +291,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     costoMercaderiaVendida,
     costosCobranzaVentas: 0,
     totalComprasMercaderia,
-    gastosPorCategoria: [] as { categoria: CategoriaGasto; esFijo: boolean; monto: number }[],
+    gastosPorCategoria: [] as { categoria: string; esFijo: boolean; monto: number }[],
     ventasNoFacturadas,
     comprasNoFacturadas,
     gananciaConsignaciones: 0,
@@ -300,11 +299,15 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
   };
 }
 
-export const CATEGORIA_GASTO_LABELS: Record<CategoriaGasto, string> = {
-  MONOTRIBUTO: "Monotributo",
-  TELEFONO: "Teléfono",
-  COMMUNITY_MANAGER: "Community Manager",
-  PUBLICIDAD: "Publicidad",
-  SOPORTE_IT: "Soporte IT",
-  OTROS: "Otros",
-};
+export const CATEGORIAS_GASTO_SUGERIDAS = [
+  "Fijo",
+  "Variable",
+  "Soporte",
+  "Excepcional",
+  "Publicidad",
+  "Monotributo",
+  "Teléfono",
+  "Community Manager",
+  "Soporte IT",
+  "Otros",
+];

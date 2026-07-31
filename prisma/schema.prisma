@@ -294,19 +294,10 @@ model MedioPago {
 // Gastos
 // ---------------------------------------------------------------------------
 
-enum CategoriaGasto {
-  MONOTRIBUTO
-  TELEFONO
-  COMMUNITY_MANAGER
-  PUBLICIDAD
-  SOPORTE_IT
-  OTROS
-}
-
 model Gasto {
-  id             Int            @id @default(autoincrement())
-  categoriaGasto CategoriaGasto
-  esFijo         Boolean        @default(false)
+  id             Int     @id @default(autoincrement())
+  categoriaGasto String
+  esFijo         Boolean @default(false)
   monto          Decimal
   descripcion    String?
   fechaGasto     DateTime       @default(now())

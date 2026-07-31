@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { CATEGORIA_GASTO_LABELS } from "@/lib/metrics";
+import { CATEGORIAS_GASTO_SUGERIDAS } from "@/lib/metrics";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { crearGasto, eliminarGasto } from "./actions";
 
@@ -42,21 +42,18 @@ export default async function GastosPage() {
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Tipo</label>
-          <select
+          <input
             name="categoriaGasto"
+            list="categorias-gasto"
             required
-            defaultValue=""
+            placeholder="Seleccionar o escribir..."
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="" disabled>
-              Seleccionar...
-            </option>
-            {Object.entries(CATEGORIA_GASTO_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+          />
+          <datalist id="categorias-gasto">
+            {CATEGORIAS_GASTO_SUGERIDAS.map((c) => (
+              <option key={c} value={c} />
             ))}
-          </select>
+          </datalist>
         </div>
 
         <div className="space-y-1">
@@ -136,7 +133,7 @@ export default async function GastosPage() {
               <tr key={g.id} className="hover:bg-gray-50">
                 <td className="whitespace-nowrap px-3 py-2">{formatDate(g.fechaGasto)}</td>
                 <td className="whitespace-nowrap px-3 py-2">
-                  {CATEGORIA_GASTO_LABELS[g.categoriaGasto]}
+                  {g.categoriaGasto}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${g.esFijo ? "bg-gray-100 text-gray-600" : "bg-blue-50 text-blue-600"}`}>
