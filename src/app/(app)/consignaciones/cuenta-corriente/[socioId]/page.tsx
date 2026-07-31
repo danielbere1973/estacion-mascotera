@@ -62,7 +62,7 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <Link href="/consignaciones" className="text-xs text-gray-400 hover:text-gray-600">← Consignaciones</Link>
         <h1 className="text-xl font-semibold text-gray-900 mt-1">Cuenta corriente — {socio.nombre}</h1>

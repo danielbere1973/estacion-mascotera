@@ -11,7 +11,7 @@ export default async function LiquidacionesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="w-full space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Liquidaciones</h1>
 
       <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">

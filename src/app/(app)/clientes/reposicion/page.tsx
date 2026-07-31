@@ -36,7 +36,7 @@ export default async function ReposicionPage({
 
   if (pares.length === 0) {
     return (
-      <div className="mx-auto max-w-5xl space-y-4">
+      <div className="w-full space-y-4">
         <h1 className="text-xl font-semibold text-gray-900">Reposiciones</h1>
         <div className="rounded-xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-400">
           No hay productos recurrentes configurados.{" "}

@@ -30,7 +30,7 @@ export default async function ComprasPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="w-full space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Compras</h1>
         {!esRestringido && (

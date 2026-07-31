@@ -55,7 +55,7 @@ export default async function ActividadPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="w-full space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Log de actividad</h1>
 
       <form className="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">

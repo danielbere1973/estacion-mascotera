@@ -66,7 +66,7 @@ export default async function ListasMayoristaPage({
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="w-full space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Listas de precios por proveedor</h1>
 
       <form className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm">

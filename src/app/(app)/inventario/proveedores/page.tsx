@@ -21,7 +21,7 @@ export default async function ProveedoresPage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Proveedores</h1>
       </div>

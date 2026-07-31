@@ -22,7 +22,7 @@ export default async function GastosPage() {
   const hoy = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="w-full space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Gastos</h1>
 
       <form

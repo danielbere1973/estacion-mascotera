@@ -24,7 +24,7 @@ export default async function ProveedorDetallePage({ params }: { params: Promise
   const sinProducto = items.filter((h) => !h.producto);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <Link href="/inventario/proveedores" className="text-xs text-gray-400 hover:text-gray-600">← Proveedores</Link>
