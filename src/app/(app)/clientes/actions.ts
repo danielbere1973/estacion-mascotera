@@ -16,6 +16,7 @@ export async function actualizarCliente(formData: FormData) {
   const direccion = formData.get("direccion")?.toString().trim();
   const telefono = formData.get("telefono")?.toString().trim();
   const email = formData.get("email")?.toString().trim() || null;
+  const mascotas = formData.get("mascotas")?.toString().trim() || null;
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
@@ -23,7 +24,7 @@ export async function actualizarCliente(formData: FormData) {
 
   await prisma.cliente.update({
     where: { id },
-    data: { nombre, apellido, direccion, telefono, email },
+    data: { nombre, apellido, direccion, telefono, email, mascotas },
   });
 
   revalidatePath("/clientes");

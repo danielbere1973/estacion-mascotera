@@ -148,6 +148,16 @@ export default async function EditarVentaPage({
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
+
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-sm font-medium text-gray-700">Fecha de acreditación (opcional)</label>
+            <input
+              type="date"
+              name="fechaAcreditacion"
+              defaultValue={venta.fechaAcreditacion ? new Date(venta.fechaAcreditacion).toISOString().split("T")[0] : ""}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
         </div>
 
         <CostosVenta costosIniciales={costosIniciales} />

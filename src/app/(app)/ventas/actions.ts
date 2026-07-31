@@ -210,6 +210,8 @@ export async function actualizarVenta(formData: FormData) {
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+  const fechaAcreditacionRaw = formData.get("fechaAcreditacion")?.toString().trim() || null;
+  const fechaAcreditacion = fechaAcreditacionRaw ? new Date(fechaAcreditacionRaw) : null;
 
   if (!canalVenta || !medioPago) throw new Error("Faltan datos de la venta.");
 
@@ -382,7 +384,7 @@ export async function actualizarVenta(formData: FormData) {
 
     await tx.venta.update({
       where: { id },
-      data: { canalVenta, medioPago, costoEnvio, facturado, numeroFactura },
+      data: { canalVenta, medioPago, costoEnvio, facturado, numeroFactura, fechaAcreditacion },
     });
 
     await registrarLog(tx, {

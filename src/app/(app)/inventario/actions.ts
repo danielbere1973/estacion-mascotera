@@ -436,6 +436,14 @@ export async function crearProducto(formData: FormData) {
   redirect("/inventario");
 }
 
+export async function reactivarProducto(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Producto inválido.");
+  await prisma.producto.update({ where: { id }, data: { activo: true } });
+  revalidatePath("/inventario");
+}
+
 export async function actualizarProducto(formData: FormData) {
   const session = await requireAdmin();
 

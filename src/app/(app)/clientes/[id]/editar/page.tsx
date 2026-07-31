@@ -95,6 +95,16 @@ export default async function EditarClientePage({
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
+
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-sm font-medium text-gray-700">Mascotas (opcional)</label>
+            <input
+              name="mascotas"
+              defaultValue={cliente.mascotas ?? ""}
+              placeholder="Ej: Luna (golden, 3 años), Michi (gato, 5 años)"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
         </div>
 
         <button

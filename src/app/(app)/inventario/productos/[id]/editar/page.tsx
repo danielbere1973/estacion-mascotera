@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { actualizarProducto } from "../../../actions";
+import { actualizarProducto, reactivarProducto } from "../../../actions";
 import { agregarProveedorProducto, quitarProveedorProducto } from "./actions";
 import { AgregarProveedorForm } from "./agregar-proveedor-form";
 
@@ -43,6 +43,18 @@ export default async function EditarProductoPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-xl font-semibold text-gray-900">Editar producto</h1>
+
+      {!producto.activo && (
+        <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+          <p className="text-sm text-orange-700 font-medium">Este producto está inactivo y no aparece en el catálogo.</p>
+          <form action={reactivarProducto}>
+            <input type="hidden" name="id" value={producto.id} />
+            <button type="submit" className="rounded-md bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700">
+              Reactivar
+            </button>
+          </form>
+        </div>
+      )}
 
       <form action={actualizarProducto} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
         <input type="hidden" name="id" value={producto.id} />

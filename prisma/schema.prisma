@@ -106,6 +106,7 @@ model Cliente {
   direccion           String
   telefono            String
   email               String?
+  mascotas            String?
   ordenesDropshipping OrdenDropshipping[]
   productosRecurrentes ClienteProductoRecurrente[]
   recordatorios       RecordatorioReposicion[]
@@ -151,9 +152,10 @@ model Venta {
   canalVenta    CanalVenta
   medioPago     String
   costoEnvio    Decimal        @default(0)
-  facturado     Boolean        @default(false)
-  numeroFactura String?
-  fechaVenta    DateTime       @default(now())
+  facturado           Boolean        @default(false)
+  numeroFactura       String?
+  fechaAcreditacion   DateTime?
+  fechaVenta          DateTime       @default(now())
   usuarioId     Int
   vendidoPorId  Int?
   cobradoPorId  Int?
