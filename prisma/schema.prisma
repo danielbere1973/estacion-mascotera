@@ -367,6 +367,7 @@ model HistorialStockMayorista {
   // Stock que tiene el MAYORISTA disponible (informativo, no es nuestro stock)
   estadoStockMayorista String?
 
+  activo           Boolean  @default(true)
   fechaImportacion DateTime @default(now())
 
   producto  Producto?  @relation(fields: [productoId], references: [id])

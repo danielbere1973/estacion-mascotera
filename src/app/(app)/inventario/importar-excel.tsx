@@ -37,9 +37,7 @@ export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
           `Procesados ${res.total} productos`,
           `${res.actualizados} actualizados`,
         ];
-        if (res.reasignados > 0) partes.push(`${res.reasignados} con código cambiado`);
-        if (res.eliminados > 0) partes.push(`${res.eliminados} eliminados (ya no están en la lista)`);
-        if (res.sinCoincidencia > 0) partes.push(`${res.sinCoincidencia} sin coincidencia`);
+        if (res.nuevos > 0) partes.push(`${res.nuevos} nuevos creados en el catálogo`);
         setResultado(partes.join(" · "));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error al procesar el archivo.");

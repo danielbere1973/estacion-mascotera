@@ -674,68 +674,40 @@ export async function importarExcel(formData: FormData) {
     if (!filasPorSku.has(sku)) filasPorSku.set(sku, fila);
   }
 
-  // Si nuestro producto tiene cargado el SKU del mayorista (Codigo-Tamaño),
-  // matcheamos por ahí. Si no, intentamos por nombre normalizado.
-  const productos = await prisma.producto.findMany();
-  const productosPorSku = new Map(productos.map((producto) => [producto.sku, producto]));
-  const productosPorNombre = new Map<string, (typeof productos)[number][]>();
-  for (const producto of productos) {
-    const clave = normalizarNombre(producto.nombre);
-    const lista = productosPorNombre.get(clave) ?? [];
-    lista.push(producto);
-    productosPorNombre.set(clave, lista);
-  }
+  const esHym = await prisma.proveedor.findUnique({
+    where: { id: Number(proveedorId) },
+    select: { nombre: true },
+  });
+  const importandoHym = esHym?.nombre?.toUpperCase() === "HYM";
+
+  // Productos existentes en el catálogo para matching por SKU
+  const productos = await prisma.producto.findMany({ select: { id: true, sku: true, nombre: true, margenPorcentaje: true } });
+  const productosPorSku = new Map(productos.map((p) => [p.sku, p]));
 
   let actualizados = 0;
-  let sinCoincidencia = 0;
+  let nuevos = 0;
   const ahora = new Date();
 
-  // SKUs presentes en esta importación
+  // Marcar como inactivos los items que ya no aparecen en esta importación
   const skusImportados = new Set(filasPorSku.keys());
-
-  // Ítems del proveedor que YA estaban en la lista pero NO vienen en esta importación
-  const itemsAnteriores = await prisma.historialStockMayorista.findMany({
-    where: { proveedorId: Number(proveedorId) },
-    select: { id: true, sku: true, productoId: true, nombre: true, tamanios: true },
+  await prisma.historialStockMayorista.updateMany({
+    where: {
+      proveedorId: Number(proveedorId),
+      activo: true,
+      sku: { notIn: [...skusImportados] },
+    },
+    data: { activo: false },
   });
-  const itemsObsoletos = itemsAnteriores.filter((i) => !skusImportados.has(i.sku));
 
-  // Para cada ítem obsoleto que tenga un Producto vinculado, intentar reasignar
-  // el SKU del producto al nuevo código del proveedor (match por nombre+tamaño).
-  const skusReasignados = new Map<string, string>(); // skuViejo → skuNuevo
-  for (const obsoleto of itemsObsoletos) {
-    if (!obsoleto.productoId) continue;
-    const claveNombre = normalizarNombre(obsoleto.nombre ?? "");
-    const tamanioObs = (obsoleto.tamanios ?? "").trim().toUpperCase();
-
-    // Buscar en el nuevo Excel un ítem con mismo nombre normalizado y mismo tamaño
-    for (const [skuNuevo, fila] of filasPorSku) {
-      const nombreNuevo = normalizarNombre(String(fila["Nombre"] ?? "").trim());
-      const tamanioNuevo = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim().toUpperCase();
-      if (nombreNuevo === claveNombre && tamanioNuevo === tamanioObs) {
-        // Si el SKU nuevo ya está en uso por otro producto, no reasignar
-        const skuEnUso = await prisma.producto.findUnique({ where: { sku: skuNuevo }, select: { id: true } });
-        if (skuEnUso && skuEnUso.id !== obsoleto.productoId) break;
-
-        skusReasignados.set(obsoleto.sku, skuNuevo);
-        await prisma.producto.update({
-          where: { id: obsoleto.productoId },
-          data: { sku: skuNuevo },
-        });
-        break;
-      }
-    }
-  }
-
-  // Eliminar ítems obsoletos (SKU ya no aparece en la lista del proveedor)
-  if (itemsObsoletos.length > 0) {
-    await prisma.historialStockMayorista.deleteMany({
-      where: {
-        proveedorId: Number(proveedorId),
-        sku: { in: itemsObsoletos.map((i) => i.sku) },
-      },
-    });
-  }
+  // Reactivar items que vuelven a aparecer
+  await prisma.historialStockMayorista.updateMany({
+    where: {
+      proveedorId: Number(proveedorId),
+      activo: false,
+      sku: { in: [...skusImportados] },
+    },
+    data: { activo: true },
+  });
 
   for (const [sku, fila] of filasPorSku) {
     const nombre = String(fila["Nombre"] ?? "").trim();
@@ -743,23 +715,42 @@ export async function importarExcel(formData: FormData) {
     const precioConDescuento = parsearPrecio(fila["Precio c/dto"]);
     const tamanios = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim() || null;
     const estadoStockMayorista = String(fila["Estado de stock"] ?? "").trim() || null;
+    const tipoProducto = String(fila["Tipo"] ?? fila["Categoria"] ?? "").trim() || null;
 
     let producto = productosPorSku.get(sku) ?? null;
-    if (!producto) {
-      const candidatos = productosPorNombre.get(normalizarNombre(nombre)) ?? [];
-      producto = candidatos.length === 1 ? candidatos[0] : null;
-    }
 
     if (producto) {
-      const precioVenta = precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
-      await prisma.producto.update({
-        where: { id: producto.id },
-        data: { precioCostoUnitario: precioCosto, precioVenta },
-      });
+      // Producto ya existe — actualizar precio si es HYM (lista madre)
+      if (importandoHym) {
+        const precioVenta = precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
+        await prisma.producto.update({
+          where: { id: producto.id },
+          data: { precioCostoUnitario: precioCosto, precioVenta },
+        });
+      }
       actualizados++;
-    } else {
-      sinCoincidencia++;
+    } else if (importandoHym) {
+      // Producto nuevo en HYM → crear en catálogo y vincular
+      const nombreCompleto = [nombre, tamanios].filter(Boolean).join(" · ") || sku;
+      producto = await prisma.producto.create({
+        data: {
+          sku,
+          nombre: nombreCompleto,
+          marca: tipoProducto ?? "-",
+          categoria: tipoProducto ?? "Sin categorizar",
+          presentacion: "BOLSA_CERRADA",
+          unidadMedida: "KILOGRAMOS",
+          contenido: 1,
+          margenPorcentaje: 30,
+          precioCostoUnitario: precioCosto,
+          precioVenta: precioCosto * 1.3,
+          stockActual: 0,
+        },
+      });
+      productosPorSku.set(sku, producto);
+      nuevos++;
     }
+    // Para otros proveedores: si no hay producto, queda sin vincular (productoId null)
 
     await prisma.historialStockMayorista.upsert({
       where: { proveedorId_sku: { proveedorId: Number(proveedorId), sku } },
@@ -769,6 +760,8 @@ export async function importarExcel(formData: FormData) {
         precioConDescuento,
         tamanios,
         estadoStockMayorista,
+        tipoProducto,
+        activo: true,
         fechaImportacion: ahora,
         ...(producto?.id ? { productoId: producto.id } : {}),
       },
@@ -781,6 +774,8 @@ export async function importarExcel(formData: FormData) {
         precioConDescuento,
         tamanios,
         estadoStockMayorista,
+        tipoProducto,
+        activo: true,
         fechaImportacion: ahora,
       },
     });
@@ -790,7 +785,5 @@ export async function importarExcel(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/ventas/nueva");
 
-  const reasignados = skusReasignados.size;
-  const eliminados = itemsObsoletos.length - reasignados;
-  return { total: filasPorSku.size, actualizados, sinCoincidencia, eliminados, reasignados };
+  return { total: filasPorSku.size, actualizados, nuevos };
 }
