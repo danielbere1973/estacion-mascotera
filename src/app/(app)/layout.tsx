@@ -15,7 +15,7 @@ export default async function AppLayout({
         isAdmin={session?.user?.rol === "ADMIN"}
         isRestringido={session?.user?.rol === "LECTOR_RESTRINGIDO"}
       />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+      <main className="w-full flex-1 px-6 py-6">{children}</main>
     </div>
   );
 }

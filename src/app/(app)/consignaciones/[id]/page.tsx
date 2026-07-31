@@ -34,6 +34,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
       },
     }),
     prisma.producto.findMany({
+      where: { activo: true },
       select: { id: true, nombre: true, marca: true, stockActual: true },
       orderBy: { nombre: "asc" },
     }),

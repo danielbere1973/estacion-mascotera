@@ -23,6 +23,8 @@ export default async function ListasMayoristaPage({
     precioCostoScraped: string;
     precioConDescuento: string | null;
     tamanios: string | null;
+    precioVenta: string | null;
+    vinculado: boolean;
   }[] = [];
 
   if (proveedorId) {
@@ -38,6 +40,8 @@ export default async function ListasMayoristaPage({
         precioCostoScraped: true,
         precioConDescuento: true,
         tamanios: true,
+        productoId: true,
+        producto: { select: { precioVenta: true } },
       },
     });
 
@@ -54,13 +58,15 @@ export default async function ListasMayoristaPage({
         precioCostoScraped: h.precioCostoScraped.toString(),
         precioConDescuento: h.precioConDescuento?.toString() ?? null,
         tamanios: h.tamanios,
+        precioVenta: h.producto?.precioVenta?.toString() ?? null,
+        vinculado: h.productoId !== null,
       });
     }
     items.sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? ""));
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Listas de precios por proveedor</h1>
 
       <form className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm">
@@ -101,6 +107,7 @@ export default async function ListasMayoristaPage({
                 <th className="px-3 py-2">Tamaño</th>
                 <th className="px-3 py-2 text-right">Precio lista</th>
                 <th className="px-3 py-2 text-right">Precio c/dto</th>
+                <th className="px-3 py-2 text-right">Rentabilidad</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -121,6 +128,21 @@ export default async function ListasMayoristaPage({
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     {item.precioConDescuento ? formatCurrency(item.precioConDescuento) : "-"}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right">
+                    {(() => {
+                      if (!item.vinculado) return <span className="text-xs text-gray-300">sin vincular</span>;
+                      if (!item.precioVenta) return <span className="text-gray-300">—</span>;
+                      const costo = Number(item.precioConDescuento ?? item.precioCostoScraped);
+                      const venta = Number(item.precioVenta);
+                      if (costo === 0) return <span className="text-gray-300">—</span>;
+                      const margen = ((venta - costo) / costo) * 100;
+                      return (
+                        <span className={margen >= 25 ? "font-medium text-green-600" : "font-medium text-orange-500"}>
+                          {margen.toFixed(1)}%
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     <div className="flex justify-end gap-2">
@@ -146,7 +168,7 @@ export default async function ListasMayoristaPage({
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+                  <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
                     Este proveedor no tiene una lista de precios importada.
                   </td>
                 </tr>

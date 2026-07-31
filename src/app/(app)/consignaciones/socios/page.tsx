@@ -10,7 +10,7 @@ export default async function SociosPage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Socios comerciales</h1>
         <Link href="/consignaciones/socios/nuevo"

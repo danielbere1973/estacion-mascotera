@@ -9,7 +9,7 @@ export default async function NuevaVentaPage() {
   const [clientes, productos, proveedores, comprasPorProducto, usuarios, mediosPago, itemsConsignados] = await Promise.all([
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
-      where: { stockActual: { gt: 0 } },
+      where: { activo: true, stockActual: { gt: 0 } },
       orderBy: { nombre: "asc" },
       select: {
         id: true,

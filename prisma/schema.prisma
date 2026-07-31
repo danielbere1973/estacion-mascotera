@@ -7,46 +7,379 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------------------------------------------------------------------------
-// Usuarios (socios)
-// ---------------------------------------------------------------------------
-
-enum RolUsuario {
-  ADMIN
-  LECTOR_RESTRINGIDO
-}
-
 model Usuario {
-  id           Int        @id @default(autoincrement())
-  nombre       String
-  apellido     String
-  email        String     @unique
-  passwordHash String
-  activo       Boolean    @default(true)
-  rol          RolUsuario @default(ADMIN)
-  createdAt    DateTime   @default(now())
-
-  // Si el rol es LECTOR_RESTRINGIDO, limita lo que puede ver a un proveedor puntual.
+  id                   Int            @id @default(autoincrement())
+  nombre               String
+  apellido             String
+  email                String         @unique
+  passwordHash         String
+  activo               Boolean        @default(true)
+  rol                  RolUsuario     @default(ADMIN)
+  createdAt            DateTime       @default(now())
   proveedorRestrictoId Int?
-  proveedorRestricto   Proveedor? @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
-
-  compras          Compra[]
-  comprasPagadas   Compra[] @relation("CompraPagadaPor")
-  ventas           Venta[]
-  ventasVendidas   Venta[] @relation("VentaVendidaPor")
-  ventasCobradas   Venta[] @relation("VentaCobradaPor")
-  gastos           Gasto[]
-  gastosPagados    Gasto[] @relation("GastoPagadoPor")
-  logsActividad    LogActividad[]
+  comprasPagadas       Compra[]       @relation("CompraPagadaPor")
+  compras              Compra[]
+  gastosPagados        Gasto[]        @relation("GastoPagadoPor")
+  gastos               Gasto[]
+  logsActividad        LogActividad[]
+  proveedorRestricto   Proveedor?     @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
+  ventasCobradas       Venta[]        @relation("VentaCobradaPor")
+  ventas               Venta[]
+  ventasVendidas       Venta[]        @relation("VentaVendidaPor")
 }
-
-// ---------------------------------------------------------------------------
-// Catálogo de productos
-// ---------------------------------------------------------------------------
 
 model TipoProducto {
   id     Int    @id @default(autoincrement())
   nombre String @unique
+}
+
+model Producto {
+  id                   Int                       @id @default(autoincrement())
+  sku                  String                    @unique
+  nombre               String
+  marca                String
+  categoria            String
+  presentacion         Presentacion
+  unidadMedida         UnidadMedida              @default(UNIDAD)
+  contenido            Decimal                   @default(1)
+  stockActual          Int                       @default(0)
+  precioCostoUnitario  Decimal                   @default(0)
+  margenPorcentaje     Decimal                   @default(30)
+  precioVenta          Decimal                   @default(0)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  proveedorId          Int?
+  skuInterno           String?
+  stockEnConsignacion  Int                       @default(0)
+  activo               Boolean                   @default(true)
+  compras              Compra[]
+  detallesConsignacion DetalleConsignacion[]
+  detalleVentas        DetalleVenta[]
+  historialStock       HistorialStockMayorista[]
+  ordenesDropshipping  OrdenDropshipping[]
+  proveedor            Proveedor?                @relation("ProductoProveedor", fields: [proveedorId], references: [id])
+  clientesRecurrentes  ClienteProductoRecurrente[] @relation("ClienteProductoRecurrenteProducto")
+  recordatorios        RecordatorioReposicion[]
+
+  @@index([categoria])
+}
+
+model Proveedor {
+  id                   Int                       @id @default(autoincrement())
+  nombre               String
+  direccion            String?
+  contacto             String?
+  compras              Compra[]
+  historialMayorista   HistorialStockMayorista[]
+  productos            Producto[]                @relation("ProductoProveedor")
+  sociosConsignacion   SocioConsignacion[]
+  usuariosRestringidos Usuario[]                 @relation("UsuarioProveedorRestricto")
+}
+
+model Compra {
+  id                  Int       @id @default(autoincrement())
+  proveedorId         Int
+  productoId          Int
+  cantidad            Int
+  precioCostoUnitario Decimal
+  descuentoPorcentaje Decimal   @default(0)
+  costoEnvio          Decimal?  @default(0)
+  numeroPedido        String?
+  facturado           Boolean   @default(false)
+  numeroFactura       String?
+  fechaCompra         DateTime  @default(now())
+  usuarioId           Int
+  pagadoPorId         Int?
+  pagadoPor           Usuario?  @relation("CompraPagadaPor", fields: [pagadoPorId], references: [id])
+  producto            Producto  @relation(fields: [productoId], references: [id])
+  proveedor           Proveedor @relation(fields: [proveedorId], references: [id])
+  usuario             Usuario   @relation(fields: [usuarioId], references: [id])
+
+  @@index([fechaCompra])
+  @@index([productoId])
+}
+
+model Cliente {
+  id                  Int                          @id @default(autoincrement())
+  nombre              String
+  apellido            String
+  direccion           String
+  telefono            String
+  email               String?
+  ordenesDropshipping OrdenDropshipping[]
+  productosRecurrentes ClienteProductoRecurrente[]
+  recordatorios       RecordatorioReposicion[]
+  ventas              Venta[]
+}
+
+model ClienteProductoRecurrente {
+  id          Int      @id @default(autoincrement())
+  clienteId   Int
+  productoId  Int
+  periodoDias Int
+  notas       String?
+  activo      Boolean  @default(true)
+  creadoAt    DateTime @default(now())
+  cliente     Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producto    Producto @relation("ClienteProductoRecurrenteProducto", fields: [productoId], references: [id])
+
+  @@unique([clienteId, productoId])
+  @@index([clienteId])
+}
+
+model RecordatorioReposicion {
+  id                      Int       @id @default(autoincrement())
+  clienteId               Int
+  productoId              Int
+  fechaUltimaCompra       DateTime
+  fechaEstimadaReposicion DateTime
+  mensaje                 String
+  enviado                 Boolean   @default(false)
+  fechaEnvio              DateTime?
+  creadoAt                DateTime  @default(now())
+  cliente                 Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producto                Producto  @relation(fields: [productoId], references: [id])
+
+  @@index([clienteId])
+  @@index([fechaEstimadaReposicion])
+  @@index([enviado])
+}
+
+model Venta {
+  id            Int            @id @default(autoincrement())
+  clienteId     Int
+  canalVenta    CanalVenta
+  medioPago     String
+  costoEnvio    Decimal        @default(0)
+  facturado     Boolean        @default(false)
+  numeroFactura String?
+  fechaVenta    DateTime       @default(now())
+  usuarioId     Int
+  vendidoPorId  Int?
+  cobradoPorId  Int?
+  costos        CostoVenta[]
+  detalles      DetalleVenta[]
+  cliente       Cliente        @relation(fields: [clienteId], references: [id])
+  cobradoPor    Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
+  usuario       Usuario        @relation(fields: [usuarioId], references: [id])
+  vendidoPor    Usuario?       @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
+
+  @@index([fechaVenta])
+  @@index([clienteId])
+}
+
+model CostoVenta {
+  id             Int     @id @default(autoincrement())
+  ventaId        Int
+  concepto       String
+  esPorcentaje   Boolean @default(false)
+  valor          Decimal
+  incluyeEnvio   Boolean @default(false)
+  montoCalculado Decimal
+  venta          Venta   @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+
+  @@index([ventaId])
+}
+
+model DetalleVenta {
+  id                  Int                @id @default(autoincrement())
+  ventaId             Int
+  productoId          Int
+  cantidad            Int
+  precioVentaUnitario Decimal
+  descuentoPorcentaje Decimal            @default(0)
+  precioCostoUnitario Decimal?
+  producto            Producto           @relation(fields: [productoId], references: [id])
+  venta               Venta              @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  ventaConsignacion   VentaConsignacion?
+
+  @@index([ventaId])
+  @@index([productoId])
+}
+
+model MedioPago {
+  id     Int     @id @default(autoincrement())
+  nombre String  @unique
+  activo Boolean @default(true)
+}
+
+model Gasto {
+  id             Int      @id @default(autoincrement())
+  monto          Decimal
+  descripcion    String?
+  fechaGasto     DateTime @default(now())
+  usuarioId      Int?
+  pagadoPorId    Int?
+  esFijo         Boolean  @default(false)
+  categoriaGasto String
+  pagadoPor      Usuario? @relation("GastoPagadoPor", fields: [pagadoPorId], references: [id])
+  usuario        Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([fechaGasto])
+}
+
+model LogActividad {
+  id        Int        @id @default(autoincrement())
+  usuarioId Int
+  accion    AccionLog
+  entidad   EntidadLog
+  entidadId Int?
+  detalle   String?
+  fecha     DateTime   @default(now())
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id])
+
+  @@index([fecha])
+  @@index([entidad, entidadId])
+}
+
+model HistorialStockMayorista {
+  id                   Int        @id @default(autoincrement())
+  productoId           Int?
+  proveedorId          Int?
+  sku                  String
+  nombre               String?
+  precioCostoScraped   Decimal
+  precioConDescuento   Decimal?
+  tamanios             String?
+  estadoStockMayorista String?
+  fechaImportacion     DateTime   @default(now())
+  skuInterno           String?
+  tipoProducto         String?
+  activo               Boolean    @default(true)
+  producto             Producto?  @relation(fields: [productoId], references: [id])
+  proveedor            Proveedor? @relation(fields: [proveedorId], references: [id])
+
+  @@unique([proveedorId, sku])
+  @@index([fechaImportacion])
+  @@index([sku])
+  @@index([proveedorId])
+}
+
+model SocioConsignacion {
+  id                  Int                       @id @default(autoincrement())
+  nombre              String
+  contacto            String?
+  notas               String?
+  proveedorId         Int?
+  consignaciones      Consignacion[]
+  liquidaciones       LiquidacionConsignacion[]
+  ordenesDropshipping OrdenDropshipping[]
+  proveedor           Proveedor?                @relation(fields: [proveedorId], references: [id])
+}
+
+model Consignacion {
+  id            Int                      @id @default(autoincrement())
+  socioId       Int
+  direccion     DireccionConsignacion
+  estado        EstadoConsignacion       @default(ABIERTA)
+  fecha         DateTime                 @default(now())
+  notas         String?
+  liquidacionId Int?
+  liquidacion   LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
+  socio         SocioConsignacion        @relation(fields: [socioId], references: [id])
+  items         DetalleConsignacion[]
+  pagos         PagoConsignacion[]
+
+  @@index([socioId])
+  @@index([estado])
+}
+
+model DetalleConsignacion {
+  id              Int                 @id @default(autoincrement())
+  consignacionId  Int
+  productoId      Int?
+  descripcion     String?
+  cantidad        Int
+  precioCosto     Decimal
+  precioPiso      Decimal
+  cantidadVendida Int                 @default(0)
+  consignacion    Consignacion        @relation(fields: [consignacionId], references: [id])
+  producto        Producto?           @relation(fields: [productoId], references: [id])
+  ventas          VentaConsignacion[]
+
+  @@index([consignacionId])
+}
+
+model VentaConsignacion {
+  id                    Int                      @id @default(autoincrement())
+  detalleConsignacionId Int
+  fecha                 DateTime                 @default(now())
+  cantidad              Int
+  precioVentaReal       Decimal
+  liquidacionId         Int?
+  facturado             Boolean                  @default(false)
+  numeroFactura         String?
+  detalleVentaId        Int?                     @unique
+  detalle               DetalleConsignacion      @relation(fields: [detalleConsignacionId], references: [id])
+  detalleVenta          DetalleVenta?            @relation(fields: [detalleVentaId], references: [id])
+  liquidacion           LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
+
+  @@index([detalleConsignacionId])
+  @@index([liquidacionId])
+}
+
+model LiquidacionConsignacion {
+  id              Int                 @id @default(autoincrement())
+  socioId         Int
+  fechaDesde      DateTime
+  fechaHasta      DateTime
+  fecha           DateTime            @default(now())
+  totalACobrarnos Decimal
+  totalACobrarles Decimal
+  saldo           Decimal
+  pagado          Boolean             @default(false)
+  fechaPago       DateTime?
+  notas           String?
+  consignaciones  Consignacion[]
+  socio           SocioConsignacion   @relation(fields: [socioId], references: [id])
+  pagos           PagoConsignacion[]
+  ventas          VentaConsignacion[]
+
+  @@index([socioId])
+}
+
+model PagoConsignacion {
+  id             Int                      @id @default(autoincrement())
+  consignacionId Int
+  fecha          DateTime                 @default(now())
+  monto          Decimal
+  notas          String?
+  liquidacionId  Int?
+  consignacion   Consignacion             @relation(fields: [consignacionId], references: [id])
+  liquidacion    LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
+
+  @@index([consignacionId])
+  @@index([liquidacionId])
+}
+
+model OrdenDropshipping {
+  id                     Int                @id @default(autoincrement())
+  socioId                Int
+  clienteId              Int?
+  clienteNombre          String?
+  fecha                  DateTime           @default(now())
+  estado                 EstadoDropshipping @default(PENDIENTE)
+  productoId             Int?
+  descripcion            String?
+  cantidad               Int
+  precioCosto            Decimal
+  precioVenta            Decimal
+  facturadoAlCliente     Boolean            @default(false)
+  facturadoPorProveedor  Boolean            @default(false)
+  numeroFacturaCliente   String?
+  numeroFacturaProveedor String?
+  notas                  String?
+  cliente                Cliente?           @relation(fields: [clienteId], references: [id])
+  producto               Producto?          @relation(fields: [productoId], references: [id])
+  socio                  SocioConsignacion  @relation(fields: [socioId], references: [id])
+
+  @@index([socioId])
+  @@index([estado])
+}
+
+enum RolUsuario {
+  ADMIN
+  LECTOR_RESTRINGIDO
 }
 
 enum Presentacion {
@@ -63,258 +396,11 @@ enum UnidadMedida {
   UNIDAD
 }
 
-model Producto {
-  id        Int               @id @default(autoincrement())
-  sku          String  @unique
-  skuInterno   String? // código interno propio de EM
-  nombre       String
-  marca     String
-  categoria String
-  presentacion Presentacion
-
-  proveedorId Int?
-  proveedor   Proveedor? @relation("ProductoProveedor", fields: [proveedorId], references: [id])
-
-  // Cómo se mide el producto (ej: 15 Kg, 500 ml, 12 Unidad para una caja x12)
-  unidadMedida UnidadMedida @default(UNIDAD)
-  contenido    Decimal      @default(1)
-
-  stockActual          Int @default(0)
-  stockEnConsignacion  Int @default(0) // unidades entregadas a socios, todavía no vendidas
-
-  // Precios
-  precioCostoUnitario Decimal @default(0)
-  // Recargo aplicado sobre el costo para sugerir el precio de venta (ej: 30 = +30%)
-  margenPorcentaje    Decimal @default(30)
-  precioVenta         Decimal @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  compras        Compra[]
-  detalleVentas  DetalleVenta[]
-  historialStock HistorialStockMayorista[]
-  detallesConsignacion DetalleConsignacion[]
-  ordenesDropshipping  OrdenDropshipping[]
-  recordatorios  RecordatorioReposicion[]
-  clientesRecurrentes ClienteProductoRecurrente[]
-
-  @@index([categoria])
-}
-
-// ---------------------------------------------------------------------------
-// Proveedores
-// ---------------------------------------------------------------------------
-
-model Proveedor {
-  id        Int     @id @default(autoincrement())
-  nombre    String
-  direccion String?
-  contacto  String?
-
-  compras              Compra[]
-  historialMayorista   HistorialStockMayorista[]
-  usuariosRestringidos Usuario[] @relation("UsuarioProveedorRestricto")
-  productos            Producto[] @relation("ProductoProveedor")
-  sociosConsignacion   SocioConsignacion[]
-}
-
-// ---------------------------------------------------------------------------
-// Compras (ingresos de mercadería)
-// ---------------------------------------------------------------------------
-
-model Compra {
-  id          Int @id @default(autoincrement())
-  proveedorId Int
-  productoId  Int
-
-  cantidad            Int
-  precioCostoUnitario Decimal
-  // Descuento aplicado por el proveedor sobre el precio de costo (ej: pago contado)
-  descuentoPorcentaje Decimal  @default(0)
-  costoEnvio          Decimal? @default(0)
-  numeroPedido        String?
-  facturado           Boolean  @default(false)
-  numeroFactura       String?
-  fechaCompra         DateTime @default(now())
-
-  usuarioId    Int
-  pagadoPorId  Int?
-
-  proveedor Proveedor @relation(fields: [proveedorId], references: [id])
-  producto  Producto  @relation(fields: [productoId], references: [id])
-  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
-  pagadoPor Usuario?  @relation("CompraPagadaPor", fields: [pagadoPorId], references: [id])
-
-  @@index([fechaCompra])
-  @@index([productoId])
-}
-
-// ---------------------------------------------------------------------------
-// Clientes
-// ---------------------------------------------------------------------------
-
-model Cliente {
-  id        Int     @id @default(autoincrement())
-  nombre    String
-  apellido  String
-  direccion String
-  telefono  String
-  email     String?
-
-  ventas              Venta[]
-  ordenesDropshipping OrdenDropshipping[]
-  recordatorios       RecordatorioReposicion[]
-  productosRecurrentes ClienteProductoRecurrente[]
-}
-
-model ClienteProductoRecurrente {
-  id         Int @id @default(autoincrement())
-  clienteId  Int
-  productoId Int
-
-  periodoDias Int
-  notas       String?
-  activo      Boolean @default(true)
-  creadoAt    DateTime @default(now())
-
-  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id])
-
-  @@unique([clienteId, productoId])
-  @@index([clienteId])
-}
-
-model RecordatorioReposicion {
-  id         Int      @id @default(autoincrement())
-  clienteId  Int
-  productoId Int
-  fechaUltimaCompra DateTime
-  fechaEstimadaReposicion DateTime
-  mensaje    String   // mensaje pre-armado listo para copiar/enviar
-  enviado    Boolean  @default(false)
-  fechaEnvio DateTime?
-  creadoAt   DateTime @default(now())
-
-  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id])
-
-  @@index([clienteId])
-  @@index([fechaEstimadaReposicion])
-  @@index([enviado])
-}
-
-// ---------------------------------------------------------------------------
-// Ventas
-// ---------------------------------------------------------------------------
-
 enum CanalVenta {
   TIENDANUBE
   WHATSAPP
   TELEFONO
 }
-
-model Venta {
-  id        Int @id @default(autoincrement())
-  clienteId Int
-
-  canalVenta    CanalVenta
-  medioPago     String
-  costoEnvio    Decimal    @default(0)
-  facturado     Boolean    @default(false)
-  numeroFactura String?
-  fechaVenta    DateTime   @default(now())
-
-  usuarioId Int
-
-  // Quién realizó la venta y quién cobró (pueden ser distintos socios)
-  vendidoPorId Int?
-  cobradoPorId Int?
-
-  cliente    Cliente        @relation(fields: [clienteId], references: [id])
-  usuario    Usuario        @relation(fields: [usuarioId], references: [id])
-  vendidoPor Usuario?       @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
-  cobradoPor Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
-  detalles   DetalleVenta[]
-  costos     CostoVenta[]
-
-  @@index([fechaVenta])
-  @@index([clienteId])
-}
-
-// Costos de cobranza del proveedor de pagos (gestión de cobro, comisión de venta,
-// financiación, etc.) que se descuentan de la ganancia de la venta.
-model CostoVenta {
-  id      Int @id @default(autoincrement())
-  ventaId Int
-
-  concepto       String
-  esPorcentaje   Boolean @default(false)
-  valor          Decimal // monto $ si esPorcentaje=false; valor % si esPorcentaje=true
-  incluyeEnvio   Boolean @default(false) // si esPorcentaje: si la base incluye el costo de envío
-  montoCalculado Decimal // monto $ resultante, calculado al guardar
-
-  venta Venta @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-
-  @@index([ventaId])
-}
-
-model DetalleVenta {
-  id      Int @id @default(autoincrement())
-  ventaId Int
-  productoId Int
-
-  cantidad            Int
-  precioVentaUnitario Decimal
-  // Descuento aplicado a este producto en la venta
-  descuentoPorcentaje Decimal  @default(0)
-  // Precio de costo al momento de la venta (foto fija, no cambia con aumentos futuros)
-  precioCostoUnitario Decimal?
-
-  venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id])
-
-  ventaConsignacion VentaConsignacion?
-
-  @@index([ventaId])
-  @@index([productoId])
-}
-
-// ---------------------------------------------------------------------------
-// Medios de pago (administrables)
-// ---------------------------------------------------------------------------
-
-model MedioPago {
-  id     Int    @id @default(autoincrement())
-  nombre String @unique
-  activo Boolean @default(true)
-}
-
-// ---------------------------------------------------------------------------
-// Gastos
-// ---------------------------------------------------------------------------
-
-model Gasto {
-  id             Int     @id @default(autoincrement())
-  categoriaGasto String
-  esFijo         Boolean @default(false)
-  monto          Decimal
-  descripcion    String?
-  fechaGasto     DateTime       @default(now())
-
-  usuarioId Int?
-  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
-
-  // Quién pagó el gasto (puede ser distinto de quién lo cargó en el sistema).
-  pagadoPorId Int?
-  pagadoPor   Usuario? @relation("GastoPagadoPor", fields: [pagadoPorId], references: [id])
-
-  @@index([fechaGasto])
-}
-
-// ---------------------------------------------------------------------------
-// Log de actividad (auditoría: quién hizo qué y cuándo)
-// ---------------------------------------------------------------------------
 
 enum AccionLog {
   CREAR
@@ -331,181 +417,14 @@ enum EntidadLog {
   PROVEEDOR
 }
 
-model LogActividad {
-  id        Int        @id @default(autoincrement())
-  usuarioId Int
-  accion    AccionLog
-  entidad   EntidadLog
-  entidadId Int?
-  detalle   String?
-  fecha     DateTime   @default(now())
-
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
-
-  @@index([fecha])
-  @@index([entidad, entidadId])
-}
-
-// ---------------------------------------------------------------------------
-// Historial de stock mayorista (importaciones de los viernes)
-// ---------------------------------------------------------------------------
-
-model HistorialStockMayorista {
-  id         Int @id @default(autoincrement())
-  productoId Int?
-  proveedorId Int?
-
-  // Código del producto en la lista de precios del mayorista (no es el SKU propio)
-  sku       String
-  skuInterno String?
-  nombre String?
-
-  precioCostoScraped   Decimal
-  precioConDescuento   Decimal?
-  tamanios             String?
-  tipoProducto         String?
-  // Stock que tiene el MAYORISTA disponible (informativo, no es nuestro stock)
-  estadoStockMayorista String?
-
-  activo           Boolean  @default(true)
-  fechaImportacion DateTime @default(now())
-
-  producto  Producto?  @relation(fields: [productoId], references: [id])
-  proveedor Proveedor? @relation(fields: [proveedorId], references: [id])
-
-  @@unique([proveedorId, sku], map: "HistorialStockMayorista_proveedorId_sku_key")
-  @@index([fechaImportacion])
-  @@index([sku])
-  @@index([proveedorId])
-}
-
-// ---------------------------------------------------------------------------
-// Módulo de Consignaciones y Dropshipping
-// ---------------------------------------------------------------------------
-
-model SocioConsignacion {
-  id          Int     @id @default(autoincrement())
-  nombre      String
-  contacto    String?
-  notas       String?
-
-  // Vínculo opcional con proveedor existente (hereda lista de precios como precios piso)
-  proveedorId Int?
-  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
-
-  consignaciones    Consignacion[]
-  liquidaciones     LiquidacionConsignacion[]
-  ordenesDropshipping OrdenDropshipping[]
-}
-
 enum DireccionConsignacion {
-  ENTREGAMOS  // nosotros le damos mercadería al socio
-  RECIBIMOS   // el socio nos da mercadería a nosotros
+  ENTREGAMOS
+  RECIBIMOS
 }
 
 enum EstadoConsignacion {
   ABIERTA
   CERRADA
-}
-
-model Consignacion {
-  id      Int @id @default(autoincrement())
-  socioId Int
-
-  direccion DireccionConsignacion
-  estado    EstadoConsignacion @default(ABIERTA)
-  fecha     DateTime           @default(now())
-  notas     String?
-
-  socio       SocioConsignacion        @relation(fields: [socioId], references: [id])
-  items       DetalleConsignacion[]
-  pagos       PagoConsignacion[]
-  liquidacion LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
-  liquidacionId Int?
-
-  @@index([socioId])
-  @@index([estado])
-}
-
-model DetalleConsignacion {
-  id             Int @id @default(autoincrement())
-  consignacionId Int
-
-  productoId  Int?    // producto del catálogo (si existe)
-  descripcion String? // descripción libre para productos sin SKU en el sistema
-
-  cantidad         Int
-  precioCosto      Decimal // costo real del dueño de la mercadería
-  precioPiso       Decimal // precio mínimo acordado — el dueño siempre cobra esto
-  cantidadVendida  Int     @default(0)
-
-  consignacion Consignacion @relation(fields: [consignacionId], references: [id])
-  producto     Producto?    @relation(fields: [productoId], references: [id])
-  ventas       VentaConsignacion[]
-
-  @@index([consignacionId])
-}
-
-model VentaConsignacion {
-  id                    Int      @id @default(autoincrement())
-  detalleConsignacionId Int
-  fecha                 DateTime @default(now())
-
-  cantidad        Int
-  precioVentaReal Decimal
-  facturado       Boolean @default(false)
-  numeroFactura   String?
-
-  liquidacionId Int?
-  liquidacion   LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
-  detalle       DetalleConsignacion      @relation(fields: [detalleConsignacionId], references: [id])
-
-  // Si la venta se cargó desde Nueva Venta (venta a cliente real), queda vinculada al renglón de esa venta
-  detalleVentaId Int?         @unique
-  detalleVenta   DetalleVenta? @relation(fields: [detalleVentaId], references: [id])
-
-  @@index([detalleConsignacionId])
-  @@index([liquidacionId])
-}
-
-model LiquidacionConsignacion {
-  id      Int @id @default(autoincrement())
-  socioId Int
-
-  fechaDesde DateTime
-  fechaHasta DateTime
-  fecha      DateTime @default(now())
-
-  // Calculados al generar la liquidación
-  totalACobrarnos Decimal // ellos nos deben (vendieron nuestros productos)
-  totalACobrarles Decimal // nosotros les debemos (vendimos sus productos)
-  saldo           Decimal // positivo = nos deben, negativo = les debemos
-
-  pagado    Boolean   @default(false)
-  fechaPago DateTime?
-  notas     String?
-
-  socio          SocioConsignacion   @relation(fields: [socioId], references: [id])
-  consignaciones Consignacion[]
-  ventas         VentaConsignacion[]
-  pagos          PagoConsignacion[]
-
-  @@index([socioId])
-}
-
-model PagoConsignacion {
-  id             Int      @id @default(autoincrement())
-  consignacionId Int
-  fecha          DateTime @default(now())
-  monto          Decimal
-  notas          String?
-
-  liquidacionId Int?
-  liquidacion   LiquidacionConsignacion? @relation(fields: [liquidacionId], references: [id])
-  consignacion  Consignacion @relation(fields: [consignacionId], references: [id])
-
-  @@index([consignacionId])
-  @@index([liquidacionId])
 }
 
 enum EstadoDropshipping {
@@ -515,32 +434,11 @@ enum EstadoDropshipping {
   CANCELADO
 }
 
-model OrdenDropshipping {
-  id      Int @id @default(autoincrement())
-  socioId Int // el proveedor que despacha
-
-  clienteId     Int?
-  clienteNombre String? // para clientes sin ficha en el sistema
-
-  fecha  DateTime           @default(now())
-  estado EstadoDropshipping @default(PENDIENTE)
-
-  productoId  Int?
-  descripcion String? // descripción libre si no está en el catálogo
-  cantidad    Int
-  precioCosto Decimal // lo que le pagamos al proveedor
-  precioVenta Decimal // lo que le cobramos al cliente
-
-  facturadoAlCliente    Boolean @default(false)
-  facturadoPorProveedor Boolean @default(false)
-  numeroFacturaCliente  String?
-  numeroFacturaProveedor String?
-  notas                 String?
-
-  socio    SocioConsignacion @relation(fields: [socioId], references: [id])
-  producto Producto?         @relation(fields: [productoId], references: [id])
-  cliente  Cliente?          @relation(fields: [clienteId], references: [id])
-
-  @@index([socioId])
-  @@index([estado])
+enum CategoriaGasto {
+  MONOTRIBUTO
+  TELEFONO
+  COMMUNITY_MANAGER
+  PUBLICIDAD
+  SOPORTE_IT
+  OTROS
 }

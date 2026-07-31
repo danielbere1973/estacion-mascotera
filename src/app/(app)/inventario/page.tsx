@@ -1,17 +1,42 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatContenido } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { ImportarExcel } from "./importar-excel";
-import { ConfirmSubmitButton } from "@/components/confirm-button";
-import { eliminarProducto } from "./actions";
+import { ProductoRow } from "./producto-row";
 
 const STOCK_BAJO_UMBRAL = 5;
 
 
-export default async function InventarioPage() {
+export default async function InventarioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; proveedor?: string }>;
+}) {
+  const { q, proveedor: proveedorFiltro } = await searchParams;
+
   const [productos, proveedores] = await Promise.all([
     prisma.producto.findMany({
-      orderBy: [{ stockActual: "asc" }, { nombre: "asc" }],
+      where: {
+        activo: true,
+        ...(q ? {
+          OR: [
+            { nombre: { contains: q, mode: "insensitive" } },
+            { marca: { contains: q, mode: "insensitive" } },
+            { sku: { contains: q, mode: "insensitive" } },
+            { skuInterno: { contains: q, mode: "insensitive" } },
+          ],
+        } : {}),
+        ...(proveedorFiltro ? {
+          historialStock: { some: { proveedorId: Number(proveedorFiltro), activo: true } },
+        } : {}),
+      },
+      include: {
+        historialStock: {
+          where: { activo: true },
+          include: { proveedor: { select: { nombre: true } } },
+        },
+      },
+      orderBy: [{ marca: "asc" }, { nombre: "asc" }],
     }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
   ]);
@@ -22,10 +47,16 @@ export default async function InventarioPage() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Inventario y Proveedores</h1>
         <div className="flex flex-wrap gap-2">
+          <Link
+            href="/inventario/proveedores"
+            className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
+          >
+            Proveedores
+          </Link>
           <Link
             href="/inventario/tipos"
             className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
@@ -37,12 +68,6 @@ export default async function InventarioPage() {
             className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
           >
             Listas de proveedores
-          </Link>
-          <Link
-            href="/inventario/vincular"
-            className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
-          >
-            Vincular productos
           </Link>
           <Link
             href="/inventario/compras"
@@ -80,81 +105,67 @@ export default async function InventarioPage() {
         <ImportarExcel proveedores={proveedores} />
       </div>
 
+      {/* Buscador y filtro por proveedor */}
+      <form method="GET" className="flex flex-wrap gap-2">
+        <input
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="Buscar por nombre, marca o SKU..."
+          className="flex-1 min-w-48 rounded-md border border-gray-300 px-3 py-2 text-sm"
+        />
+        <select
+          name="proveedor"
+          defaultValue={proveedorFiltro ?? ""}
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+        >
+          <option value="">Todos los proveedores</option>
+          {proveedores.map((p) => (
+            <option key={p.id} value={p.id}>{p.nombre}</option>
+          ))}
+        </select>
+        <button type="submit" className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+          Buscar
+        </button>
+        {(q || proveedorFiltro) && (
+          <a href="/inventario" className="rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-500 hover:bg-gray-50">
+            Limpiar
+          </a>
+        )}
+      </form>
+
+      <p className="text-xs text-gray-400">{productos.length} producto{productos.length !== 1 ? "s" : ""}</p>
+
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th className="px-3 py-2">SKU</th>
+              <th className="px-3 py-2 w-20">SKU</th>
               <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Marca</th>
-              <th className="px-3 py-2">Categoría</th>
-              <th className="px-3 py-2">Contenido</th>
-              <th className="px-3 py-2 text-right">Stock</th>
-              <th className="px-3 py-2 text-right text-orange-600">Consig.</th>
+              <th className="px-3 py-2 w-32">Marca</th>
+              <th className="px-3 py-2 w-40">Proveedores</th>
+              <th className="px-3 py-2 w-16 text-right">Stock</th>
               <th className="px-3 py-2 text-right">Costo</th>
-              <th className="px-3 py-2 text-right">Margen</th>
               <th className="px-3 py-2 text-right">Precio Lista</th>
-              <th className="px-3 py-2"></th>
+              <th className="px-3 py-2 w-16"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {productos.map((p) => {
-              const bajoStock = p.stockActual <= STOCK_BAJO_UMBRAL;
-              return (
-                <tr key={p.id} className={bajoStock ? "bg-red-50" : "hover:bg-gray-50"}>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{p.sku}</td>
-                  <td className="px-3 py-2">{p.nombre}</td>
-                  <td className="whitespace-nowrap px-3 py-2">{p.marca}</td>
-                  <td className="whitespace-nowrap px-3 py-2">{p.categoria}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-gray-500">
-                    {formatContenido(p.contenido.toString(), p.unidadMedida)}
-                  </td>
-                  <td
-                    className={`whitespace-nowrap px-3 py-2 text-right font-medium ${
-                      bajoStock ? "text-red-600" : ""
-                    }`}
-                  >
-                    {p.stockActual}
-                    {bajoStock && " ⚠"}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right text-orange-600">
-                    {p.stockEnConsignacion > 0 ? p.stockEnConsignacion : "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right">
-                    {formatCurrency(p.precioCostoUnitario.toString())}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right">
-                    +{p.margenPorcentaje.toString()}%
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
-                    {formatCurrency(p.precioVenta.toString())}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/inventario/productos/${p.id}/editar`}
-                        className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                      >
-                        Editar
-                      </Link>
-                      <form action={eliminarProducto}>
-                        <input type="hidden" name="id" value={p.id} />
-                        <ConfirmSubmitButton
-                          confirmMessage={`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`}
-                          className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                        >
-                          Eliminar
-                        </ConfirmSubmitButton>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {productos.map((p) => (
+              <ProductoRow key={p.id} p={{
+                ...p,
+                precioCostoUnitario: Number(p.precioCostoUnitario),
+                precioVenta: Number(p.precioVenta),
+                historialStock: p.historialStock.map((h) => ({
+                  ...h,
+                  precioCostoScraped: Number(h.precioCostoScraped),
+                  precioConDescuento: h.precioConDescuento !== null ? Number(h.precioConDescuento) : null,
+                })),
+              }} />
+            ))}
             {productos.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-6 text-center text-gray-400">
-                  No hay productos cargados todavía.
+                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+                  No hay productos que coincidan con la búsqueda.
                 </td>
               </tr>
             )}

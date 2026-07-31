@@ -199,7 +199,7 @@ export function EditarVentaItems({
           ? consignado
             ? Math.min(consignado.disponible, producto!.stockActual)
             : (producto?.stockActual ?? Infinity)
-          : row.stockBase;
+          : Infinity; // ítems existentes: no limitar en el browser, el servidor valida el delta
 
         return (
           <div key={row.key} className="flex flex-wrap items-center gap-2">
@@ -314,7 +314,7 @@ export function EditarVentaItems({
                   : `Stock disponible: ${producto.stockActual}`}
               </span>
             )}
-            {!esNuevo && (
+            {!esNuevo && row.stockBase > 0 && (
               <span className="basis-full text-xs text-gray-400">Stock disponible: {row.stockBase}</span>
             )}
           </div>

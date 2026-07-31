@@ -72,7 +72,7 @@ export default async function ReportesPage({
         })
       : Promise.resolve([]),
     needsInventario
-      ? prisma.producto.findMany({ orderBy: [{ stockActual: "asc" }, { nombre: "asc" }] })
+      ? prisma.producto.findMany({ where: { activo: true }, orderBy: [{ stockActual: "asc" }, { nombre: "asc" }] })
       : Promise.resolve([]),
   ]);
 
@@ -111,7 +111,7 @@ export default async function ReportesPage({
   const tipoLabel = TIPOS_REPORTE.find((t) => t.value === tipo)?.label ?? "";
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="text-xl font-semibold text-gray-900">Reportes</h1>
         <Suspense>

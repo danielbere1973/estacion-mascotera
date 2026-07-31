@@ -93,7 +93,7 @@ export function Nav({
 
   return (
     <header className="sticky top-0 z-10 border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex w-full flex-col gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 font-semibold text-gray-900">
             <Image src="/logo.png" alt="Estación Mascotera" width={32} height={32} className="rounded-full" />

@@ -21,6 +21,7 @@ export default async function EditarVentaPage({
       },
     }),
     prisma.producto.findMany({
+      where: { activo: true },
       orderBy: { nombre: "asc" },
       select: { id: true, sku: true, nombre: true, precioVenta: true, stockActual: true },
     }),

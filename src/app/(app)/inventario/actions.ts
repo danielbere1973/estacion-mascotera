@@ -354,6 +354,31 @@ export async function eliminarProducto(formData: FormData) {
   revalidatePath("/ventas/nueva");
 }
 
+// Genera el siguiente skuInterno correlativo (AA00 → AA01 → ... → ZZ99).
+// Busca el máximo actual en la DB y devuelve el siguiente.
+async function siguienteSkuInterno(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]): Promise<string> {
+  const ultimo = await tx.producto.findFirst({
+    where: { skuInterno: { not: null } },
+    orderBy: { skuInterno: "desc" },
+    select: { skuInterno: true },
+  });
+
+  if (!ultimo?.skuInterno || !/^[A-Z]{2}\d{2}$/.test(ultimo.skuInterno)) return "AA00";
+
+  const letras = ultimo.skuInterno.slice(0, 2);
+  const num = parseInt(ultimo.skuInterno.slice(2), 10);
+
+  if (num < 99) return `${letras}${String(num + 1).padStart(2, "0")}`;
+
+  // Incrementar letras
+  const l2 = letras[1];
+  const l1 = letras[0];
+  if (l2 < "Z") return `${l1}${String.fromCharCode(l2.charCodeAt(0) + 1)}00`;
+  if (l1 < "Z") return `${String.fromCharCode(l1.charCodeAt(0) + 1)}A00`;
+
+  throw new Error("Se agotaron los SKU internos disponibles (ZZ99).");
+}
+
 export async function crearProducto(formData: FormData) {
   const session = await requireAdmin();
 
@@ -379,8 +404,9 @@ export async function crearProducto(formData: FormData) {
   const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
 
   await prisma.$transaction(async (tx) => {
+    const skuInternoFinal = skuInterno || await siguienteSkuInterno(tx);
     const producto = await tx.producto.create({
-      data: { sku, skuInterno, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual, proveedorId },
+      data: { sku, skuInterno: skuInternoFinal, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual, proveedorId },
     });
 
     // Agregar al historial del proveedor para que aparezca en futuras compras.
@@ -564,9 +590,13 @@ function parsearPrecio(valor: unknown): number {
 // Parser de CSV simple (soporta campos entre comillas con comas y comillas escapadas).
 // No usamos XLSX para CSV porque convierte automáticamente celdas como
 // "$ 24.100,00" en números (perdiendo datos, ej: termina en 24.1).
+// Detecta automáticamente si el separador es ";" o ",".
 function parsearCSV(texto: string): Record<string, string>[] {
   const lineas = texto.split(/\r\n|\n|\r/).filter((linea) => linea.length > 0);
   if (lineas.length === 0) return [];
+
+  // Detectar separador: si la primera línea tiene más ";" que "," usamos ";"
+  const sep = (lineas[0].split(";").length > lineas[0].split(",").length) ? ";" : ",";
 
   const parsearLinea = (linea: string): string[] => {
     const campos: string[] = [];
@@ -587,7 +617,7 @@ function parsearCSV(texto: string): Record<string, string>[] {
         }
       } else if (c === '"') {
         dentroComillas = true;
-      } else if (c === ",") {
+      } else if (c === sep) {
         campos.push(actual);
         actual = "";
       } else {
@@ -607,6 +637,42 @@ function parsearCSV(texto: string): Record<string, string>[] {
     });
     return fila;
   });
+}
+
+// Parsea el campo Tamaño del CSV de HYM y retorna contenido y unidadMedida.
+// Ejemplos: "12 Kg" → {contenido: 12, unidad: KILOGRAMOS}
+//           "1.5 Kg" → {contenido: 1.5, unidad: KILOGRAMOS}
+//           "0.355"  → {contenido: 355, unidad: GRAMOS} (decimal sin unidad = kg, convertimos a g si < 1)
+//           "0.340"  → {contenido: 340, unidad: GRAMOS}
+//           "7.5 Kg" → {contenido: 7.5, unidad: KILOGRAMOS}
+function parsearTamanio(tamanio: string): { contenido: number; unidad: string } | null {
+  const t = tamanio.trim();
+  if (!t) return null;
+
+  // Formato "X.X Kg" o "X Kg"
+  const matchKg = t.match(/^([\d.]+)\s*[Kk][Gg]$/);
+  if (matchKg) {
+    return { contenido: Number(matchKg[1]), unidad: "KILOGRAMOS" };
+  }
+
+  // Formato "X.X Lt" o "X Lt"
+  const matchLt = t.match(/^([\d.]+)\s*[Ll][Tt]$/);
+  if (matchLt) {
+    return { contenido: Number(matchLt[1]), unidad: "LITROS" };
+  }
+
+  // Formato numérico puro (decimal sin unidad = kg implícito en el CSV de HYM)
+  // Si es < 1 lo convertimos a gramos
+  const matchNum = t.match(/^([\d.]+)$/);
+  if (matchNum) {
+    const val = Number(matchNum[1]);
+    if (val < 1) {
+      return { contenido: Math.round(val * 1000), unidad: "GRAMOS" };
+    }
+    return { contenido: val, unidad: "KILOGRAMOS" };
+  }
+
+  return null;
 }
 
 // Normaliza nombres para poder comparar "RC Urinary Care" con "RC URINARY CARE".
@@ -732,20 +798,25 @@ export async function importarExcel(formData: FormData) {
     } else if (importandoHym) {
       // Producto nuevo en HYM → crear en catálogo y vincular
       const nombreCompleto = [nombre, tamanios].filter(Boolean).join(" · ") || sku;
-      producto = await prisma.producto.create({
-        data: {
-          sku,
-          nombre: nombreCompleto,
-          marca: tipoProducto ?? "-",
-          categoria: tipoProducto ?? "Sin categorizar",
-          presentacion: "BOLSA_CERRADA",
-          unidadMedida: "KILOGRAMOS",
-          contenido: 1,
-          margenPorcentaje: 30,
-          precioCostoUnitario: precioCosto,
-          precioVenta: precioCosto * 1.3,
-          stockActual: 0,
-        },
+      const tamanioParseado = tamanios ? parsearTamanio(tamanios) : null;
+      producto = await prisma.$transaction(async (tx) => {
+        const skuInternoAuto = await siguienteSkuInterno(tx);
+        return tx.producto.create({
+          data: {
+            sku,
+            skuInterno: skuInternoAuto,
+            nombre: nombreCompleto,
+            marca: tipoProducto ?? "-",
+            categoria: tipoProducto ?? "Sin categorizar",
+            presentacion: "BOLSA_CERRADA",
+            unidadMedida: (tamanioParseado?.unidad ?? "KILOGRAMOS") as "KILOGRAMOS" | "GRAMOS" | "LITROS" | "MILILITROS" | "UNIDAD",
+            contenido: tamanioParseado?.contenido ?? 1,
+            margenPorcentaje: 30,
+            precioCostoUnitario: precioCosto,
+            precioVenta: precioCosto * 1.3,
+            stockActual: 0,
+          },
+        });
       });
       productosPorSku.set(sku, producto);
       nuevos++;

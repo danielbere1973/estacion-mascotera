@@ -82,7 +82,7 @@ export default async function DashboardPage({
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
         <div className="flex gap-1">

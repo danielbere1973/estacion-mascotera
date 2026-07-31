@@ -26,6 +26,7 @@ export default async function EditarClientePage({
       orderBy: { creadoAt: "asc" },
     }),
     prisma.producto.findMany({
+      where: { activo: true },
       select: { id: true, nombre: true, marca: true },
       orderBy: [{ marca: "asc" }, { nombre: "asc" }],
     }),

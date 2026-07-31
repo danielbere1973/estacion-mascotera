@@ -22,7 +22,7 @@ export default async function UsuariosPage() {
   ]);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Usuarios</h1>
 
       <details className="rounded-xl border border-gray-200 bg-white p-4">

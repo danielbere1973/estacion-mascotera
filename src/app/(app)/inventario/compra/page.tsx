@@ -7,6 +7,7 @@ export default async function NuevaCompraPage() {
   const [proveedores, productos, historial, tiposProducto, usuarios] = await Promise.all([
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
+      where: { activo: true },
       orderBy: { nombre: "asc" },
       select: { id: true, sku: true, nombre: true },
     }),

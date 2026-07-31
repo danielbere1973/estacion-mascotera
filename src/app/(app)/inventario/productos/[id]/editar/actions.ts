@@ -29,6 +29,12 @@ export async function agregarProveedorProducto(formData: FormData) {
     },
   });
 
+  // Si existe otro Producto con ese SKU, lo marcamos inactivo (queda absorbido por este)
+  await prisma.producto.updateMany({
+    where: { sku: skuFinal, id: { not: productoId } },
+    data: { activo: false },
+  });
+
   revalidatePath(`/inventario/productos/${productoId}/editar`);
   revalidatePath("/inventario");
 }
@@ -42,7 +48,7 @@ export async function quitarProveedorProducto(formData: FormData) {
 
   await prisma.historialStockMayorista.update({
     where: { id: historialId },
-    data: { productoId: null, activo: false },
+    data: { productoId: null },
   });
 
   revalidatePath(`/inventario/productos/${productoId}/editar`);

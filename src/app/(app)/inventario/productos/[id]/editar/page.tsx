@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { actualizarProducto } from "../../../actions";
 import { agregarProveedorProducto, quitarProveedorProducto } from "./actions";
+import { AgregarProveedorForm } from "./agregar-proveedor-form";
 
 export default async function EditarProductoPage({
   params,
@@ -9,7 +10,7 @@ export default async function EditarProductoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [producto, tipos, proveedores] = await Promise.all([
+  const [producto, tipos, proveedores, itemsPorProveedor] = await Promise.all([
     prisma.producto.findUnique({
       where: { id: Number(id) },
       include: {
@@ -22,6 +23,17 @@ export default async function EditarProductoPage({
     }),
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.historialStockMayorista.findMany({
+      where: { activo: true },
+      select: {
+        proveedorId: true,
+        sku: true,
+        nombre: true,
+        precioCostoScraped: true,
+        precioConDescuento: true,
+      },
+      orderBy: { sku: "asc" },
+    }),
   ]);
   if (!producto) notFound();
 
@@ -134,32 +146,19 @@ export default async function EditarProductoPage({
         )}
 
         {proveedoresDisponibles.length > 0 && (
-          <form action={agregarProveedorProducto} className="space-y-3 border-t border-gray-100 pt-3">
-            <input type="hidden" name="productoId" value={producto.id} />
-            <p className="text-xs font-medium text-gray-600">Agregar proveedor</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500">Proveedor</label>
-                <select name="proveedorId" required className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
-                  <option value="">Seleccionar...</option>
-                  {proveedoresDisponibles.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nombre}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500">SKU del proveedor</label>
-                <input name="sku" placeholder="Código en lista" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm font-mono" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500">Precio costo</label>
-                <input name="precioCosto" type="number" step="0.01" min={0} required placeholder="0" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" />
-              </div>
-            </div>
-            <button type="submit" className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
-              Agregar proveedor
-            </button>
-          </form>
+          <AgregarProveedorForm
+            productoId={producto.id}
+            proveedores={proveedoresDisponibles}
+            itemsPorProveedor={itemsPorProveedor
+              .filter((i) => i.proveedorId !== null)
+              .map((i) => ({
+                proveedorId: i.proveedorId!,
+                sku: i.sku,
+                nombre: i.nombre ?? "",
+                precio: Number(i.precioConDescuento ?? i.precioCostoScraped),
+              }))}
+            action={agregarProveedorProducto}
+          />
         )}
       </div>
     </div>

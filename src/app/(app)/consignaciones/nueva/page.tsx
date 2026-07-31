@@ -9,12 +9,13 @@ export default async function NuevaConsignacionPage() {
   const [socios, productos, proveedoresRaw, tipos, todosSkus] = await Promise.all([
     prisma.socioConsignacion.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
+      where: { activo: true },
       select: { id: true, nombre: true, marca: true, stockActual: true },
       orderBy: { nombre: "asc" },
     }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
-    prisma.producto.findMany({ select: { sku: true, proveedorId: true } }),
+    prisma.producto.findMany({ where: { activo: true }, select: { sku: true, proveedorId: true } }),
   ]);
 
   const proveedores = proveedoresRaw.map((p) => {
