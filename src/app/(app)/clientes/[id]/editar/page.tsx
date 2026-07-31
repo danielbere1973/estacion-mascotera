@@ -6,6 +6,8 @@ import {
   agregarProductoRecurrente,
   editarProductoRecurrente,
   eliminarProductoRecurrente,
+  agregarMascota,
+  eliminarMascota,
 } from "../../actions";
 
 export default async function EditarClientePage({
@@ -18,8 +20,9 @@ export default async function EditarClientePage({
   const { id } = await params;
   const clienteId = Number(id);
 
-  const [cliente, productosRecurrentes, todosProductos] = await Promise.all([
+  const [cliente, mascotas, productosRecurrentes, todosProductos] = await Promise.all([
     prisma.cliente.findUnique({ where: { id: clienteId } }),
+    prisma.mascota.findMany({ where: { clienteId }, orderBy: { creadoAt: "asc" } }),
     prisma.clienteProductoRecurrente.findMany({
       where: { clienteId },
       include: { producto: { select: { id: true, nombre: true, marca: true } } },
@@ -95,16 +98,6 @@ export default async function EditarClientePage({
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
-
-          <div className="space-y-1 sm:col-span-2">
-            <label className="text-sm font-medium text-gray-700">Mascotas (opcional)</label>
-            <input
-              name="mascotas"
-              defaultValue={cliente.mascotas ?? ""}
-              placeholder="Ej: Luna (golden, 3 años), Michi (gato, 5 años)"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
         </div>
 
         <button
@@ -114,6 +107,123 @@ export default async function EditarClientePage({
           Guardar cambios
         </button>
       </form>
+
+      {/* Mascotas */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-800">Mascotas</h2>
+
+        {mascotas.length > 0 && (
+          <div className="space-y-2">
+            {mascotas.map((m) => (
+              <div key={m.id} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-800">
+                      {m.nombre}{" "}
+                      <span className="text-xs font-normal text-gray-500">
+                        ({m.tipo === "PERRO" ? "Perro" : "Gato"})
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                      <span>
+                        {m.edad === "<1" ? "Menos de 1 año" : `${m.edad} ${m.edad === "1" ? "año" : "años"}`}
+                      </span>
+                      <span>
+                        {{
+                          MINI: "Mini",
+                          PEQUENIO: "Pequeño",
+                          MEDIANO: "Mediano",
+                          GRANDE: "Grande",
+                          GIGANTE: "Gigante",
+                        }[m.tamanio]}
+                      </span>
+                      {m.raza && <span>{m.raza}</span>}
+                      {m.condicionesEspeciales && (
+                        <span className="text-orange-600">{m.condicionesEspeciales}</span>
+                      )}
+                    </div>
+                  </div>
+                  <form action={eliminarMascota}>
+                    <input type="hidden" name="id" value={m.id} />
+                    <button type="submit" className="rounded px-2 py-1 text-xs text-red-500 hover:bg-red-50">
+                      Eliminar
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <form action={agregarMascota} className="space-y-3 border-t border-gray-100 pt-3">
+          <input type="hidden" name="clienteId" value={cliente.id} />
+          <p className="text-xs font-medium text-gray-600">Agregar mascota</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Tipo</label>
+              <select name="tipo" required className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+                <option value="">Seleccionar...</option>
+                <option value="PERRO">Perro</option>
+                <option value="GATO">Gato</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Nombre</label>
+              <input
+                name="nombre"
+                required
+                placeholder="Ej: Luna"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Edad</label>
+              <select name="edad" required className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+                <option value="">Seleccionar...</option>
+                <option value="&lt;1">Menos de 1 año</option>
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={String(n)}>
+                    {n} {n === 1 ? "año" : "años"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Tamaño</label>
+              <select name="tamanio" required className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+                <option value="">Seleccionar...</option>
+                <option value="MINI">Mini</option>
+                <option value="PEQUENIO">Pequeño</option>
+                <option value="MEDIANO">Mediano</option>
+                <option value="GRANDE">Grande</option>
+                <option value="GIGANTE">Gigante</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Raza (opcional)</label>
+              <input
+                name="raza"
+                placeholder="Ej: Golden Retriever"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Condiciones especiales (opcional)</label>
+              <input
+                name="condicionesEspeciales"
+                placeholder="Ej: alérgico al pollo, diabético"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+          >
+            Agregar mascota
+          </button>
+        </form>
+      </div>
 
       {/* Productos recurrentes */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">

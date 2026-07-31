@@ -106,11 +106,26 @@ model Cliente {
   direccion           String
   telefono            String
   email               String?
-  mascotas            String?
+  mascotas            Mascota[]
   ordenesDropshipping OrdenDropshipping[]
   productosRecurrentes ClienteProductoRecurrente[]
   recordatorios       RecordatorioReposicion[]
   ventas              Venta[]
+}
+
+model Mascota {
+  id                  Int           @id @default(autoincrement())
+  clienteId           Int
+  tipo                TipoMascota
+  nombre              String
+  edad                String
+  tamanio             TamanioMascota
+  raza                String?
+  condicionesEspeciales String?
+  creadoAt            DateTime      @default(now())
+  cliente             Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
 }
 
 model ClienteProductoRecurrente {
@@ -434,6 +449,19 @@ enum EstadoDropshipping {
   DESPACHADO
   ENTREGADO
   CANCELADO
+}
+
+enum TipoMascota {
+  PERRO
+  GATO
+}
+
+enum TamanioMascota {
+  MINI
+  PEQUENIO
+  MEDIANO
+  GRANDE
+  GIGANTE
 }
 
 enum CategoriaGasto {

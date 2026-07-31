@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
+import { TipoMascota, TamanioMascota } from "@prisma/client";
 
 export async function actualizarCliente(formData: FormData) {
   await requireAdmin();
@@ -16,7 +17,6 @@ export async function actualizarCliente(formData: FormData) {
   const direccion = formData.get("direccion")?.toString().trim();
   const telefono = formData.get("telefono")?.toString().trim();
   const email = formData.get("email")?.toString().trim() || null;
-  const mascotas = formData.get("mascotas")?.toString().trim() || null;
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
@@ -24,12 +24,43 @@ export async function actualizarCliente(formData: FormData) {
 
   await prisma.cliente.update({
     where: { id },
-    data: { nombre, apellido, direccion, telefono, email, mascotas },
+    data: { nombre, apellido, direccion, telefono, email },
   });
 
   revalidatePath("/clientes");
   revalidatePath("/ventas");
   redirect("/clientes");
+}
+
+export async function agregarMascota(formData: FormData) {
+  await requireAdmin();
+
+  const clienteId = Number(formData.get("clienteId"));
+  const tipo = formData.get("tipo")?.toString() as TipoMascota;
+  const nombre = formData.get("nombre")?.toString().trim();
+  const edad = formData.get("edad")?.toString().trim();
+  const tamanio = formData.get("tamanio")?.toString() as TamanioMascota;
+  const raza = formData.get("raza")?.toString().trim() || null;
+  const condicionesEspeciales = formData.get("condicionesEspeciales")?.toString().trim() || null;
+
+  if (!clienteId || !tipo || !nombre || !edad || !tamanio) throw new Error("Faltan datos obligatorios.");
+
+  await prisma.mascota.create({
+    data: { clienteId, tipo, nombre, edad, tamanio, raza, condicionesEspeciales },
+  });
+
+  revalidatePath(`/clientes/${clienteId}/editar`);
+}
+
+export async function eliminarMascota(formData: FormData) {
+  await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Inválido.");
+
+  const mascota = await prisma.mascota.delete({ where: { id } });
+
+  revalidatePath(`/clientes/${mascota.clienteId}/editar`);
 }
 
 export async function agregarProductoRecurrente(formData: FormData) {
