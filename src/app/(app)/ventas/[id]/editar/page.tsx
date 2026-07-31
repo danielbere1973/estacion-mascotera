@@ -16,7 +16,7 @@ export default async function EditarVentaPage({
       where: { id: Number(id) },
       include: {
         cliente: true,
-        detalles: { include: { producto: true } },
+        detalles: { include: { producto: { select: { sku: true, nombre: true } } } },
         costos: true,
       },
     }),

@@ -267,7 +267,7 @@ export async function actualizarVenta(formData: FormData) {
         const deltaCantidad = cantidad - actual.cantidad;
 
         if (actual.ventaConsignacion) {
-          if (actual.ventaConsignacion.liquidacionId) {
+          if (actual.ventaConsignacion.liquidacionId && (deltaCantidad !== 0 || precio !== Number(actual.precioVentaUnitario))) {
             throw new Error("No se puede modificar: esta venta ya fue liquidada con el socio.");
           }
           if (deltaCantidad !== 0) {
@@ -283,10 +283,12 @@ export async function actualizarVenta(formData: FormData) {
               data: { cantidadVendida: { increment: deltaCantidad } },
             });
           }
-          await tx.ventaConsignacion.update({
-            where: { id: actual.ventaConsignacion.id },
-            data: { cantidad, precioVentaReal: precio },
-          });
+          if (!actual.ventaConsignacion.liquidacionId) {
+            await tx.ventaConsignacion.update({
+              where: { id: actual.ventaConsignacion.id },
+              data: { cantidad, precioVentaReal: precio },
+            });
+          }
         }
 
         if (deltaCantidad !== 0) {
