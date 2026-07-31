@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { actualizarProducto } from "../../../actions";
+import { agregarProveedorProducto, quitarProveedorProducto } from "./actions";
 
 export default async function EditarProductoPage({
   params,
@@ -9,39 +10,40 @@ export default async function EditarProductoPage({
 }) {
   const { id } = await params;
   const [producto, tipos, proveedores] = await Promise.all([
-    prisma.producto.findUnique({ where: { id: Number(id) } }),
+    prisma.producto.findUnique({
+      where: { id: Number(id) },
+      include: {
+        historialStock: {
+          where: { activo: true },
+          include: { proveedor: { select: { id: true, nombre: true } } },
+          orderBy: { proveedor: { nombre: "asc" } },
+        },
+      },
+    }),
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
   ]);
   if (!producto) notFound();
 
+  const proveedoresYaVinculados = new Set(producto.historialStock.map((h) => h.proveedorId).filter(Boolean) as number[]);
+  const proveedoresDisponibles = proveedores.filter((p) => !proveedoresYaVinculados.has(p.id));
+
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-xl font-semibold text-gray-900">Editar producto</h1>
 
       <form action={actualizarProducto} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
         <input type="hidden" name="id" value={producto.id} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-
-          <div className="space-y-1 sm:col-span-2">
-            <label className="text-sm font-medium text-gray-700">Proveedor</label>
-            <select name="proveedorId" defaultValue={producto.proveedorId ?? ""} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-              <option value="">— Sin proveedor —</option>
-              {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">SKU proveedor principal</label>
+            <input name="sku" defaultValue={producto.sku} required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">SKU proveedor</label>
-            <input name="sku" defaultValue={producto.sku} required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">SKU interno <span className="font-normal text-gray-400">(opcional)</span></label>
-            <input name="skuInterno" defaultValue={producto.skuInterno ?? ""} placeholder="Código propio de EM" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
+            <label className="text-sm font-medium text-gray-700">SKU interno <span className="font-normal text-gray-400">(para ARCA)</span></label>
+            <input name="skuInterno" defaultValue={producto.skuInterno ?? ""} placeholder="AA00" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
           </div>
 
           <div className="space-y-1">
@@ -103,6 +105,63 @@ export default async function EditarProductoPage({
           Guardar cambios
         </button>
       </form>
+
+      {/* Proveedores */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-800">Proveedores</h2>
+
+        {producto.historialStock.length > 0 && (
+          <div className="space-y-2">
+            {producto.historialStock.map((h) => (
+              <div key={h.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm">
+                <div>
+                  <span className="font-medium text-gray-800">{h.proveedor?.nombre ?? "—"}</span>
+                  <span className="ml-3 text-gray-500 font-mono text-xs">{h.sku}</span>
+                  <span className="ml-3 text-gray-600">
+                    ${Number(h.precioConDescuento ?? h.precioCostoScraped).toLocaleString("es-AR")}
+                  </span>
+                </div>
+                <form action={quitarProveedorProducto}>
+                  <input type="hidden" name="historialId" value={h.id} />
+                  <input type="hidden" name="productoId" value={producto.id} />
+                  <button type="submit" className="text-xs text-red-500 hover:text-red-700">
+                    Quitar
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {proveedoresDisponibles.length > 0 && (
+          <form action={agregarProveedorProducto} className="space-y-3 border-t border-gray-100 pt-3">
+            <input type="hidden" name="productoId" value={producto.id} />
+            <p className="text-xs font-medium text-gray-600">Agregar proveedor</p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Proveedor</label>
+                <select name="proveedorId" required className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+                  <option value="">Seleccionar...</option>
+                  {proveedoresDisponibles.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">SKU del proveedor</label>
+                <input name="sku" placeholder="Código en lista" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm font-mono" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Precio costo</label>
+                <input name="precioCosto" type="number" step="0.01" min={0} required placeholder="0" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" />
+              </div>
+            </div>
+            <button type="submit" className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
+              Agregar proveedor
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
