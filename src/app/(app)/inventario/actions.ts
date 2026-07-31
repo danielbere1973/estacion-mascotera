@@ -713,8 +713,11 @@ export async function importarExcel(formData: FormData) {
       const nombreNuevo = normalizarNombre(String(fila["Nombre"] ?? "").trim());
       const tamanioNuevo = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim().toUpperCase();
       if (nombreNuevo === claveNombre && tamanioNuevo === tamanioObs) {
+        // Si el SKU nuevo ya está en uso por otro producto, no reasignar
+        const skuEnUso = await prisma.producto.findUnique({ where: { sku: skuNuevo }, select: { id: true } });
+        if (skuEnUso && skuEnUso.id !== obsoleto.productoId) break;
+
         skusReasignados.set(obsoleto.sku, skuNuevo);
-        // Actualizar el SKU del producto en inventario
         await prisma.producto.update({
           where: { id: obsoleto.productoId },
           data: { sku: skuNuevo },
