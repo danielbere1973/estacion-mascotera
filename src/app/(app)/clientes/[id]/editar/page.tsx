@@ -20,7 +20,7 @@ export default async function EditarClientePage({
   const { id } = await params;
   const clienteId = Number(id);
 
-  const [cliente, mascotas, productosRecurrentes, todosProductos] = await Promise.all([
+  const [cliente, mascotas, productosRecurrentes, productosComprados] = await Promise.all([
     prisma.cliente.findUnique({ where: { id: clienteId } }),
     prisma.mascota.findMany({ where: { clienteId }, orderBy: { creadoAt: "asc" } }),
     prisma.clienteProductoRecurrente.findMany({
@@ -29,7 +29,10 @@ export default async function EditarClientePage({
       orderBy: { creadoAt: "asc" },
     }),
     prisma.producto.findMany({
-      where: { activo: true },
+      where: {
+        activo: true,
+        detalleVentas: { some: { venta: { clienteId } } },
+      },
       select: { id: true, nombre: true, marca: true },
       orderBy: [{ marca: "asc" }, { nombre: "asc" }],
     }),
@@ -38,7 +41,7 @@ export default async function EditarClientePage({
   if (!cliente) notFound();
 
   const productosYaAgregados = new Set(productosRecurrentes.map((r) => r.productoId));
-  const productosDisponibles = todosProductos.filter((p) => !productosYaAgregados.has(p.id));
+  const productosDisponibles = productosComprados.filter((p) => !productosYaAgregados.has(p.id));
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
