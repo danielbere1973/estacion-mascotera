@@ -2,8 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { crearProducto, proximoSkuInterno } from "../../actions";
 
 export default async function NuevoProductoPage() {
-  const [tipos, proximoSku] = await Promise.all([
+  const [tipos, proveedores, proximoSku] = await Promise.all([
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     proximoSkuInterno(),
   ]);
 
@@ -20,7 +21,17 @@ export default async function NuevoProductoPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">SKU proveedor</label>
+            <label className="text-sm font-medium text-gray-700">Proveedor <span className="font-normal text-gray-400">(opcional)</span></label>
+            <select name="proveedorId" defaultValue="" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              <option value="">— Sin proveedor —</option>
+              {proveedores.map((p) => (
+                <option key={p.id} value={p.id}>{p.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-sm font-medium text-gray-700">SKU proveedor <span className="font-normal text-gray-400">(opcional)</span></label>
             <input name="skuProveedor" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" placeholder="Ej: KFRCPINS500G" />
           </div>
 

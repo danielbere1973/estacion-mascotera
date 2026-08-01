@@ -423,6 +423,8 @@ export async function crearProducto(formData: FormData) {
     throw new Error("Faltan datos del producto.");
   }
 
+  const proveedorId = Number(formData.get("proveedorId") || 0) || null;
+  const skuProveedor = formData.get("skuProveedor")?.toString().trim() || null;
   const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
 
   await prisma.$transaction(async (tx) => {
@@ -430,6 +432,19 @@ export async function crearProducto(formData: FormData) {
     const producto = await tx.producto.create({
       data: { skuInterno: skuInternoAuto, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual },
     });
+
+    if (proveedorId && skuProveedor) {
+      await tx.historialStockMayorista.create({
+        data: {
+          productoId: producto.id,
+          proveedorId,
+          sku: skuProveedor,
+          precioCostoScraped: precioCostoUnitario,
+          activo: true,
+          fechaImportacion: new Date(),
+        },
+      });
+    }
 
     await registrarLog(tx, {
       usuarioId: Number(session.user.id),
