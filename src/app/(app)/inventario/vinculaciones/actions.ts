@@ -4,18 +4,20 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 
-export async function desvincularItem(formData: FormData) {
+export async function desvincularItem(
+  _prev: { error: string | null },
+  formData: FormData
+): Promise<{ error: string | null }> {
   await requireAdmin();
   const historialId = Number(formData.get("historialId"));
-  if (!historialId) throw new Error("Datos inválidos.");
+  if (!historialId) return { error: "Datos inválidos." };
 
   const item = await prisma.historialStockMayorista.findUnique({
     where: { id: historialId },
     select: { productoId: true },
   });
-  if (!item?.productoId) throw new Error("Este ítem ya no tiene vinculación.");
+  if (!item?.productoId) return { error: "Este ítem ya no tiene vinculación." };
 
-  // Verificar que el producto tenga al menos otro proveedor vinculado
   const otrosVinculos = await prisma.historialStockMayorista.count({
     where: {
       productoId: item.productoId,
@@ -25,9 +27,9 @@ export async function desvincularItem(formData: FormData) {
   });
 
   if (otrosVinculos === 0) {
-    throw new Error(
-      "No se puede desvincular: es el único proveedor de este producto. Primero vinculá otro proveedor o dá de baja el producto."
-    );
+    return {
+      error: "Es el único proveedor de este producto. Vinculá otro proveedor antes de desvincular este.",
+    };
   }
 
   await prisma.historialStockMayorista.update({
@@ -36,4 +38,5 @@ export async function desvincularItem(formData: FormData) {
   });
 
   revalidatePath("/inventario/vinculaciones");
+  return { error: null };
 }

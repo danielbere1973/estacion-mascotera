@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
-import { desvincularItem } from "./actions";
+import { DesvincularBtn } from "./desvincular-btn";
 
 export default async function VinculacionesPage({
   searchParams,
@@ -109,17 +109,7 @@ export default async function VinculacionesPage({
                     {h.producto?.skuInterno ?? "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    {h.producto && (
-                      <form action={desvincularItem}>
-                        <input type="hidden" name="historialId" value={h.id} />
-                        <button
-                          type="submit"
-                          className="text-xs text-red-500 hover:text-red-700 hover:underline"
-                        >
-                          Desvincular
-                        </button>
-                      </form>
-                    )}
+                    {h.producto && <DesvincularBtn historialId={h.id} />}
                   </td>
                 </tr>
               ))}
