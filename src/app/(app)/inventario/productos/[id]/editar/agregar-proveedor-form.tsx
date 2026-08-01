@@ -25,6 +25,8 @@ export function AgregarProveedorForm({
   const [proveedorId, setProveedorId] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [skuSeleccionado, setSkuSeleccionado] = useState("");
+  const [skuManual, setSkuManual] = useState("");
+  const [modoManual, setModoManual] = useState(false);
   const [precio, setPrecio] = useState("");
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -52,9 +54,11 @@ export function AgregarProveedorForm({
   function handleProveedorChange(id: string) {
     setProveedorId(id);
     setSkuSeleccionado("");
+    setSkuManual("");
     setBusqueda("");
     setPrecio("");
     setAbierto(false);
+    setModoManual(false);
   }
 
   // Cerrar dropdown al hacer click fuera
@@ -71,7 +75,7 @@ export function AgregarProveedorForm({
   return (
     <form action={action} className="space-y-3 border-t border-gray-100 pt-3">
       <input type="hidden" name="productoId" value={productoId} />
-      <input type="hidden" name="sku" value={skuSeleccionado} />
+      <input type="hidden" name="sku" value={modoManual ? skuManual : skuSeleccionado} />
       <p className="text-xs font-medium text-gray-600">Agregar proveedor</p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="space-y-1">
@@ -91,18 +95,24 @@ export function AgregarProveedorForm({
         </div>
 
         <div className="space-y-1" ref={ref}>
-          <label className="text-xs text-gray-500">SKU del proveedor</label>
-          {tieneListaImportada ? (
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-gray-500">SKU del proveedor</label>
+            {tieneListaImportada && (
+              <button
+                type="button"
+                onClick={() => { setModoManual(!modoManual); setSkuSeleccionado(""); setSkuManual(""); setBusqueda(""); setPrecio(""); }}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                {modoManual ? "← Buscar en lista" : "No está en la lista →"}
+              </button>
+            )}
+          </div>
+          {tieneListaImportada && !modoManual ? (
             <div className="relative">
               <input
                 type="text"
                 value={busqueda}
-                onChange={(e) => {
-                  setBusqueda(e.target.value);
-                  setSkuSeleccionado("");
-                  setPrecio("");
-                  setAbierto(true);
-                }}
+                onChange={(e) => { setBusqueda(e.target.value); setSkuSeleccionado(""); setPrecio(""); setAbierto(true); }}
                 onFocus={() => setAbierto(true)}
                 placeholder="Buscar por SKU o nombre..."
                 className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm font-mono"
@@ -126,9 +136,12 @@ export function AgregarProveedorForm({
             </div>
           ) : (
             <input
-              name="sku"
-              placeholder={proveedorId ? "Sin lista — ingresá manual" : "Primero elegí proveedor"}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm font-mono"
+              type="text"
+              value={skuManual}
+              onChange={(e) => setSkuManual(e.target.value)}
+              placeholder={proveedorId ? "SKU del proveedor" : "Primero elegí proveedor"}
+              disabled={!proveedorId}
+              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm font-mono disabled:bg-gray-50 disabled:text-gray-400"
             />
           )}
         </div>
@@ -150,7 +163,7 @@ export function AgregarProveedorForm({
       </div>
       <button
         type="submit"
-        disabled={tieneListaImportada && !skuSeleccionado}
+        disabled={!proveedorId || (modoManual ? !skuManual : tieneListaImportada && !skuSeleccionado)}
         className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Agregar proveedor
