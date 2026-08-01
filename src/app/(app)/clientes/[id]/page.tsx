@@ -30,7 +30,7 @@ export default async function ClienteHistorialPage({
     where: { clienteId },
     include: {
       detalles: {
-        include: { producto: { select: { nombre: true, marca: true, sku: true } } },
+        include: { producto: { select: { nombre: true, marca: true, skuInterno: true } } },
       },
       costos: true,
     },

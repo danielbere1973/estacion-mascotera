@@ -15,20 +15,16 @@ export default async function NuevaConsignacionPage() {
     }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
-    prisma.producto.findMany({ where: { activo: true }, select: { sku: true, proveedorId: true } }),
+    prisma.producto.findMany({ where: { activo: true }, select: { skuInterno: true } }),
   ]);
 
-  const proveedores = proveedoresRaw.map((p) => {
-    const prefijo = prefijoDe(p.nombre);
-    const regex = new RegExp(`^${prefijo}(\\d+)$`);
-    let max = 0;
-    for (const prod of todosSkus) {
-      if (prod.proveedorId !== p.id) continue;
-      const m = prod.sku.match(regex);
-      if (m) max = Math.max(max, Number(m[1]));
-    }
-    return { id: p.id, nombre: p.nombre, prefijo, siguienteNumero: max + 1 };
-  });
+  void todosSkus; // ya no se usa para generar SKUs
+  const proveedores = proveedoresRaw.map((p) => ({
+    id: p.id,
+    nombre: p.nombre,
+    prefijo: "",
+    siguienteNumero: 1,
+  }));
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">

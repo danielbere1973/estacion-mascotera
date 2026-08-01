@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       where: { fechaVenta: { gte: fechaDesde, lte: fechaHasta } },
       include: {
         cliente: true,
-        detalles: { include: { producto: { select: { precioCostoUnitario: true, nombre: true, sku: true } } } },
+        detalles: { include: { producto: { select: { precioCostoUnitario: true, nombre: true, skuInterno: true } } } },
         vendidoPor: { select: { nombre: true, apellido: true } },
         cobradoPor: { select: { nombre: true, apellido: true } },
       },
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     });
 
     let totalBruto = 0, totalDescuentos = 0, costoMercaderia = 0, totalCostoEnvios = 0;
-    const productoMap = new Map<string, { nombre: string; sku: string; unidades: number; total: number }>();
+    const productoMap = new Map<string, { nombre: string; skuInterno: string; unidades: number; total: number }>();
     const canalMap = new Map<string, { cantidad: number; total: number }>();
     const pagoMap = new Map<string, { cantidad: number; total: number }>();
     const vendedorMap = new Map<string, { cantidad: number; total: number }>();
@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
         const desc = bruto * (Number(d.descuentoPorcentaje) / 100);
         brutoVenta += bruto; descVenta += desc;
         costoMercaderia += Number(d.producto.precioCostoUnitario) * d.cantidad;
-        const prev = productoMap.get(d.producto.sku) ?? { nombre: d.producto.nombre, sku: d.producto.sku, unidades: 0, total: 0 };
-        productoMap.set(d.producto.sku, { ...prev, unidades: prev.unidades + d.cantidad, total: prev.total + bruto - desc });
+        const prev = productoMap.get(d.producto.skuInterno) ?? { nombre: d.producto.nombre, skuInterno: d.producto.skuInterno, unidades: 0, total: 0 };
+        productoMap.set(d.producto.skuInterno, { ...prev, unidades: prev.unidades + d.cantidad, total: prev.total + bruto - desc });
       }
       totalBruto += brutoVenta; totalDescuentos += descVenta;
       totalCostoEnvios += Number(v.costoEnvio);
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
     if (tipo === "ranking-productos") {
       const rows: unknown[][] = [["SKU", "Producto", "Unidades", "Total $"]];
       for (const p of [...productoMap.values()].sort((a, b) => b.total - a.total)) {
-        rows.push([p.sku, p.nombre, p.unidades, p.total]);
+        rows.push([p.skuInterno, p.nombre, p.unidades, p.total]);
       }
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Ranking productos");
     }
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
       where: { fechaCompra: { gte: fechaDesde, lte: fechaHasta } },
       include: {
         proveedor: { select: { nombre: true } },
-        producto: { select: { nombre: true, sku: true } },
+        producto: { select: { nombre: true, skuInterno: true } },
         usuario: { select: { nombre: true, apellido: true } },
         pagadoPor: { select: { nombre: true, apellido: true } },
       },
@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
     for (const c of compras) {
       rows.push([
         new Date(c.fechaCompra).toLocaleDateString("es-AR"),
-        c.proveedor.nombre, c.producto.sku, c.producto.nombre, c.cantidad,
+        c.proveedor.nombre, c.producto.skuInterno, c.producto.nombre, c.cantidad,
         Number(c.precioCostoUnitario), Number(c.precioCostoUnitario) * c.cantidad,
         `${c.usuario.apellido}, ${c.usuario.nombre}`,
         c.pagadoPor ? `${c.pagadoPor.apellido}, ${c.pagadoPor.nombre}` : "",
@@ -159,9 +159,9 @@ export async function GET(req: NextRequest) {
 
   if (tipo === "inventario") {
     const productos = await prisma.producto.findMany({ orderBy: { nombre: "asc" } });
-    const rows: unknown[][] = [["SKU", "Nombre", "Categoría", "Stock", "Costo unit.", "Precio lista", "Valor lista", "Valor costo"]];
+    const rows: unknown[][] = [["SKU Interno", "Nombre", "Categoría", "Stock", "Costo unit.", "Precio lista", "Valor lista", "Valor costo"]];
     for (const p of productos) {
-      rows.push([p.sku, p.nombre, p.categoria, p.stockActual, Number(p.precioCostoUnitario), Number(p.precioVenta), p.stockActual * Number(p.precioVenta), p.stockActual * Number(p.precioCostoUnitario)]);
+      rows.push([p.skuInterno, p.nombre, p.categoria, p.stockActual, Number(p.precioCostoUnitario), Number(p.precioVenta), p.stockActual * Number(p.precioVenta), p.stockActual * Number(p.precioCostoUnitario)]);
     }
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Inventario");
   }

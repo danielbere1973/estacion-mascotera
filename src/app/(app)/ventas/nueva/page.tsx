@@ -13,7 +13,7 @@ export default async function NuevaVentaPage() {
       orderBy: { nombre: "asc" },
       select: {
         id: true,
-        sku: true,
+        skuInterno: true,
         nombre: true,
         precioVenta: true,
         stockActual: true,

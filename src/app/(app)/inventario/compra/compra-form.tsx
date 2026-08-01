@@ -18,7 +18,7 @@ export function CompraForm({
   action,
 }: {
   proveedores: Proveedor[];
-  productos: { id: number; sku: string; nombre: string }[];
+  productos: { id: number; skuInterno: string; nombre: string }[];
   mayoristaItems: MayoristaItem[];
   tiposProducto: { id: number; nombre: string }[];
   usuarios: Usuario[];

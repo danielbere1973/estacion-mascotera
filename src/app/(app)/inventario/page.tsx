@@ -22,7 +22,7 @@ export default async function InventarioPage({
           OR: [
             { nombre: { contains: q, mode: "insensitive" } },
             { marca: { contains: q, mode: "insensitive" } },
-            { sku: { contains: q, mode: "insensitive" } },
+            { skuInterno: { contains: q, mode: "insensitive" } },
             { skuInterno: { contains: q, mode: "insensitive" } },
           ],
         } : {}),

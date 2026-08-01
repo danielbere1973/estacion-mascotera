@@ -43,7 +43,7 @@ export default async function ReportesPage({
           where: { fechaVenta: { gte: fechaDesde, lte: fechaHasta } },
           include: {
             cliente: true,
-            detalles: { include: { producto: { select: { precioCostoUnitario: true, nombre: true, sku: true } } } },
+            detalles: { include: { producto: { select: { precioCostoUnitario: true, nombre: true, skuInterno: true } } } },
             vendidoPor: { select: { nombre: true, apellido: true } },
             cobradoPor: { select: { nombre: true, apellido: true } },
           },
@@ -54,7 +54,7 @@ export default async function ReportesPage({
           where: { fechaCompra: { gte: fechaDesde, lte: fechaHasta } },
           include: {
             proveedor: { select: { nombre: true } },
-            producto: { select: { nombre: true, sku: true } },
+            producto: { select: { nombre: true, skuInterno: true } },
             usuario: { select: { nombre: true, apellido: true } },
             pagadoPor: { select: { nombre: true, apellido: true } },
           },
@@ -78,7 +78,7 @@ export default async function ReportesPage({
 
   // ---- Agregaciones de ventas ----
   let totalBruto = 0, totalDescuentos = 0, costoMercaderia = 0, totalCostoEnvios = 0;
-  const productoMap = new Map<string, { nombre: string; sku: string; unidades: number; total: number }>();
+  const productoMap = new Map<string, { nombre: string; sku: string; unidades: number; total: number }>(); // key = skuInterno
   const canalMap = new Map<string, { cantidad: number; total: number }>();
   const pagoMap = new Map<string, { cantidad: number; total: number }>();
   const vendedorMap = new Map<string, { cantidad: number; total: number }>();
@@ -92,8 +92,8 @@ export default async function ReportesPage({
       const desc = bruto * (Number(d.descuentoPorcentaje) / 100);
       brutoVenta += bruto; descVenta += desc;
       costoMercaderia += Number(d.producto.precioCostoUnitario) * d.cantidad;
-      const prev = productoMap.get(d.producto.sku) ?? { nombre: d.producto.nombre, sku: d.producto.sku, unidades: 0, total: 0 };
-      productoMap.set(d.producto.sku, { ...prev, unidades: prev.unidades + d.cantidad, total: prev.total + bruto - desc });
+      const prev = productoMap.get(d.producto.skuInterno) ?? { nombre: d.producto.nombre, sku: d.producto.skuInterno, unidades: 0, total: 0 };
+      productoMap.set(d.producto.skuInterno, { ...prev, unidades: prev.unidades + d.cantidad, total: prev.total + bruto - desc });
     }
     totalBruto += brutoVenta; totalDescuentos += descVenta;
     totalCostoEnvios += Number(v.costoEnvio);
@@ -236,7 +236,7 @@ export default async function ReportesPage({
             rows={compras.map((c) => [
               new Date(c.fechaCompra).toLocaleDateString("es-AR"),
               c.proveedor.nombre,
-              c.producto.sku,
+              c.producto.skuInterno,
               c.producto.nombre,
               c.cantidad,
               formatARS(Number(c.precioCostoUnitario) * c.cantidad),
@@ -290,7 +290,7 @@ export default async function ReportesPage({
           </div>
           <ReporteTable
             headers={["SKU", "Nombre", "Categoría", "Stock", "Costo unit.", "Precio lista", "Valor lista"]}
-            rows={productos.map((p) => [p.sku, p.nombre, p.categoria, p.stockActual, formatARS(Number(p.precioCostoUnitario)), formatARS(Number(p.precioVenta)), formatARS(p.stockActual * Number(p.precioVenta))])}
+            rows={productos.map((p) => [p.skuInterno, p.nombre, p.categoria, p.stockActual, formatARS(Number(p.precioCostoUnitario)), formatARS(Number(p.precioVenta)), formatARS(p.stockActual * Number(p.precioVenta))])}
             alignRight={[3, 4, 5, 6]}
             empty="Sin productos"
           />

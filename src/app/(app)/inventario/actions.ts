@@ -60,11 +60,20 @@ export async function crearCompra(formData: FormData) {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      let producto = await tx.producto.findFirst({ where: { sku: item.sku } });
+      // Buscar producto vinculado a este SKU de proveedor en el historial
+      const historialItem = await tx.historialStockMayorista.findFirst({
+        where: { sku: item.sku, proveedorId: Number(proveedorId) },
+        select: { productoId: true },
+      });
+      let producto = historialItem?.productoId
+        ? await tx.producto.findUnique({ where: { id: historialItem.productoId } })
+        : null;
+
       if (!producto) {
+        const skuInternoAuto = await siguienteSkuInterno(tx);
         producto = await tx.producto.create({
           data: {
-            sku: item.sku,
+            skuInterno: skuInternoAuto,
             nombre: item.nombre,
             marca: "-",
             categoria: tipoDefault?.nombre ?? "General",
@@ -76,6 +85,12 @@ export async function crearCompra(formData: FormData) {
             precioVenta: item.precioCosto * 1.3,
             stockActual: item.cantidad,
           },
+        });
+        // Vincular al historial
+        await tx.historialStockMayorista.upsert({
+          where: { proveedorId_sku: { proveedorId: Number(proveedorId), sku: item.sku } },
+          update: { productoId: producto.id, activo: true },
+          create: { proveedorId: Number(proveedorId), sku: item.sku, nombre: item.nombre, precioCostoScraped: item.precioCosto, productoId: producto.id },
         });
       } else {
         const precioVenta = item.precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
@@ -202,14 +217,22 @@ export async function actualizarCompra(formData: FormData) {
       const precioBase = Number(mayorItem?.precioConDescuento ?? mayorItem?.precioCostoScraped ?? precioListaUnitario);
       const nombre = [mayorItem?.nombre, mayorItem?.tamanios].filter(Boolean).join(" · ") || itemSku;
       const categoria = mayorItem?.tipoProducto ?? "Sin categorizar";
+      const skuInternoAuto = await (async () => {
+        const ultimo = await prisma.producto.findFirst({ where: {}, orderBy: { skuInterno: "desc" }, select: { skuInterno: true } });
+        if (!ultimo?.skuInterno || !/^[A-Z]{2}\d{2}$/.test(ultimo.skuInterno)) return "AA00";
+        const letras = ultimo.skuInterno.slice(0, 2);
+        const num = parseInt(ultimo.skuInterno.slice(2), 10);
+        if (num < 99) return `${letras}${String(num + 1).padStart(2, "0")}`;
+        const nextLetras = letras[1] < "Z" ? letras[0] + String.fromCharCode(letras.charCodeAt(1) + 1) : String.fromCharCode(letras.charCodeAt(0) + 1) + "A";
+        return `${nextLetras}00`;
+      })();
       const nuevo = await prisma.producto.create({
         data: {
-          sku: itemSku,
+          skuInterno: skuInternoAuto,
           nombre,
           marca: proveedor.nombre,
           categoria,
           presentacion: "INDIVIDUAL",
-          proveedorId,
           precioCostoUnitario: precioBase,
           precioVenta: precioBase * 1.3,
         },
@@ -346,7 +369,7 @@ export async function eliminarProducto(formData: FormData) {
       accion: "ELIMINAR",
       entidad: "PRODUCTO",
       entidadId: id,
-      detalle: `${producto.nombre} (${producto.sku})`,
+      detalle: `${producto.nombre} (${producto.skuInterno})`,
     });
   });
 
@@ -358,7 +381,7 @@ export async function eliminarProducto(formData: FormData) {
 // Busca el máximo actual en la DB y devuelve el siguiente.
 async function siguienteSkuInterno(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]): Promise<string> {
   const ultimo = await tx.producto.findFirst({
-    where: { skuInterno: { not: null } },
+    where: {},
     orderBy: { skuInterno: "desc" },
     select: { skuInterno: true },
   });
@@ -382,8 +405,6 @@ async function siguienteSkuInterno(tx: Parameters<Parameters<typeof prisma.$tran
 export async function crearProducto(formData: FormData) {
   const session = await requireAdmin();
 
-  const sku = formData.get("sku")?.toString().trim();
-  const skuInterno = formData.get("skuInterno")?.toString().trim() || null;
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim();
   const categoria = formData.get("categoria")?.toString().trim();
@@ -393,33 +414,17 @@ export async function crearProducto(formData: FormData) {
   const margenPorcentaje = Number(formData.get("margenPorcentaje") || 30);
   const precioCostoUnitario = Number(formData.get("precioCostoUnitario") || 0);
   const stockActual = 0;
-  const proveedorIdStr = formData.get("proveedorId")?.toString();
-  const proveedorId = proveedorIdStr ? Number(proveedorIdStr) : null;
 
-  if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
+  if (!nombre || !marca || !categoria || !presentacion || !unidadMedida) {
     throw new Error("Faltan datos del producto.");
   }
-  if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
 
   const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
 
   await prisma.$transaction(async (tx) => {
-    const skuInternoFinal = skuInterno || await siguienteSkuInterno(tx);
+    const skuInternoAuto = await siguienteSkuInterno(tx);
     const producto = await tx.producto.create({
-      data: { sku, skuInterno: skuInternoFinal, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual, proveedorId },
-    });
-
-    // Agregar al historial del proveedor para que aparezca en futuras compras.
-    // Primero eliminar cualquier entrada previa con el mismo proveedor+sku para evitar duplicados.
-    await tx.historialStockMayorista.deleteMany({ where: { proveedorId, sku } });
-    await tx.historialStockMayorista.create({
-      data: {
-        proveedorId,
-        sku,
-        nombre,
-        precioCostoScraped: precioCostoUnitario,
-        productoId: producto.id,
-      },
+      data: { skuInterno: skuInternoAuto, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual },
     });
 
     await registrarLog(tx, {
@@ -427,7 +432,7 @@ export async function crearProducto(formData: FormData) {
       accion: "CREAR",
       entidad: "PRODUCTO",
       entidadId: producto.id,
-      detalle: `${nombre} (${sku})`,
+      detalle: `${nombre} (${skuInternoAuto})`,
     });
   });
 
@@ -450,8 +455,6 @@ export async function actualizarProducto(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Producto inválido.");
 
-  const sku = formData.get("sku")?.toString().trim();
-  const skuInterno = formData.get("skuInterno")?.toString().trim() || null;
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim();
   const categoria = formData.get("categoria")?.toString().trim();
@@ -460,10 +463,8 @@ export async function actualizarProducto(formData: FormData) {
   const contenido = Number(formData.get("contenido"));
   const margenPorcentaje = Number(formData.get("margenPorcentaje"));
   const precioCostoUnitario = Number(formData.get("precioCostoUnitario"));
-  const proveedorIdStr = formData.get("proveedorId")?.toString();
-  const proveedorId = proveedorIdStr ? Number(proveedorIdStr) : null;
 
-  if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
+  if (!nombre || !marca || !categoria || !presentacion || !unidadMedida) {
     throw new Error("Faltan datos del producto.");
   }
   if (!contenido || contenido <= 0) throw new Error("El contenido debe ser mayor a 0.");
@@ -472,22 +473,9 @@ export async function actualizarProducto(formData: FormData) {
   const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
 
   await prisma.$transaction(async (tx) => {
-    await tx.producto.update({
+    const prod = await tx.producto.update({
       where: { id },
-      data: {
-        sku,
-        skuInterno,
-        nombre,
-        marca,
-        categoria,
-        presentacion,
-        unidadMedida,
-        contenido,
-        margenPorcentaje,
-        precioCostoUnitario,
-        precioVenta,
-        proveedorId,
-      },
+      data: { nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta },
     });
 
     await registrarLog(tx, {
@@ -495,7 +483,7 @@ export async function actualizarProducto(formData: FormData) {
       accion: "ACTUALIZAR",
       entidad: "PRODUCTO",
       entidadId: id,
-      detalle: `${nombre} (${sku})`,
+      detalle: `${nombre} (${prod.skuInterno})`,
     });
   });
 
@@ -509,7 +497,6 @@ export async function crearProductoDesdeListaMayorista(formData: FormData) {
 
   const listaItemId = Number(formData.get("listaItemId"));
   const proveedorId = Number(formData.get("proveedorId"));
-  const sku = formData.get("sku")?.toString().trim();
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim();
   const categoria = formData.get("categoria")?.toString().trim();
@@ -519,7 +506,7 @@ export async function crearProductoDesdeListaMayorista(formData: FormData) {
   const margenPorcentaje = Number(formData.get("margenPorcentaje"));
   const precioCostoUnitario = Number(formData.get("precioCostoUnitario"));
 
-  if (!sku || !nombre || !marca || !categoria || !presentacion || !unidadMedida) {
+  if (!nombre || !marca || !categoria || !presentacion || !unidadMedida) {
     throw new Error("Faltan datos del producto.");
   }
   if (!contenido || contenido <= 0) throw new Error("El contenido debe ser mayor a 0.");
@@ -529,9 +516,10 @@ export async function crearProductoDesdeListaMayorista(formData: FormData) {
   const precioVenta = precioCostoUnitario * (1 + margenPorcentaje / 100);
 
   await prisma.$transaction(async (tx) => {
+    const skuInternoAuto = await siguienteSkuInterno(tx);
     const producto = await tx.producto.create({
       data: {
-        sku,
+        skuInterno: skuInternoAuto,
         nombre,
         marca,
         categoria,
@@ -555,7 +543,7 @@ export async function crearProductoDesdeListaMayorista(formData: FormData) {
       accion: "CREAR",
       entidad: "PRODUCTO",
       entidadId: producto.id,
-      detalle: `${nombre} (${sku}) desde lista proveedor`,
+      detalle: `${nombre} (${skuInternoAuto}) desde lista proveedor`,
     });
   });
 
@@ -754,9 +742,16 @@ export async function importarExcel(formData: FormData) {
   });
   const importandoHym = esHym?.nombre?.toUpperCase() === "HYM";
 
-  // Productos existentes en el catálogo para matching por SKU
-  const productos = await prisma.producto.findMany({ select: { id: true, sku: true, nombre: true, margenPorcentaje: true } });
-  const productosPorSku = new Map(productos.map((p) => [p.sku, p]));
+  // Matching por SKU de proveedor a través del historial
+  const historialItems = await prisma.historialStockMayorista.findMany({
+    where: { proveedorId: Number(proveedorId), productoId: { not: null } },
+    select: { sku: true, productoId: true, producto: { select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true } } },
+  });
+  const productosPorSku = new Map(
+    historialItems
+      .filter((h) => h.producto)
+      .map((h) => [h.sku, h.producto!])
+  );
 
   let actualizados = 0;
   let nuevos = 0;
@@ -811,7 +806,6 @@ export async function importarExcel(formData: FormData) {
         const skuInternoAuto = await siguienteSkuInterno(tx);
         return tx.producto.create({
           data: {
-            sku,
             skuInterno: skuInternoAuto,
             nombre: nombreCompleto,
             marca: tipoProducto ?? "-",

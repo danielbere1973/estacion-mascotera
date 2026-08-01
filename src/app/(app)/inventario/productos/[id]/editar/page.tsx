@@ -61,13 +61,8 @@ export default async function EditarProductoPage({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">SKU proveedor principal</label>
-            <input name="sku" defaultValue={producto.sku} required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">SKU interno <span className="font-normal text-gray-400">(para ARCA)</span></label>
-            <input name="skuInterno" defaultValue={producto.skuInterno ?? ""} placeholder="AA00" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
+            <label className="text-sm font-medium text-gray-700">SKU interno</label>
+            <input defaultValue={producto.skuInterno ?? ""} readOnly className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-500 cursor-not-allowed" />
           </div>
 
           <div className="space-y-1">

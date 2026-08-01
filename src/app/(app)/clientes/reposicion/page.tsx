@@ -29,7 +29,7 @@ export default async function ReposicionPage({
     where: { activo: true },
     include: {
       cliente: true,
-      producto: { select: { id: true, nombre: true, marca: true, sku: true } },
+      producto: { select: { id: true, nombre: true, marca: true, skuInterno: true } },
     },
     orderBy: [{ cliente: { apellido: "asc" } }, { cliente: { nombre: "asc" } }],
   });

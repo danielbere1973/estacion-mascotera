@@ -14,25 +14,18 @@ export async function agregarProveedorProducto(formData: FormData) {
 
   if (!productoId || !proveedorId) throw new Error("Datos inválidos.");
 
-  const producto = await prisma.producto.findUniqueOrThrow({ where: { id: productoId }, select: { sku: true } });
-  const skuFinal = sku || producto.sku;
+  if (!sku) throw new Error("Debe ingresar el SKU del proveedor.");
 
   await prisma.historialStockMayorista.upsert({
-    where: { proveedorId_sku: { proveedorId, sku: skuFinal } },
+    where: { proveedorId_sku: { proveedorId, sku } },
     update: { productoId, precioCostoScraped: precioCosto, activo: true },
     create: {
       proveedorId,
       productoId,
-      sku: skuFinal,
+      sku,
       precioCostoScraped: precioCosto,
       activo: true,
     },
-  });
-
-  // Si existe otro Producto con ese SKU, lo marcamos inactivo (queda absorbido por este)
-  await prisma.producto.updateMany({
-    where: { sku: skuFinal, id: { not: productoId } },
-    data: { activo: false },
   });
 
   revalidatePath(`/inventario/productos/${productoId}/editar`);

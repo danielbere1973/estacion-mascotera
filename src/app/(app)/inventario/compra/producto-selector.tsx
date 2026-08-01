@@ -7,7 +7,7 @@ import type { MayoristaItem } from "./mayorista-producto-selector";
 
 type Producto = {
   id: number;
-  sku: string;
+  skuInterno: string;
   nombre: string;
 };
 
@@ -26,8 +26,8 @@ export function ProductoSelector({
     { value: NUEVO, label: "+ Nuevo producto", search: "nuevo producto" },
     ...productos.map((p) => ({
       value: String(p.id),
-      label: `${p.sku} · ${p.nombre}`,
-      search: `${p.sku} ${p.nombre}`,
+      label: `${p.skuInterno} · ${p.nombre}`,
+      search: `${p.skuInterno} ${p.nombre}`,
     })),
   ];
 
