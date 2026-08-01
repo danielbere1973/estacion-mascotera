@@ -433,18 +433,17 @@ export async function crearProducto(formData: FormData) {
       data: { skuInterno: skuInternoAuto, nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, stockActual },
     });
 
-    if (proveedorId && skuProveedor) {
-      await tx.historialStockMayorista.create({
-        data: {
-          productoId: producto.id,
-          proveedorId,
-          sku: skuProveedor,
-          precioCostoScraped: precioCostoUnitario,
-          activo: true,
-          fechaImportacion: new Date(),
-        },
-      });
-    }
+    if (!proveedorId || !skuProveedor) throw new Error("Proveedor y SKU proveedor son obligatorios.");
+    await tx.historialStockMayorista.create({
+      data: {
+        productoId: producto.id,
+        proveedorId,
+        sku: skuProveedor,
+        precioCostoScraped: precioCostoUnitario,
+        activo: true,
+        fechaImportacion: new Date(),
+      },
+    });
 
     await registrarLog(tx, {
       usuarioId: Number(session.user.id),
