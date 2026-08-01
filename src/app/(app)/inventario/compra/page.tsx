@@ -14,7 +14,7 @@ export default async function NuevaCompraPage() {
     prisma.historialStockMayorista.findMany({
       where: { proveedorId: { not: null } },
       orderBy: { fechaImportacion: "desc" },
-      include: { producto: { select: { skuInterno: true } } },
+      include: { producto: { select: { skuInterno: true, nombre: true } } },
     }),
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
     prisma.usuario.findMany({
@@ -45,13 +45,14 @@ export default async function NuevaCompraPage() {
     // buscamos por SKU en el inventario para auto-detectar el producto.
     const productoVinculado =
       h.productoId && h.producto
-        ? { id: h.productoId, skuInterno: h.producto.skuInterno }
+        ? { id: h.productoId, skuInterno: h.producto.skuInterno, nombre: h.producto.nombre }
         : null;
 
     mayoristaItems.push({
       proveedorId: h.proveedorId as number,
       sku: h.sku,
       nombre: h.nombre,
+      nombreCatalogo: productoVinculado?.nombre ?? null,
       precioCostoScraped: h.precioCostoScraped.toString(),
       precioConDescuento: h.precioConDescuento?.toString() ?? null,
       tamanios: h.tamanios,

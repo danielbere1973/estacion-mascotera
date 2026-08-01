@@ -7,6 +7,7 @@ export type MayoristaItem = {
   proveedorId: number;
   sku: string;
   nombre: string | null;
+  nombreCatalogo: string | null;
   precioCostoScraped: string;
   precioConDescuento: string | null;
   tamanios: string | null;
