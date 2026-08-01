@@ -109,26 +109,17 @@ export default async function VinculacionesPage({
                     {h.producto?.skuInterno ?? "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      {h.producto ? (
-                        <form action={desvincularItem}>
-                          <input type="hidden" name="historialId" value={h.id} />
-                          <button
-                            type="submit"
-                            className="text-xs text-red-500 hover:text-red-700 hover:underline"
-                          >
-                            Desvincular
-                          </button>
-                        </form>
-                      ) : (
-                        <Link
-                          href={`/inventario/productos/${h.productoId ?? "nuevo"}?vincular=${h.id}`}
-                          className="text-xs text-blue-600 hover:underline"
+                    {h.producto && (
+                      <form action={desvincularItem}>
+                        <input type="hidden" name="historialId" value={h.id} />
+                        <button
+                          type="submit"
+                          className="text-xs text-red-500 hover:text-red-700 hover:underline"
                         >
-                          Vincular
-                        </Link>
-                      )}
-                    </div>
+                          Desvincular
+                        </button>
+                      </form>
+                    )}
                   </td>
                 </tr>
               ))}
