@@ -45,12 +45,20 @@ export default async function ClientesPage() {
                 <td className="px-3 py-2 text-gray-600">{c.direccion}</td>
                 <td className="px-3 py-2 text-right text-gray-500">{c._count.ventas}</td>
                 <td className="px-3 py-2 text-right">
-                  <Link
-                    href={`/clientes/${c.id}/editar`}
-                    className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                  >
-                    Editar
-                  </Link>
+                  <div className="flex justify-end gap-2">
+                    <Link
+                      href={`/clientes/${c.id}`}
+                      className="rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+                    >
+                      Historial
+                    </Link>
+                    <Link
+                      href={`/clientes/${c.id}/editar`}
+                      className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                    >
+                      Editar
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
