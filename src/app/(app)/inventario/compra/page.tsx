@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { crearCompra } from "../actions";
+import { crearCompra, proximoSkuInterno } from "../actions";
 import { CompraForm } from "./compra-form";
 import type { MayoristaItem } from "./mayorista-producto-selector";
 
 export default async function NuevaCompraPage() {
-  const [proveedores, productos, historial, tiposProducto, usuarios] = await Promise.all([
+  const [proveedores, productos, historial, tiposProducto, usuarios, proximoSku] = await Promise.all([
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       where: { activo: true },
@@ -22,6 +22,7 @@ export default async function NuevaCompraPage() {
       orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
       select: { id: true, nombre: true, apellido: true },
     }),
+    proximoSkuInterno(),
   ]);
 
   // Índice de productos existentes por SKU (normalizado a mayúsculas) para
@@ -69,6 +70,7 @@ export default async function NuevaCompraPage() {
         tiposProducto={tiposProducto}
         usuarios={usuarios}
         action={crearCompra}
+        proximoSku={proximoSku}
       />
     </div>
   );

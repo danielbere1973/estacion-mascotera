@@ -23,6 +23,7 @@ export function CompraForm({
   tiposProducto: { id: number; nombre: string }[];
   usuarios: Usuario[];
   action: (formData: FormData) => void;
+  proximoSku?: string;
 }) {
   const [proveedorId, setProveedorId] = useState("");
 

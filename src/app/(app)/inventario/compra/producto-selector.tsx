@@ -16,9 +16,11 @@ const NUEVO = "nuevo";
 export function ProductoSelector({
   productos,
   itemsDelProveedor = [],
+  proximoSku = "",
 }: {
   productos: Producto[];
   itemsDelProveedor?: MayoristaItem[];
+  proximoSku?: string;
 }) {
   const [productoId, setProductoId] = useState("");
 
@@ -54,7 +56,7 @@ export function ProductoSelector({
         </p>
       )}
 
-      {productoId === NUEVO && <NuevoProductoFields />}
+      {productoId === NUEVO && <NuevoProductoFields proximoSku={proximoSku} />}
     </div>
   );
 }

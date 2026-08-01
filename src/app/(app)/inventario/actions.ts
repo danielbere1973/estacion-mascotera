@@ -377,6 +377,10 @@ export async function eliminarProducto(formData: FormData) {
   revalidatePath("/ventas/nueva");
 }
 
+export async function proximoSkuInterno(): Promise<string> {
+  return siguienteSkuInterno(prisma);
+}
+
 // Genera el siguiente skuInterno correlativo (AA00 → AA01 → ... → ZZ99).
 // Busca el máximo actual en la DB y devuelve el siguiente.
 async function siguienteSkuInterno(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]): Promise<string> {

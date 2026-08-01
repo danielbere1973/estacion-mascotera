@@ -1,21 +1,22 @@
 export function NuevoProductoFields({
   defaultNombre = "",
-  defaultSku = "",
+  proximoSku = "",
   tiposProducto = [],
 }: {
   defaultNombre?: string;
-  defaultSku?: string;
+  proximoSku?: string;
   tiposProducto?: { id: number; nombre: string }[];
 }) {
   return (
     <div className="grid grid-cols-1 gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
-      <input
-        name="productoSku"
-        placeholder="SKU / Código de barra"
-        defaultValue={defaultSku}
-        required
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-      />
+      <div className="space-y-0.5">
+        <label className="text-xs text-gray-500">SKU interno (asignado automáticamente)</label>
+        <input
+          defaultValue={proximoSku}
+          readOnly
+          className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-mono text-gray-500 cursor-not-allowed"
+        />
+      </div>
       <input
         name="productoNombre"
         placeholder="Nombre"

@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { crearProducto } from "../../actions";
+import { crearProducto, proximoSkuInterno } from "../../actions";
 
 export default async function NuevoProductoPage() {
-  const [tipos, proveedores] = await Promise.all([
+  const [tipos, proximoSku] = await Promise.all([
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
-    prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
+    proximoSkuInterno(),
   ]);
 
   return (
@@ -14,24 +14,14 @@ export default async function NuevoProductoPage() {
       <form action={crearProducto} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
-          <div className="space-y-1 sm:col-span-2">
-            <label className="text-sm font-medium text-gray-700">Proveedor</label>
-            <select name="proveedorId" defaultValue="" required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-              <option value="" disabled>Seleccionar proveedor...</option>
-              {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">SKU interno</label>
+            <input defaultValue={proximoSku} readOnly className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-500 cursor-not-allowed" />
           </div>
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">SKU proveedor</label>
-            <input name="sku" required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">SKU interno <span className="font-normal text-gray-400">(opcional)</span></label>
-            <input name="skuInterno" placeholder="Código propio de EM" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
+            <input name="skuProveedor" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" placeholder="Ej: KFRCPINS500G" />
           </div>
 
           <div className="space-y-1">
