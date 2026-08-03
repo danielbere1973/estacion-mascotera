@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { eliminarVenta } from "./actions";
+import { FiltrosVentas } from "./filtros-ventas";
 
 const CANAL_LABELS: Record<string, string> = {
   TIENDANUBE: "Tiendanube",
@@ -104,89 +105,16 @@ export default async function VentasPage({
         )}
       </div>
 
-      <form className="rounded-xl border border-gray-200 bg-white p-3 text-sm space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="date"
-            name="desde"
-            defaultValue={params.desde}
-            className="rounded-md border border-gray-300 px-2 py-1"
-          />
-          <input
-            type="date"
-            name="hasta"
-            defaultValue={params.hasta}
-            className="rounded-md border border-gray-300 px-2 py-1"
-          />
-          <select
-            name="clienteId"
-            defaultValue={params.clienteId ?? ""}
-            className="rounded-md border border-gray-300 px-2 py-1"
-          >
-            <option value="">Todos los clientes</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre} {c.apellido}
-              </option>
-            ))}
-          </select>
-          <select
-            name="facturado"
-            defaultValue={params.facturado ?? ""}
-            className="rounded-md border border-gray-300 px-2 py-1"
-          >
-            <option value="">Facturado: todos</option>
-            <option value="si">Facturado: sí</option>
-            <option value="no">Facturado: no</option>
-          </select>
-          <button
-            type="submit"
-            className="rounded-md bg-gray-800 px-3 py-1 text-white hover:bg-gray-900"
-          >
-            Filtrar
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-gray-100 pt-3">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Canal</p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {(["TIENDANUBE", "WHATSAPP", "TELEFONO"] as const).map((c) => (
-                <label key={c} className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="canal"
-                    value={c}
-                    defaultChecked={canalesSeleccionados.includes(c)}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span>{CANAL_LABELS[c]}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {mediosPago.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Pago</p>
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                {mediosPago.map((mp) => (
-                  <label key={mp} className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="pago"
-                      value={mp}
-                      defaultChecked={pagosSeleccionados.includes(mp)}
-                      className="h-3.5 w-3.5"
-                    />
-                    <span>{mp}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </form>
+      <FiltrosVentas
+        desde={params.desde}
+        hasta={params.hasta}
+        clienteId={params.clienteId}
+        facturado={params.facturado}
+        canalesSeleccionados={canalesSeleccionados}
+        pagosSeleccionados={pagosSeleccionados}
+        clientes={clientes}
+        mediosPago={mediosPago}
+      />
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
