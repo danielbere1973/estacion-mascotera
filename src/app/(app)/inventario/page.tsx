@@ -22,7 +22,7 @@ export default async function InventarioPage({
           OR: [
             { nombre: { contains: q, mode: "insensitive" } },
             { marca: { contains: q, mode: "insensitive" } },
-            { sku: { contains: q, mode: "insensitive" } },
+            { skuInterno: { contains: q, mode: "insensitive" } },
             { skuInterno: { contains: q, mode: "insensitive" } },
           ],
         } : {}),
@@ -68,6 +68,12 @@ export default async function InventarioPage({
             className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
           >
             Listas de proveedores
+          </Link>
+          <Link
+            href="/inventario/vinculaciones"
+            className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
+          >
+            Vinculaciones
           </Link>
           <Link
             href="/inventario/compras"

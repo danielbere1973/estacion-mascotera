@@ -16,14 +16,14 @@ export default async function EditarVentaPage({
       where: { id: Number(id) },
       include: {
         cliente: true,
-        detalles: { include: { producto: { select: { sku: true, nombre: true } } } },
+        detalles: { include: { producto: { select: { skuInterno: true, nombre: true } } } },
         costos: true,
       },
     }),
     prisma.producto.findMany({
       where: { activo: true },
       orderBy: { nombre: "asc" },
-      select: { id: true, sku: true, nombre: true, precioVenta: true, stockActual: true },
+      select: { id: true, skuInterno: true, nombre: true, precioVenta: true, stockActual: true },
     }),
     prisma.detalleConsignacion.findMany({
       where: {
@@ -39,7 +39,7 @@ export default async function EditarVentaPage({
   const detalles = venta.detalles.map((d) => ({
     id: d.id,
     productoId: d.productoId,
-    productoSku: d.producto.sku,
+    productoSku: d.producto.skuInterno,
     productoNombre: d.producto.nombre,
     cantidad: d.cantidad,
     precioVentaUnitario: d.precioVentaUnitario.toString(),

@@ -13,7 +13,7 @@ type ItemConsignado = {
 
 type ProductoCatalogo = {
   id: number;
-  sku: string;
+  skuInterno: string;
   nombre: string;
   precioVenta: string;
   stockActual: number;
@@ -165,8 +165,8 @@ export function EditarVentaItems({
 
   const opciones = productos.map((p) => ({
     value: String(p.id),
-    label: `${p.sku} · ${p.nombre}`,
-    search: `${p.sku} ${p.nombre}`,
+    label: `${p.skuInterno} · ${p.nombre}`,
+    search: `${p.skuInterno} ${p.nombre}`,
   }));
 
   return (

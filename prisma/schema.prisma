@@ -35,7 +35,7 @@ model TipoProducto {
 
 model Producto {
   id                   Int                       @id @default(autoincrement())
-  sku                  String                    @unique
+  skuInterno           String                    @unique
   nombre               String
   marca                String
   categoria            String
@@ -48,8 +48,6 @@ model Producto {
   precioVenta          Decimal                   @default(0)
   createdAt            DateTime                  @default(now())
   updatedAt            DateTime                  @updatedAt
-  proveedorId          Int?
-  skuInterno           String?
   stockEnConsignacion  Int                       @default(0)
   activo               Boolean                   @default(true)
   compras              Compra[]
@@ -57,7 +55,6 @@ model Producto {
   detalleVentas        DetalleVenta[]
   historialStock       HistorialStockMayorista[]
   ordenesDropshipping  OrdenDropshipping[]
-  proveedor            Proveedor?                @relation("ProductoProveedor", fields: [proveedorId], references: [id])
   clientesRecurrentes  ClienteProductoRecurrente[] @relation("ClienteProductoRecurrenteProducto")
   recordatorios        RecordatorioReposicion[]
 
@@ -71,7 +68,6 @@ model Proveedor {
   contacto             String?
   compras              Compra[]
   historialMayorista   HistorialStockMayorista[]
-  productos            Producto[]                @relation("ProductoProveedor")
   sociosConsignacion   SocioConsignacion[]
   usuariosRestringidos Usuario[]                 @relation("UsuarioProveedorRestricto")
 }

@@ -7,7 +7,7 @@ import type { MayoristaItem } from "./mayorista-producto-selector";
 
 type Producto = {
   id: number;
-  sku: string;
+  skuInterno: string;
   nombre: string;
 };
 
@@ -16,9 +16,11 @@ const NUEVO = "nuevo";
 export function ProductoSelector({
   productos,
   itemsDelProveedor = [],
+  proximoSku = "",
 }: {
   productos: Producto[];
   itemsDelProveedor?: MayoristaItem[];
+  proximoSku?: string;
 }) {
   const [productoId, setProductoId] = useState("");
 
@@ -26,8 +28,8 @@ export function ProductoSelector({
     { value: NUEVO, label: "+ Nuevo producto", search: "nuevo producto" },
     ...productos.map((p) => ({
       value: String(p.id),
-      label: `${p.sku} · ${p.nombre}`,
-      search: `${p.sku} ${p.nombre}`,
+      label: `${p.skuInterno} · ${p.nombre}`,
+      search: `${p.skuInterno} ${p.nombre}`,
     })),
   ];
 
@@ -54,7 +56,7 @@ export function ProductoSelector({
         </p>
       )}
 
-      {productoId === NUEVO && <NuevoProductoFields />}
+      {productoId === NUEVO && <NuevoProductoFields proximoSku={proximoSku} />}
     </div>
   );
 }

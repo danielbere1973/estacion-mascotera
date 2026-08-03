@@ -26,13 +26,16 @@ export function CompraItems({ items }: { items: MayoristaItem[] }) {
     { id: Date.now(), sku: "", nombre: "", precio: "", cantidad: "1", descuento: "0", modoManual: false },
   ]);
 
-  const opciones = items.map((i) => ({
-    value: i.sku,
-    label: `${i.nombre ?? ""}${i.tamanios ? ` · ${i.tamanios}` : ""} — ${formatCurrency(
-      i.precioConDescuento ?? i.precioCostoScraped
-    )}`,
-    search: `${i.nombre ?? ""} ${i.sku} ${i.tamanios ?? ""}`,
-  }));
+  const opciones = items.map((i) => {
+    const labelNombre = i.nombreCatalogo
+      ? `${i.nombreCatalogo} (${i.nombre ?? i.sku})`
+      : `${i.nombre ?? ""}${i.tamanios ? ` · ${i.tamanios}` : ""}`;
+    return {
+      value: i.sku,
+      label: `${labelNombre} — ${formatCurrency(i.precioConDescuento ?? i.precioCostoScraped)}`,
+      search: `${i.nombreCatalogo ?? ""} ${i.nombre ?? ""} ${i.sku} ${i.tamanios ?? ""}`,
+    };
+  });
 
   function update(id: number, field: keyof Row, value: string) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));

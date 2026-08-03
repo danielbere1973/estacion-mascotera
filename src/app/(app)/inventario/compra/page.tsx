@@ -1,20 +1,20 @@
 import { prisma } from "@/lib/prisma";
-import { crearCompra } from "../actions";
+import { crearCompra, proximoSkuInterno } from "../actions";
 import { CompraForm } from "./compra-form";
 import type { MayoristaItem } from "./mayorista-producto-selector";
 
 export default async function NuevaCompraPage() {
-  const [proveedores, productos, historial, tiposProducto, usuarios] = await Promise.all([
+  const [proveedores, productos, historial, tiposProducto, usuarios, proximoSku] = await Promise.all([
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       where: { activo: true },
       orderBy: { nombre: "asc" },
-      select: { id: true, sku: true, nombre: true },
+      select: { id: true, skuInterno: true, nombre: true },
     }),
     prisma.historialStockMayorista.findMany({
       where: { proveedorId: { not: null } },
       orderBy: { fechaImportacion: "desc" },
-      include: { producto: { select: { sku: true } } },
+      include: { producto: { select: { skuInterno: true, nombre: true } } },
     }),
     prisma.tipoProducto.findMany({ orderBy: { nombre: "asc" } }),
     prisma.usuario.findMany({
@@ -22,13 +22,14 @@ export default async function NuevaCompraPage() {
       orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
       select: { id: true, nombre: true, apellido: true },
     }),
+    proximoSkuInterno(),
   ]);
 
   // Índice de productos existentes por SKU (normalizado a mayúsculas) para
   // detectar automáticamente si un item de la lista ya está en el inventario,
   // independientemente de si el historial tiene productoId seteado.
   const productosPorSku = new Map(
-    productos.map((p) => [p.sku.toUpperCase().trim(), p])
+    productos.map((p) => [p.skuInterno.toUpperCase().trim(), p])
   );
 
   // Última lista importada por proveedor: nos quedamos con el registro más
@@ -44,18 +45,19 @@ export default async function NuevaCompraPage() {
     // buscamos por SKU en el inventario para auto-detectar el producto.
     const productoVinculado =
       h.productoId && h.producto
-        ? { id: h.productoId, sku: h.producto.sku }
-        : (productosPorSku.get(h.sku.toUpperCase().trim()) ?? null);
+        ? { id: h.productoId, skuInterno: h.producto.skuInterno, nombre: h.producto.nombre }
+        : null;
 
     mayoristaItems.push({
       proveedorId: h.proveedorId as number,
       sku: h.sku,
       nombre: h.nombre,
+      nombreCatalogo: productoVinculado?.nombre ?? null,
       precioCostoScraped: h.precioCostoScraped.toString(),
       precioConDescuento: h.precioConDescuento?.toString() ?? null,
       tamanios: h.tamanios,
       productoId: productoVinculado?.id ?? null,
-      productoSku: productoVinculado?.sku ?? null,
+      productoSku: productoVinculado?.skuInterno ?? null,
     });
   }
 
@@ -69,6 +71,7 @@ export default async function NuevaCompraPage() {
         tiposProducto={tiposProducto}
         usuarios={usuarios}
         action={crearCompra}
+        proximoSku={proximoSku}
       />
     </div>
   );

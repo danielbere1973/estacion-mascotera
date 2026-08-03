@@ -89,16 +89,24 @@ export async function crearConsignacion(formData: FormData) {
         }
         const proveedorId = nuevoProveedorIds[i] ? Number(nuevoProveedorIds[i]) : null;
         if (!proveedorId) throw new Error(`Falta el proveedor del producto nuevo en el ítem ${i + 1}.`);
+        const skuInternoAuto = await (async () => {
+          const ultimo = await tx.producto.findFirst({ where: {}, orderBy: { skuInterno: "desc" }, select: { skuInterno: true } });
+          if (!ultimo?.skuInterno || !/^[A-Z]{2}\d{2}$/.test(ultimo.skuInterno)) return "AA00";
+          const letras = ultimo.skuInterno.slice(0, 2);
+          const num = parseInt(ultimo.skuInterno.slice(2), 10);
+          if (num < 99) return `${letras}${String(num + 1).padStart(2, "0")}`;
+          const nextLetras = letras[1] < "Z" ? letras[0] + String.fromCharCode(letras.charCodeAt(1) + 1) : String.fromCharCode(letras.charCodeAt(0) + 1) + "A";
+          return `${nextLetras}00`;
+        })();
         const nuevo = await tx.producto.create({
           data: {
-            sku: nuevoSkus[i],
+            skuInterno: skuInternoAuto,
             nombre: nuevoNombres[i],
             marca: nuevoMarcas[i],
             categoria: nuevoCategorias[i],
             presentacion: nuevoPresentaciones[i] as "BOLSA_CERRADA" | "CAJA_CERRADA" | "INDIVIDUAL",
             unidadMedida: (nuevoUnidades[i] || "UNIDAD") as "KILOGRAMOS" | "GRAMOS" | "LITROS" | "MILILITROS" | "UNIDAD",
             contenido: nuevoContenidos[i] ? Number(nuevoContenidos[i]) : 1,
-            proveedorId,
             precioCostoUnitario: costos[i] || 0,
             margenPorcentaje: 30,
             precioVenta: (costos[i] || 0) * 1.3,
