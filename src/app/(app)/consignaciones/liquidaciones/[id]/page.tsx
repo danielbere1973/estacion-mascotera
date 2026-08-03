@@ -14,7 +14,7 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
     include: {
       socio: true,
       ventas: {
-        include: { detalle: { include: { consignacion: true } } },
+        include: { detalle: { include: { consignacion: true, producto: { select: { nombre: true } } } } },
         orderBy: { fecha: "asc" },
       },
       pagos: {
@@ -149,7 +149,12 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
               <div key={v.id} className="px-4 py-3 text-sm">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="font-medium text-gray-900">{v.detalle.descripcion ?? `Item #${v.detalle.id}`}</span>
+                    <span className="font-medium text-gray-900">
+                      {v.detalle.producto?.nombre ?? v.detalle.descripcion ?? `Item #${v.detalle.id}`}
+                    </span>
+                    {v.detalle.descripcion && v.detalle.producto?.nombre && (
+                      <span className="text-gray-400 ml-1 text-xs">({v.detalle.descripcion})</span>
+                    )}
                     <span className="text-gray-400 ml-2 text-xs">
                       {new Date(v.fecha).toLocaleDateString("es-AR")} · {v.cantidad} u. · Consig. #{v.detalle.consignacionId}
                     </span>

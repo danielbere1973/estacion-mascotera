@@ -12,7 +12,7 @@ export default async function ImprimirLiquidacionPage({ params }: { params: Prom
     include: {
       socio: true,
       ventas: {
-        include: { detalle: { include: { consignacion: true } } },
+        include: { detalle: { include: { consignacion: true, producto: { select: { nombre: true } } } } },
         orderBy: { fecha: "asc" },
       },
       pagos: {
@@ -151,7 +151,12 @@ export default async function ImprimirLiquidacionPage({ params }: { params: Prom
                 return (
                   <tr key={v.id} className="hover:bg-gray-50">
                     <td className="px-3 py-2 whitespace-nowrap">{new Date(v.fecha).toLocaleDateString("es-AR")}</td>
-                    <td className="px-3 py-2">{v.detalle.descripcion ?? `Item #${v.detalle.id}`}</td>
+                    <td className="px-3 py-2">
+                      {v.detalle.producto?.nombre ?? v.detalle.descripcion ?? `Item #${v.detalle.id}`}
+                      {v.detalle.descripcion && v.detalle.producto?.nombre && (
+                        <span className="text-gray-400 ml-1">({v.detalle.descripcion})</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">{v.cantidad}</td>
                     <td className="px-3 py-2 text-right">{fmt(precioVenta)}</td>
                     <td className="px-3 py-2 text-right">{fmt(costo)}</td>
