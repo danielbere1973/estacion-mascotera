@@ -22,34 +22,20 @@ async function main() {
 
   console.log(`Proveedor: ${monami.nombre} (id=${monami.id})`);
 
-  // Buscar todos los productos de este proveedor
-  const productos = await db.producto.findMany({
+  // Buscar productos vinculados a Mon Ami via historialStockMayorista
+  const historial = await db.historialStockMayorista.findMany({
     where: { proveedorId: monami.id },
+    include: { producto: true },
+    orderBy: { fechaImportacion: "desc" },
   });
 
+  const vistos = new Set<number>();
+  const productos = historial
+    .filter(h => h.producto && !vistos.has(h.productoId!) && vistos.add(h.productoId!))
+    .map(h => h.producto!);
+
   if (productos.length === 0) {
-    // Alternativa: buscar por SKU en historialStockMayorista y cruzar con Producto
-    console.log("No hay productos vinculados directamente a Mon Ami.");
-    console.log("Buscando por lista de precios...");
-
-    const historial = await db.historialStockMayorista.findMany({
-      where: { proveedorId: monami.id },
-      include: { producto: true },
-      orderBy: { fechaImportacion: "desc" },
-    });
-
-    const vistos = new Set<number>();
-    const productosViaHistorial = historial
-      .filter(h => h.producto && !vistos.has(h.productoId!) && vistos.add(h.productoId!))
-      .map(h => h.producto!);
-
-    if (productosViaHistorial.length === 0) {
-      console.log("Tampoco hay productos en la lista de Mon Ami.");
-      return;
-    }
-
-    console.log(`Encontrados ${productosViaHistorial.length} productos vía historial.\n`);
-    await ajustar(productosViaHistorial);
+    console.log("No hay productos vinculados a Mon Ami.");
     return;
   }
 
