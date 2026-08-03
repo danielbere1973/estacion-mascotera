@@ -101,6 +101,26 @@ export default async function EditarClientePage({
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">CUIT (opcional)</label>
+            <input
+              name="cuit"
+              defaultValue={cliente.cuit ?? ""}
+              placeholder="Ej: 20-12345678-9"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">DNI (opcional)</label>
+            <input
+              name="dni"
+              defaultValue={cliente.dni ?? ""}
+              placeholder="Ej: 12345678"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+            />
+          </div>
         </div>
 
         <button
