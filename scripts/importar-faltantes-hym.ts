@@ -20,13 +20,13 @@ async function main() {
     const encontradas = await cdb.compra.findMany({
       where: {
         fechaCompra: { gte: desde, lte: hasta },
-        producto: { sku: b.sku },
+        producto: { skuInterno: b.sku },
       },
       select: {
         id: true, cantidad: true, precioCostoUnitario: true, descuentoPorcentaje: true,
         costoEnvio: true, facturado: true, numeroFactura: true, numeroPedido: true,
         fechaCompra: true, productoId: true, proveedorId: true, pagadoPorId: true, usuarioId: true,
-        producto: { select: { sku: true, nombre: true } },
+        producto: { select: { skuInterno: true, nombre: true } },
       },
     });
 
@@ -37,13 +37,13 @@ async function main() {
 
     for (const c of encontradas) {
       if (idsNeon.has(c.id)) {
-        console.log(`  Ya existe en Neon: #${c.id} ${c.producto.sku}`);
+        console.log(`  Ya existe en Neon: #${c.id} ${c.producto.skuInterno}`);
         continue;
       }
 
       // Verificar que el producto existe en Neon
-      const prodNeon = await neon.producto.findFirst({ where: { sku: c.producto.sku }, select: { id: true } });
-      if (!prodNeon) { console.log(`  ⚠ Producto ${c.producto.sku} no existe en Neon`); continue; }
+      const prodNeon = await neon.producto.findFirst({ where: { skuInterno: c.producto.skuInternoInterno }, select: { id: true } });
+      if (!prodNeon) { console.log(`  ⚠ Producto ${c.producto.skuInterno} no existe en Neon`); continue; }
 
       // Importar
       await neon.$transaction(async (tx) => {
@@ -67,7 +67,7 @@ async function main() {
         await tx.producto.update({ where: { id: prodNeon.id }, data: { stockActual: { increment: c.cantidad } } });
       });
 
-      console.log(`✅ Importado: #${c.id} | ${c.producto.sku} | pedido ${b.pedido} | qty=${c.cantidad}`);
+      console.log(`✅ Importado: #${c.id} | ${c.producto.skuInterno} | pedido ${b.pedido} | qty=${c.cantidad}`);
     }
   }
 }

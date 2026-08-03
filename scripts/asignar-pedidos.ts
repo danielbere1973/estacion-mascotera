@@ -31,7 +31,7 @@ async function main() {
   // Primero mostramos lo que encontramos antes de tocar nada
   console.log("=== Vista previa ===\n");
 
-  const asignaciones: { id: number; pedido: string; sku: string; nombre: string; precio: number }[] = [];
+  const asignaciones: { id: number; pedido: string; skuInterno: string | null; nombre: string; precio: number }[] = [];
   const yaUsados = new Set<number>();
 
   for (const [pedido, fecha, sku, precio] of pedidos) {
@@ -41,9 +41,9 @@ async function main() {
     const compras = await neon.compra.findMany({
       where: {
         fechaCompra: { gte: desde, lte: hasta },
-        producto: { sku },
+        producto: { skuInterno: sku },
       },
-      include: { producto: { select: { sku: true, nombre: true } } },
+      include: { producto: { select: { skuInterno: true, nombre: true } } },
     });
 
     // Si hay varias (duplicados SKU en mismo pedido), tomar la que no fue usada aún y cuyo precio sea más cercano
@@ -58,8 +58,8 @@ async function main() {
 
     const c = candidatos[0];
     yaUsados.add(c.id);
-    asignaciones.push({ id: c.id, pedido, sku: c.producto.sku, nombre: c.producto.nombre, precio: Number(c.precioCostoUnitario) });
-    console.log(`  Pedido ${pedido} → Compra #${c.id} | ${c.producto.sku} · ${c.producto.nombre} | precio=$${Number(c.precioCostoUnitario)}`);
+    asignaciones.push({ id: c.id, pedido, sku: c.producto.skuInterno, nombre: c.producto.nombre, precio: Number(c.precioCostoUnitario) });
+    console.log(`  Pedido ${pedido} → Compra #${c.id} | ${c.producto.skuInterno} · ${c.producto.nombre} | precio=$${Number(c.precioCostoUnitario)}`);
   }
 
   console.log(`\nTotal a actualizar: ${asignaciones.length}`);

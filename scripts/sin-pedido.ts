@@ -4,12 +4,12 @@ const neon = new PrismaClient({ datasources: { db: { url: "postgresql://neondb_o
 async function main() {
   const compras = await neon.compra.findMany({
     where: { numeroPedido: null },
-    include: { producto: { select: { sku: true, nombre: true } }, proveedor: { select: { nombre: true } } },
+    include: { producto: { select: { skuInterno: true, nombre: true } }, proveedor: { select: { nombre: true } } },
     orderBy: { fechaCompra: "asc" },
   });
   console.log(`Compras sin número de pedido: ${compras.length}`);
   compras.forEach(c =>
-    console.log(`  #${c.id} | ${new Date(c.fechaCompra).toLocaleDateString("es-AR")} | ${c.proveedor.nombre} | ${c.producto.sku} · ${c.producto.nombre} | $${c.precioCostoUnitario}`)
+    console.log(`  #${c.id} | ${new Date(c.fechaCompra).toLocaleDateString("es-AR")} | ${c.proveedor.nombre} | ${c.producto.skuInterno} · ${c.producto.nombre} | $${c.precioCostoUnitario}`)
   );
 }
 main().catch(console.error).finally(() => neon.$disconnect());
