@@ -58,7 +58,7 @@ async function main() {
 
     const c = candidatos[0];
     yaUsados.add(c.id);
-    asignaciones.push({ id: c.id, pedido, sku: c.producto.skuInterno, nombre: c.producto.nombre, precio: Number(c.precioCostoUnitario) });
+    asignaciones.push({ id: c.id, pedido, skuInterno: c.producto.skuInterno, nombre: c.producto.nombre, precio: Number(c.precioCostoUnitario) });
     console.log(`  Pedido ${pedido} → Compra #${c.id} | ${c.producto.skuInterno} · ${c.producto.nombre} | precio=$${Number(c.precioCostoUnitario)}`);
   }
 
