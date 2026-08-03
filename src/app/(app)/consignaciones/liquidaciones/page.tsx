@@ -10,9 +10,24 @@ export default async function LiquidacionesPage() {
     orderBy: { fecha: "desc" },
   });
 
+  const saldoTotal = liquidaciones
+    .filter((l) => !l.pagado)
+    .reduce((s, l) => s + Number(l.saldo), 0);
+
   return (
     <div className="w-full space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Liquidaciones</h1>
+      <div className="relative flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Liquidaciones</h1>
+        {saldoTotal !== 0 && (
+          <div className="absolute left-1/2 -translate-x-1/2 text-center">
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Saldo general pendiente</p>
+            <p className={`text-2xl font-bold ${saldoTotal >= 0 ? "text-green-700" : "text-red-600"}`}>
+              {fmt(Math.abs(saldoTotal))}
+            </p>
+            <p className="text-xs text-gray-400">{saldoTotal >= 0 ? "nos deben" : "les debemos"}</p>
+          </div>
+        )}
+      </div>
 
       <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
         {liquidaciones.map((liq) => (
