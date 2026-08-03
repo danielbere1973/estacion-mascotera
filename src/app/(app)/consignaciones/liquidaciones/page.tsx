@@ -10,24 +10,9 @@ export default async function LiquidacionesPage() {
     orderBy: { fecha: "desc" },
   });
 
-  const saldoTotal = liquidaciones
-    .filter((l) => !l.pagado)
-    .reduce((s, l) => s + Number(l.saldo), 0);
-
   return (
     <div className="w-full space-y-4">
-      <div className="relative flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Liquidaciones</h1>
-        {saldoTotal !== 0 && (
-          <div className="absolute left-1/2 -translate-x-1/2 text-center">
-            <p className="text-xs text-gray-400 uppercase tracking-wide">Saldo general pendiente</p>
-            <p className={`text-2xl font-bold ${saldoTotal > 0 ? "text-red-600" : "text-green-700"}`}>
-              {fmt(Math.abs(saldoTotal))}
-            </p>
-            <p className="text-xs text-gray-400">{saldoTotal > 0 ? "les debemos" : "nos deben"}</p>
-          </div>
-        )}
-      </div>
+      <h1 className="text-xl font-semibold text-gray-900">Liquidaciones</h1>
 
       <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
         {liquidaciones.map((liq) => (
@@ -43,7 +28,7 @@ export default async function LiquidacionesPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`text-sm font-semibold ${Number(liq.saldo) > 0 ? "text-red-600" : "text-green-700"}`}>
+              <span className={`text-sm font-semibold ${Number(liq.saldo) >= 0 ? "text-green-700" : "text-red-600"}`}>
                 {fmt(Math.abs(Number(liq.saldo)))}
               </span>
               <span className={`rounded-full px-2 py-0.5 text-xs ${liq.pagado ? "bg-gray-100 text-gray-500" : "bg-orange-100 text-orange-700"}`}>
