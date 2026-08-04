@@ -15,7 +15,7 @@ export default async function TiposProductoPage() {
   const conteo = new Map(conProductos.map((g) => [g.categoria, g._count._all]));
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="space-y-6">
       <h1 className="text-xl font-semibold text-gray-900">Tipos de producto</h1>
 
       <form action={crearTipoProducto} className="flex gap-2">

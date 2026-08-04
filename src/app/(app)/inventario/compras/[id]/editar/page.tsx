@@ -37,7 +37,7 @@ export default async function EditarCompraPage({
   const precioListaUnitario = descuento < 100 ? precioCosto / (1 - descuento / 100) : precioCosto;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Editar compra #{compra.id}</h1>
       <EditorCompraForm
         compra={{

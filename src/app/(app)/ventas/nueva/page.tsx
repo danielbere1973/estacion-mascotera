@@ -73,7 +73,7 @@ export default async function NuevaVentaPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Nueva venta</h1>
 
       <form action={crearVenta} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">

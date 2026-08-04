@@ -44,7 +44,7 @@ export default async function EditarClientePage({
   const productosDisponibles = productosComprados.filter((p) => !productosYaAgregados.has(p.id));
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="space-y-6">
       <h1 className="text-xl font-semibold text-gray-900">Editar cliente</h1>
 
       {/* Datos del cliente */}

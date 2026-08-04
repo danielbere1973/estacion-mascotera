@@ -5,7 +5,7 @@ export default async function NuevoSocioPage() {
   const proveedores = await prisma.proveedor.findMany({ orderBy: { nombre: "asc" } });
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Nuevo socio comercial</h1>
       <form action={crearSocio} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
         <div className="space-y-1">

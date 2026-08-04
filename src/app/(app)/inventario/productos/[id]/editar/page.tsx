@@ -41,7 +41,7 @@ export default async function EditarProductoPage({
   const proveedoresDisponibles = proveedores.filter((p) => !proveedoresYaVinculados.has(p.id));
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <h1 className="text-xl font-semibold text-gray-900">Editar producto</h1>
 
       {!producto.activo && (

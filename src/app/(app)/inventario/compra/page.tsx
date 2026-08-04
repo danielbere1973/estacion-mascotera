@@ -62,7 +62,7 @@ export default async function NuevaCompraPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Registrar compra</h1>
       <CompraForm
         proveedores={proveedores}

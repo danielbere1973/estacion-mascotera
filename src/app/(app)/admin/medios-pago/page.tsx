@@ -6,7 +6,7 @@ export default async function MediosPagoPage() {
   const medios = await prisma.medioPago.findMany({ orderBy: { nombre: "asc" } });
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="space-y-6">
       <h1 className="text-xl font-semibold text-gray-900">Medios de pago</h1>
 
       {/* Formulario nuevo */}

@@ -21,7 +21,7 @@ export default async function EditarUsuarioPage({
   if (!usuario) notFound();
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Editar usuario</h1>
 
       <form

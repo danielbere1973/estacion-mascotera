@@ -11,7 +11,7 @@ export default async function EditarSocioPage({ params }: { params: Promise<{ id
   if (!socio) notFound();
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Editar socio</h1>
       <form action={actualizarSocio} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
         <input type="hidden" name="id" value={socio.id} />

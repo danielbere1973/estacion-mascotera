@@ -20,7 +20,7 @@ export default async function CrearProductoDesdeListaPage({
   if (!item || item.productoId) notFound();
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Crear producto desde lista</h1>
 
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">

@@ -27,7 +27,7 @@ export default async function NuevaConsignacionPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Nueva consignación</h1>
       <NuevaConsignacionForm socios={socios} productos={productos} proveedores={proveedores} tipos={tipos} />
     </div>

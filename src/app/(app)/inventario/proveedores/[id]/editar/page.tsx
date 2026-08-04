@@ -9,7 +9,7 @@ export default async function EditarProveedorPage({ params }: { params: Promise<
   if (!proveedor) notFound();
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="space-y-6">
       <div>
         <Link href="/inventario/proveedores" className="text-xs text-gray-400 hover:text-gray-600">← Proveedores</Link>
         <h1 className="mt-1 text-xl font-semibold text-gray-900">Editar proveedor</h1>

@@ -24,7 +24,7 @@ export default async function EditarGastoPage({
   const fecha = gasto.fechaGasto.toISOString().slice(0, 10);
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Editar gasto</h1>
 
       <form
