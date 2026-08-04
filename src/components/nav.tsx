@@ -4,81 +4,135 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 
 const links = [
-  { href: "/", label: "Dashboard" },
-  { href: "/ventas", label: "Ventas" },
-  { href: "/inventario", label: "Inventario" },
-  { href: "/consignaciones", label: "Consignaciones" },
-  { href: "/gastos", label: "Gastos" },
-  { href: "/reportes", label: "Reportes" },
+  { href: "/", label: "Dashboard", icon: "🏠" },
+  { href: "/ventas", label: "Ventas", icon: "🛒" },
+  { href: "/clientes", label: "Clientes", icon: "👥" },
+  { href: "/inventario", label: "Inventario", icon: "📦" },
+  { href: "/consignaciones", label: "Consignaciones", icon: "🤝" },
+  { href: "/gastos", label: "Gastos", icon: "💸" },
+  { href: "/reportes", label: "Reportes", icon: "📊" },
 ];
 
 const linksRestringido = [
-  { href: "/", label: "Dashboard" },
-  { href: "/ventas", label: "Ventas" },
-  { href: "/inventario/compras", label: "Compras" },
-  { href: "/consignaciones", label: "Consignaciones" },
+  { href: "/", label: "Dashboard", icon: "🏠" },
+  { href: "/ventas", label: "Ventas", icon: "🛒" },
+  { href: "/inventario/compras", label: "Compras", icon: "📦" },
+  { href: "/consignaciones", label: "Consignaciones", icon: "🤝" },
 ];
 
 const adminLinks = [
-  { href: "/clientes", label: "Clientes" },
-  { href: "/usuarios", label: "Usuarios" },
-  { href: "/actividad", label: "Actividad" },
-  { href: "/admin/medios-pago", label: "Medios de pago" },
-  { href: "/inventario/tipos", label: "Categorías" },
+  { href: "/usuarios", label: "Usuarios", icon: "👤" },
+  { href: "/actividad", label: "Actividad", icon: "📋" },
+  { href: "/admin/medios-pago", label: "Medios de pago", icon: "💳" },
+  { href: "/inventario/tipos", label: "Categorías", icon: "🏷️" },
 ];
 
-function AdminDropdown({ pathname }: { pathname: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const isActive = adminLinks.some((l) => pathname.startsWith(l.href));
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+function NavLink({ href, label, icon }: { href: string; label: string; icon: string }) {
+  const pathname = usePathname();
+  const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${
-          isActive ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
-        }`}
-      >
-        Admin
-        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-xl border border-gray-200 bg-white shadow-lg py-1">
-          {adminLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className={`block px-4 py-2 text-sm ${
-                pathname.startsWith(link.href)
-                  ? "bg-blue-50 text-blue-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+    <Link
+      href={href}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        active
+          ? "bg-blue-600 text-white"
+          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+      }`}
+    >
+      <span className="text-base leading-none">{icon}</span>
+      {label}
+    </Link>
   );
 }
 
+export function Sidebar({
+  isAdmin,
+  isRestringido,
+}: {
+  isAdmin: boolean;
+  isRestringido: boolean;
+}) {
+  const pathname = usePathname();
+  const [adminOpen, setAdminOpen] = useState(
+    adminLinks.some((l) => pathname.startsWith(l.href))
+  );
+  const visibleLinks = isRestringido ? linksRestringido : links;
+
+  return (
+    <aside className="flex h-full w-60 flex-col border-r border-gray-200 bg-white">
+      {/* Logo / nombre */}
+      <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-4">
+        <Image
+          src="/logo.png"
+          alt="Estación Mascotera"
+          width={36}
+          height={36}
+          className="rounded-full shrink-0"
+        />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide leading-none">CRM</p>
+          <p className="truncate text-sm font-bold text-gray-900 leading-tight mt-0.5">Estación Mascotera</p>
+        </div>
+      </div>
+
+      {/* Links principales */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        {visibleLinks.map((link) => (
+          <NavLink key={link.href} {...link} />
+        ))}
+
+        {isAdmin && (
+          <div className="pt-3">
+            <button
+              onClick={() => setAdminOpen((o) => !o)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600"
+            >
+              Admin
+              <svg
+                className={`h-3 w-3 transition-transform ${adminOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {adminOpen && (
+              <div className="mt-1 space-y-1">
+                {adminLinks.map((link) => (
+                  <NavLink key={link.href} {...link} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </nav>
+    </aside>
+  );
+}
+
+export function TopBar({ userName }: { userName: string }) {
+  return (
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6">
+      <div />
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-gray-500">{userName}</span>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="rounded-md px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+        >
+          Salir
+        </button>
+      </div>
+    </header>
+  );
+}
+
+// Mantener Nav export para compatibilidad con cualquier import existente
 export function Nav({
   userName,
   isAdmin,
@@ -88,55 +142,10 @@ export function Nav({
   isAdmin: boolean;
   isRestringido: boolean;
 }) {
-  const pathname = usePathname();
-  const visibleLinks = isRestringido ? linksRestringido : links;
-
   return (
-    <header className="sticky top-0 z-10 border-b border-gray-200 bg-white">
-      <div className="flex w-full flex-col gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 font-semibold text-gray-900">
-            <Image src="/logo.png" alt="Estación Mascotera" width={32} height={32} className="rounded-full" />
-            Estación Mascotera
-          </span>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-sm text-gray-500 hover:text-gray-800 sm:hidden"
-          >
-            Salir
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <nav className="flex gap-1 overflow-x-auto items-center">
-            {visibleLinks.map((link) => {
-              const active = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${
-                    active ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-          {isAdmin && <AdminDropdown pathname={pathname} />}
-        </div>
-
-        <div className="hidden items-center gap-3 sm:flex">
-          <span className="text-sm text-gray-500">{userName}</span>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-sm text-gray-500 hover:text-gray-800"
-          >
-            Salir
-          </button>
-        </div>
-      </div>
-    </header>
+    <>
+      <Sidebar isAdmin={isAdmin} isRestringido={isRestringido} />
+      <TopBar userName={userName} />
+    </>
   );
 }
