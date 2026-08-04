@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { actualizarVenta } from "../../actions";
 import { EditarVentaItems } from "./editar-venta-items";
 import { CostosVenta } from "../../costos-venta";
+import { FacturadoField } from "@/components/facturado-field";
 
 export default async function EditarVentaPage({
   params,
@@ -133,20 +134,8 @@ export default async function EditarVentaPage({
             />
           </div>
 
-          <div className="flex items-end gap-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <input type="checkbox" name="facturado" defaultChecked={venta.facturado} className="h-4 w-4" />
-              Facturado
-            </label>
-          </div>
-
-          <div className="space-y-1 sm:col-span-2">
-            <label className="text-sm font-medium text-gray-700">N° de factura (opcional)</label>
-            <input
-              name="numeroFactura"
-              defaultValue={venta.numeroFactura ?? ""}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+          <div className="sm:col-span-2">
+            <FacturadoField defaultFacturado={venta.facturado} defaultNumero={venta.numeroFactura ?? ""} />
           </div>
 
           <div className="space-y-1 sm:col-span-2">

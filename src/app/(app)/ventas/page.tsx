@@ -129,6 +129,7 @@ export default async function VentasPage({
               <th className="px-3 py-2 text-right">Envío</th>
               {!esRestringido && <th className="px-3 py-2 text-right">Costos cobranza</th>}
               {!esRestringido && <th className="px-3 py-2 text-right">Ganancia</th>}
+              <th className="px-3 py-2 text-right">Total abonado</th>
               <th className="px-3 py-2">Facturado</th>
               {!esRestringido && <th className="px-3 py-2"></th>}
             </tr>
@@ -152,6 +153,7 @@ export default async function VentasPage({
                 0
               );
               const costosCobranza = venta.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0);
+              const totalAbonado = total - descuento + Number(venta.costoEnvio);
               const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
               return (
                 <tr key={venta.id} className="hover:bg-gray-50">
@@ -188,6 +190,9 @@ export default async function VentasPage({
                       {formatCurrency(ganancia)}
                     </td>
                   )}
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold text-blue-700">
+                    {formatCurrency(totalAbonado)}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2">
                     {venta.facturado ? (
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
@@ -225,7 +230,7 @@ export default async function VentasPage({
             })}
             {ventas.length === 0 && (
               <tr>
-                <td colSpan={esRestringido ? 8 : 11} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={esRestringido ? 9 : 12} className="px-3 py-6 text-center text-gray-400">
                   No hay ventas registradas para este filtro.
                 </td>
               </tr>
