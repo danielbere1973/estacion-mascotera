@@ -536,3 +536,23 @@ export async function agregarItemConsignacion(formData: FormData) {
   revalidatePath(`/consignaciones/${consignacionId}`);
   revalidatePath("/inventario");
 }
+
+export async function editarItemConsignacion(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  const costo = Number(formData.get("costo"));
+  const piso = Number(formData.get("piso"));
+  const cantidad = Number(formData.get("cantidad"));
+
+  if (!id) throw new Error("Item inválido.");
+  if (cantidad <= 0) throw new Error("La cantidad debe ser mayor a 0.");
+
+  const item = await prisma.detalleConsignacion.findUniqueOrThrow({ where: { id } });
+
+  await prisma.detalleConsignacion.update({
+    where: { id },
+    data: { precioCosto: costo, precioPiso: piso, cantidad },
+  });
+
+  revalidatePath(`/consignaciones/${item.consignacionId}`);
+}

@@ -8,6 +8,7 @@ import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { VentaRow } from "./venta-row";
 import { EditarConsignacionForm } from "./editar-consignacion-form";
 import { AgregarItemForm } from "./agregar-item-form";
+import { EditarItemForm } from "./editar-item-form";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -206,7 +207,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           return (
             <div key={item.id} className="rounded-xl border border-gray-200 bg-white p-4">
               <div className="flex items-start justify-between mb-3">
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-gray-900">
                     {item.producto ? `${item.producto.nombre} (${item.producto.marca})` : item.descripcion ?? "Sin descripción"}
                   </p>
@@ -216,6 +217,16 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                       : `Costo: ${fmt(Number(item.precioCosto))} · Piso: ${fmt(Number(item.precioPiso))} · Cant: ${item.cantidad} · Disponibles: ${disponible}`
                     }
                   </p>
+                  {!esRestringido && cons.estado === "ABIERTA" && (
+                    <EditarItemForm
+                      item={{
+                        id: item.id,
+                        cantidad: item.cantidad,
+                        precioCosto: Number(item.precioCosto),
+                        precioPiso: Number(item.precioPiso),
+                      }}
+                    />
+                  )}
                 </div>
                 {!esRestringido && diff !== 0 && (
                   <span className={`text-xs font-semibold ${diff > 0 ? "text-green-600" : "text-red-600"}`}>
