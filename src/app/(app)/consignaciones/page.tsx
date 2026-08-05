@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
-const formatCurrency = (n: number) =>
+const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
 export default async function ConsignacionesPage() {
@@ -18,7 +18,11 @@ export default async function ConsignacionesPage() {
       consignaciones: {
         where: { estado: "ABIERTA" },
         include: {
-          items: { include: { ventas: { where: { liquidacionId: null } } } },
+          items: {
+            include: {
+              ventas: { where: { liquidacionId: null } },
+            },
+          },
         },
       },
       liquidaciones: { where: { pagado: false }, orderBy: { fecha: "desc" }, take: 1 },
@@ -56,49 +60,80 @@ export default async function ConsignacionesPage() {
           {socios.map((socio) => {
             let aCobrarnos = 0;
             let aCobrarles = 0;
-            for (const c of socio.consignaciones) {
+
+            const consignacionesConResumen = socio.consignaciones.map((c) => {
+              let productos = 0;
+              let unidades = 0;
               for (const item of c.items) {
                 const costo = Number(item.precioCosto);
+                productos++;
                 for (const v of item.ventas) {
+                  unidades += v.cantidad;
                   const ganancia = Number(v.precioVentaReal) - costo;
                   const monto = (costo + ganancia / 3) * v.cantidad;
                   if (c.direccion === "ENTREGAMOS") aCobrarnos += monto;
                   else aCobrarles += monto;
                 }
               }
-            }
+              return { id: c.id, direccion: c.direccion, productos, unidades };
+            });
+
             const saldo = aCobrarnos - aCobrarles;
             const liquidacionPendiente = socio.liquidaciones[0];
 
-            // Restringido: link directo a la primer consignación abierta, si hay una sola
             const href = esRestringido && socio.consignaciones.length === 1
               ? `/consignaciones/${socio.consignaciones[0].id}`
               : `/consignaciones/cuenta-corriente/${socio.id}`;
 
             return (
               <Link key={socio.id} href={href}
-                className="rounded-xl border border-gray-200 bg-white p-4 hover:border-blue-200 hover:shadow-sm transition-all">
-                <div className="flex items-start justify-between mb-3">
+                className="rounded-xl border border-gray-200 bg-white p-4 hover:border-blue-200 hover:shadow-sm transition-all block">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <h2 className="font-semibold text-gray-900">{socio.nombre}</h2>
                     {socio.contacto && <p className="text-xs text-gray-400 mt-0.5">{socio.contacto}</p>}
                   </div>
-                  {!esRestringido && (
-                    <span className={`text-sm font-semibold ${saldo > 0 ? "text-green-700" : saldo < 0 ? "text-red-600" : "text-gray-400"}`}>
-                      {saldo > 0 ? "Te deben" : saldo < 0 ? "Debés" : "Sin saldo"}
-                      {saldo !== 0 && ` ${formatCurrency(Math.abs(saldo))}`}
-                    </span>
+                  {!esRestringido && saldo !== 0 && (
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${saldo > 0 ? "text-green-700" : "text-red-600"}`}>
+                        {fmt(Math.abs(saldo))}
+                      </p>
+                      <p className={`text-xs ${saldo > 0 ? "text-green-600" : "text-red-500"}`}>
+                        {saldo > 0 ? "te deben" : "debés"}
+                      </p>
+                    </div>
+                  )}
+                  {!esRestringido && saldo === 0 && (
+                    <span className="text-xs text-gray-400">Sin saldo</span>
                   )}
                 </div>
-                <div className="flex gap-4 text-xs text-gray-500">
-                  <span>{socio.consignaciones.length} consignaciones abiertas</span>
-                  {!esRestringido && liquidacionPendiente && (
-                    <span className="text-orange-600">Liquidación pendiente de pago</span>
-                  )}
-                </div>
-                {esRestringido && socio.consignaciones.length > 1 && (
-                  <p className="text-xs text-blue-500 mt-1">Ver detalle →</p>
+
+                {/* Consignaciones abiertas */}
+                {consignacionesConResumen.length > 0 && (
+                  <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-3">
+                    {consignacionesConResumen.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between text-xs">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          c.direccion === "ENTREGAMOS"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}>
+                          {c.direccion === "ENTREGAMOS" ? "Entregamos" : "Recibimos"}
+                        </span>
+                        <span className="text-gray-500">
+                          {c.productos} {c.productos === 1 ? "producto" : "productos"} · {c.unidades} {c.unidades === 1 ? "unidad vendida" : "unidades vendidas"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
+
+                <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
+                  <span>{socio.consignaciones.length} consignación{socio.consignaciones.length !== 1 ? "es" : ""} abierta{socio.consignaciones.length !== 1 ? "s" : ""}</span>
+                  {!esRestringido && liquidacionPendiente && (
+                    <span className="text-amber-600 font-medium">⚠ Liquidación pendiente</span>
+                  )}
+                </div>
               </Link>
             );
           })}

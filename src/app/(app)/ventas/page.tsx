@@ -1,16 +1,8 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDate } from "@/lib/format";
-import { ConfirmSubmitButton } from "@/components/confirm-button";
-import { eliminarVenta } from "./actions";
 import { FiltrosVentas } from "./filtros-ventas";
-
-const CANAL_LABELS: Record<string, string> = {
-  TIENDANUBE: "Tiendanube",
-  WHATSAPP: "WhatsApp",
-  TELEFONO: "Teléfono",
-};
+import { VentaExpandibleRow } from "./venta-row";
 
 export default async function VentasPage({
   searchParams,
@@ -45,20 +37,11 @@ export default async function VentasPage({
     };
   }
 
-  if (params.clienteId) {
-    where.clienteId = Number(params.clienteId);
-  }
-
+  if (params.clienteId) where.clienteId = Number(params.clienteId);
   if (params.facturado === "si") where.facturado = true;
   if (params.facturado === "no") where.facturado = false;
-
-  if (canalesSeleccionados.length > 0) {
-    where.canalVenta = { in: canalesSeleccionados };
-  }
-
-  if (pagosSeleccionados.length > 0) {
-    where.medioPago = { in: pagosSeleccionados };
-  }
+  if (canalesSeleccionados.length > 0) where.canalVenta = { in: canalesSeleccionados };
+  if (pagosSeleccionados.length > 0) where.medioPago = { in: pagosSeleccionados };
 
   if (esRestringido) {
     const comprasDelProveedor = await prisma.compra.findMany({
@@ -74,9 +57,22 @@ export default async function VentasPage({
     prisma.venta.findMany({
       where,
       include: {
-        cliente: true,
-        detalles: { select: { cantidad: true, precioVentaUnitario: true, descuentoPorcentaje: true, precioCostoUnitario: true, producto: { select: { precioCostoUnitario: true } } } },
-        costos: true,
+        cliente: {
+          select: { nombre: true, apellido: true, cuit: true, dni: true },
+        },
+        detalles: {
+          select: {
+            id: true,
+            cantidad: true,
+            precioVentaUnitario: true,
+            descuentoPorcentaje: true,
+            precioCostoUnitario: true,
+            producto: {
+              select: { skuInterno: true, nombre: true, precioCostoUnitario: true },
+            },
+          },
+        },
+        costos: { select: { montoCalculado: true } },
       },
       orderBy: { fechaVenta: "desc" },
       take: 100,
@@ -93,12 +89,12 @@ export default async function VentasPage({
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Ventas</h1>
         {!esRestringido && (
           <Link
             href="/ventas/nueva"
-            className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             + Nueva venta
           </Link>
@@ -120,117 +116,42 @@ export default async function VentasPage({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
+              <th className="w-8 px-3 py-2"></th>
               <th className="px-3 py-2">Fecha</th>
               <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2">Canal</th>
-              <th className="px-3 py-2">Pago</th>
               <th className="px-3 py-2 text-right">Total</th>
-              <th className="px-3 py-2 text-right">Descuento</th>
-              <th className="px-3 py-2 text-right">Envío</th>
-              {!esRestringido && <th className="px-3 py-2 text-right">Costos cobranza</th>}
-              {!esRestringido && <th className="px-3 py-2 text-right">Ganancia</th>}
               <th className="px-3 py-2 text-right">Total abonado</th>
+              {!esRestringido && <th className="px-3 py-2 text-right">Ganancia</th>}
               <th className="px-3 py-2">Facturado</th>
-              {!esRestringido && <th className="px-3 py-2"></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {ventas.map((venta) => {
-              const total = venta.detalles.reduce(
-                (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario),
-                0
-              );
-              const descuento = venta.detalles.reduce(
-                (acc, d) =>
-                  acc +
-                  d.cantidad *
-                    Number(d.precioVentaUnitario) *
-                    (Number(d.descuentoPorcentaje) / 100),
-                0
-              );
-              const costoMercaderia = venta.detalles.reduce(
-                (acc, d) => acc + d.cantidad * Number(d.precioCostoUnitario ?? d.producto.precioCostoUnitario),
-                0
-              );
-              const costosCobranza = venta.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0);
-              const totalAbonado = total - descuento + Number(venta.costoEnvio);
-              const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
-              return (
-                <tr key={venta.id} className="hover:bg-gray-50">
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {formatDate(venta.fechaVenta)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {venta.cliente.nombre} {venta.cliente.apellido}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {CANAL_LABELS[venta.canalVenta] ?? venta.canalVenta}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">{venta.medioPago}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
-                    {formatCurrency(total)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right text-gray-500">
-                    {descuento > 0 ? `- ${formatCurrency(descuento)}` : "-"}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right">
-                    {formatCurrency(Number(venta.costoEnvio))}
-                  </td>
-                  {!esRestringido && (
-                    <td className="whitespace-nowrap px-3 py-2 text-right text-gray-500">
-                      {costosCobranza > 0 ? `- ${formatCurrency(costosCobranza)}` : "-"}
-                    </td>
-                  )}
-                  {!esRestringido && (
-                    <td
-                      className={`whitespace-nowrap px-3 py-2 text-right font-medium ${
-                        ganancia >= 0 ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {formatCurrency(ganancia)}
-                    </td>
-                  )}
-                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold text-blue-700">
-                    {formatCurrency(totalAbonado)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {venta.facturado ? (
-                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-                        Sí {venta.numeroFactura ? `· ${venta.numeroFactura}` : ""}
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                        No
-                      </span>
-                    )}
-                  </td>
-                  {!esRestringido && (
-                    <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Link
-                          href={`/ventas/${venta.id}/editar`}
-                          className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                        >
-                          Editar
-                        </Link>
-                        <form action={eliminarVenta}>
-                          <input type="hidden" name="id" value={venta.id} />
-                          <ConfirmSubmitButton
-                            confirmMessage="¿Eliminar esta venta? Se devolverá el stock de los productos vendidos."
-                            className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                          >
-                            Eliminar
-                          </ConfirmSubmitButton>
-                        </form>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
+            {ventas.map((venta) => (
+              <VentaExpandibleRow
+                key={venta.id}
+                venta={{
+                  ...venta,
+                  costoEnvio: venta.costoEnvio.toString(),
+                  detalles: venta.detalles.map((d) => ({
+                    ...d,
+                    precioVentaUnitario: d.precioVentaUnitario.toString(),
+                    descuentoPorcentaje: d.descuentoPorcentaje.toString(),
+                    precioCostoUnitario: d.precioCostoUnitario?.toString() ?? null,
+                    producto: {
+                      ...d.producto,
+                      precioCostoUnitario: d.producto.precioCostoUnitario.toString(),
+                    },
+                  })),
+                  costos: venta.costos.map((c) => ({
+                    montoCalculado: c.montoCalculado.toString(),
+                  })),
+                }}
+                esRestringido={esRestringido}
+              />
+            ))}
             {ventas.length === 0 && (
               <tr>
-                <td colSpan={esRestringido ? 9 : 12} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={esRestringido ? 6 : 7} className="px-3 py-8 text-center text-gray-400">
                   No hay ventas registradas para este filtro.
                 </td>
               </tr>
