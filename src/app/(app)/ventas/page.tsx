@@ -70,6 +70,11 @@ export default async function VentasPage({
             producto: {
               select: { skuInterno: true, nombre: true, precioCostoUnitario: true },
             },
+            ventaConsignacion: {
+              select: {
+                detalle: { select: { precioCosto: true, precioPiso: true } },
+              },
+            },
           },
         },
         costos: { select: { montoCalculado: true } },
@@ -141,6 +146,14 @@ export default async function VentasPage({
                       ...d.producto,
                       precioCostoUnitario: d.producto.precioCostoUnitario.toString(),
                     },
+                    ventaConsignacion: d.ventaConsignacion
+                      ? {
+                          detalle: {
+                            precioCosto: d.ventaConsignacion.detalle.precioCosto.toString(),
+                            precioPiso: d.ventaConsignacion.detalle.precioPiso.toString(),
+                          },
+                        }
+                      : null,
                   })),
                   costos: venta.costos.map((c) => ({
                     montoCalculado: c.montoCalculado.toString(),

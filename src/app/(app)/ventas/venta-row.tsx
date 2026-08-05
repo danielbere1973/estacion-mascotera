@@ -28,6 +28,12 @@ type DetalleVenta = {
     nombre: string;
     precioCostoUnitario: string;
   };
+  ventaConsignacion: {
+    detalle: {
+      precioCosto: string;
+      precioPiso: string;
+    };
+  } | null;
 };
 
 type VentaRow = {
@@ -66,10 +72,16 @@ export function VentaExpandibleRow({
       acc + d.cantidad * Number(d.precioVentaUnitario) * (Number(d.descuentoPorcentaje) / 100),
     0
   );
-  const costoMercaderia = venta.detalles.reduce(
-    (acc, d) => acc + d.cantidad * Number(d.precioCostoUnitario ?? d.producto.precioCostoUnitario),
-    0
-  );
+  const costoMercaderia = venta.detalles.reduce((acc, d) => {
+    const precioVenta = Number(d.precioVentaUnitario) * (1 - Number(d.descuentoPorcentaje) / 100);
+    if (d.ventaConsignacion) {
+      // Producto de consignación: costo efectivo = precioCosto + 1/3 * (precioVenta - precioCosto)
+      const costo = Number(d.ventaConsignacion.detalle.precioCosto);
+      const costoEfectivo = costo + (precioVenta - costo) / 3;
+      return acc + d.cantidad * costoEfectivo;
+    }
+    return acc + d.cantidad * Number(d.precioCostoUnitario ?? d.producto.precioCostoUnitario);
+  }, 0);
   const costosCobranza = venta.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0);
   const totalAbonado = total - descuento + Number(venta.costoEnvio);
   const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
