@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { anularLiquidacion } from "../../actions";
+import { anularLiquidacion, marcarLiquidacionPagada } from "../../actions";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 
 const fmt = (n: number) =>
@@ -58,6 +58,20 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
           >
             Imprimir / PDF
           </Link>
+          <form action={marcarLiquidacionPagada}>
+            <input type="hidden" name="id" value={liq.id} />
+            <input type="hidden" name="pagada" value={liq.pagado ? "false" : "true"} />
+            <button
+              type="submit"
+              className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
+                liq.pagado
+                  ? "border-gray-300 text-gray-500 hover:bg-gray-50"
+                  : "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+              }`}
+            >
+              {liq.pagado ? "Marcar como pendiente" : "Marcar como saldada ✓"}
+            </button>
+          </form>
           <form action={anularLiquidacion}>
             <input type="hidden" name="id" value={liq.id} />
             <input type="hidden" name="socioId" value={liq.socioId} />

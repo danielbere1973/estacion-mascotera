@@ -360,6 +360,21 @@ export async function generarLiquidacion(formData: FormData) {
   redirect(`/consignaciones/liquidaciones/${liquidacion.id}`);
 }
 
+export async function marcarLiquidacionPagada(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  const pagada = formData.get("pagada") === "true";
+
+  const liq = await prisma.liquidacionConsignacion.update({
+    where: { id },
+    data: { pagado: pagada },
+  });
+
+  revalidatePath(`/consignaciones/liquidaciones/${id}`);
+  revalidatePath("/consignaciones/liquidaciones");
+  revalidatePath(`/consignaciones/cuenta-corriente/${liq.socioId}`);
+}
+
 export async function anularLiquidacion(formData: FormData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
