@@ -65,11 +65,11 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
               type="submit"
               className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
                 liq.pagado
-                  ? "border-gray-300 text-gray-500 hover:bg-gray-50"
-                  : "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                  ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                  : "border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
               }`}
             >
-              {liq.pagado ? "Marcar como pendiente" : "Marcar como saldada ✓"}
+              {liq.pagado ? "✓ Saldada — deshacer" : "Marcar como saldada"}
             </button>
           </form>
           <form action={anularLiquidacion}>
