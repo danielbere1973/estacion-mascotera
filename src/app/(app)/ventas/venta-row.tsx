@@ -8,8 +8,10 @@ import { eliminarVenta } from "./actions";
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
-const fmtDate = (d: Date) =>
-  new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+const fmtDate = (d: Date) => {
+  const utc = new Date(d);
+  return `${String(utc.getUTCDate()).padStart(2, "0")}/${String(utc.getUTCMonth() + 1).padStart(2, "0")}/${String(utc.getUTCFullYear()).slice(-2)}`;
+};
 
 const CANAL_LABELS: Record<string, string> = {
   TIENDANUBE: "Tiendanube",
