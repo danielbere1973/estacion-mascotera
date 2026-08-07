@@ -94,6 +94,17 @@ export default async function EditarVentaPage({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Fecha de venta</label>
+            <input
+              type="date"
+              name="fechaVenta"
+              defaultValue={new Date(venta.fechaVenta).toISOString().split("T")[0]}
+              required
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Canal de venta</label>
             <select
               name="canalVenta"
