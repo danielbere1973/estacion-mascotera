@@ -87,6 +87,7 @@ export function VentaExpandibleRow({
   const costosCobranza = venta.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0);
   const totalAbonado = total - descuento + Number(venta.costoEnvio);
   const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
+  const pctGanancia = totalAbonado > 0 ? (ganancia / totalAbonado) * 100 : null;
 
   const docLabel = venta.cliente.cuit ? "CUIT" : venta.cliente.dni ? "DNI" : null;
   const docValue = venta.cliente.cuit ?? venta.cliente.dni ?? null;
@@ -121,6 +122,11 @@ export function VentaExpandibleRow({
         {!esRestringido && (
           <td className={`whitespace-nowrap px-3 py-2 text-right text-sm font-semibold ${ganancia >= 0 ? "text-green-600" : "text-red-500"}`}>
             {fmt(ganancia)}
+            {pctGanancia !== null && (
+              <span className="ml-1 text-xs font-normal opacity-70">
+                {pctGanancia.toFixed(1)}%
+              </span>
+            )}
           </td>
         )}
         <td className="whitespace-nowrap px-3 py-2">
