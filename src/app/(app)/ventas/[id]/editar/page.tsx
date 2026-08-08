@@ -130,6 +130,16 @@ export default async function EditarVentaPage({
           </div>
         </div>
 
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            name="esVentaInterna"
+            defaultChecked={venta.esVentaInterna}
+            className="h-4 w-4 rounded border-gray-300 text-blue-600"
+          />
+          <span className="text-sm font-medium text-gray-700">Venta interna (no cuenta en rentabilidad)</span>
+        </label>
+
         <EditarVentaItems detalles={detalles} productos={productosPlain} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

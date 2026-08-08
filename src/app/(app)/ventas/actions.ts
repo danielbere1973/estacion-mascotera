@@ -61,6 +61,7 @@ export async function crearVenta(formData: FormData) {
   const medioPago = formData.get("medioPago")?.toString().trim();
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const facturado = formData.get("facturado") === "on";
+  const esVentaInterna = formData.get("esVentaInterna") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const vendidoPorId = formData.get("vendidoPorId") ? Number(formData.get("vendidoPorId")) : null;
   const cobradoPorId = formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
@@ -126,6 +127,7 @@ export async function crearVenta(formData: FormData) {
         medioPago,
         costoEnvio,
         facturado,
+        esVentaInterna,
         numeroFactura,
         fechaVenta,
         fechaAcreditacion,
@@ -212,7 +214,10 @@ export async function actualizarVenta(formData: FormData) {
   const medioPago = formData.get("medioPago")?.toString().trim();
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const facturado = formData.get("facturado") === "on";
+  const esVentaInterna = formData.get("esVentaInterna") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+  const fechaVentaStr = formData.get("fechaVenta")?.toString().trim();
+  const fechaVenta = fechaVentaStr ? new Date(fechaVentaStr) : undefined;
   const fechaAcreditacionRaw = formData.get("fechaAcreditacion")?.toString().trim() || null;
   const fechaAcreditacion = fechaAcreditacionRaw ? new Date(fechaAcreditacionRaw) : null;
 
@@ -387,7 +392,7 @@ export async function actualizarVenta(formData: FormData) {
 
     await tx.venta.update({
       where: { id },
-      data: { canalVenta, medioPago, costoEnvio, facturado, numeroFactura, fechaAcreditacion },
+      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, numeroFactura, fechaVenta, fechaAcreditacion },
     });
 
     await registrarLog(tx, {

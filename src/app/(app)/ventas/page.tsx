@@ -60,6 +60,7 @@ export default async function VentasPage({
         cliente: {
           select: { nombre: true, apellido: true, cuit: true, dni: true },
         },
+
         detalles: {
           select: {
             id: true,
@@ -117,61 +118,85 @@ export default async function VentasPage({
         mediosPago={mediosPago}
       />
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-            <tr>
-              <th className="w-8 px-3 py-2"></th>
-              <th className="px-3 py-2">Fecha</th>
-              <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2 text-right">Total</th>
-              <th className="px-3 py-2 text-right">Total abonado</th>
-              {!esRestringido && <th className="px-3 py-2 text-right">Ganancia</th>}
-              <th className="px-3 py-2">Facturado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {ventas.map((venta) => (
-              <VentaExpandibleRow
-                key={venta.id}
-                venta={{
-                  ...venta,
-                  costoEnvio: venta.costoEnvio.toString(),
-                  detalles: venta.detalles.map((d) => ({
-                    ...d,
-                    precioVentaUnitario: d.precioVentaUnitario.toString(),
-                    descuentoPorcentaje: d.descuentoPorcentaje.toString(),
-                    precioCostoUnitario: d.precioCostoUnitario?.toString() ?? null,
-                    producto: {
-                      ...d.producto,
-                      precioCostoUnitario: d.producto.precioCostoUnitario.toString(),
-                    },
-                    ventaConsignacion: d.ventaConsignacion
-                      ? {
-                          detalle: {
-                            precioCosto: d.ventaConsignacion.detalle.precioCosto.toString(),
-                            precioPiso: d.ventaConsignacion.detalle.precioPiso.toString(),
-                          },
-                        }
-                      : null,
-                  })),
-                  costos: venta.costos.map((c) => ({
-                    montoCalculado: c.montoCalculado.toString(),
-                  })),
-                }}
-                esRestringido={esRestringido}
-              />
-            ))}
-            {ventas.length === 0 && (
-              <tr>
-                <td colSpan={esRestringido ? 6 : 7} className="px-3 py-8 text-center text-gray-400">
-                  No hay ventas registradas para este filtro.
-                </td>
-              </tr>
+      {(() => {
+        const ventasNormales = ventas.filter((v) => !v.esVentaInterna);
+        const ventasInternas = ventas.filter((v) => v.esVentaInterna);
+
+        const renderTabla = (lista: typeof ventas, titulo?: string) => (
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+            {titulo && (
+              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{titulo}</span>
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="w-8 px-3 py-2"></th>
+                  <th className="px-3 py-2">Fecha</th>
+                  <th className="px-3 py-2">Cliente</th>
+                  <th className="px-3 py-2 text-right">Total</th>
+                  <th className="px-3 py-2 text-right">Total abonado</th>
+                  {!esRestringido && <th className="px-3 py-2 text-right">Ganancia</th>}
+                  <th className="px-3 py-2">Facturado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {lista.map((venta) => (
+                  <VentaExpandibleRow
+                    key={venta.id}
+                    venta={{
+                      ...venta,
+                      costoEnvio: venta.costoEnvio.toString(),
+                      detalles: venta.detalles.map((d) => ({
+                        ...d,
+                        precioVentaUnitario: d.precioVentaUnitario.toString(),
+                        descuentoPorcentaje: d.descuentoPorcentaje.toString(),
+                        precioCostoUnitario: d.precioCostoUnitario?.toString() ?? null,
+                        producto: {
+                          ...d.producto,
+                          precioCostoUnitario: d.producto.precioCostoUnitario.toString(),
+                        },
+                        ventaConsignacion: d.ventaConsignacion
+                          ? {
+                              detalle: {
+                                precioCosto: d.ventaConsignacion.detalle.precioCosto.toString(),
+                                precioPiso: d.ventaConsignacion.detalle.precioPiso.toString(),
+                              },
+                            }
+                          : null,
+                      })),
+                      costos: venta.costos.map((c) => ({
+                        montoCalculado: c.montoCalculado.toString(),
+                      })),
+                    }}
+                    esRestringido={esRestringido}
+                  />
+                ))}
+                {lista.length === 0 && (
+                  <tr>
+                    <td colSpan={esRestringido ? 6 : 7} className="px-3 py-8 text-center text-gray-400">
+                      No hay ventas registradas para este filtro.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        );
+
+        return (
+          <>
+            {renderTabla(ventasNormales)}
+            {ventasInternas.length > 0 && (
+              <div className="space-y-2">
+                <h2 className="text-sm font-medium text-gray-400">Ventas internas</h2>
+                {renderTabla(ventasInternas)}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

@@ -169,6 +169,7 @@ model Venta {
   numeroFactura       String?
   fechaAcreditacion   DateTime?
   fechaVenta          DateTime       @default(now())
+  esVentaInterna      Boolean        @default(false)
   usuarioId     Int
   vendidoPorId  Int?
   cobradoPorId  Int?

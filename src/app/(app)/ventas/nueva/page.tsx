@@ -156,6 +156,11 @@ export default async function NuevaVentaPage() {
 
         <CostosVenta />
 
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" name="esVentaInterna" className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+          <span className="text-sm font-medium text-gray-700">Venta interna (no cuenta en rentabilidad)</span>
+        </label>
+
         <FacturadoField />
 
         <div className="space-y-1">

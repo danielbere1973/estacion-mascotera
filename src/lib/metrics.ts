@@ -21,7 +21,9 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   const [detalles, ventasEnvio, costosCobranzaAgg, compras, gastos, productos, todasLasCompras, ventasNoFact, comprasNoFact, ventasConsig] =
     await Promise.all([
       prisma.detalleVenta.findMany({
-        where: fechaVenta ? { venta: { fechaVenta } } : undefined,
+        where: fechaVenta
+          ? { venta: { fechaVenta, esVentaInterna: false } }
+          : { venta: { esVentaInterna: false } },
         select: {
           cantidad: true,
           precioVentaUnitario: true,
@@ -34,11 +36,13 @@ export async function getDashboardMetrics(rango: RangoFechas) {
         },
       }),
       prisma.venta.aggregate({
-        where: fechaVenta ? { fechaVenta } : undefined,
+        where: fechaVenta ? { fechaVenta, esVentaInterna: false } : { esVentaInterna: false },
         _sum: { costoEnvio: true },
       }),
       prisma.costoVenta.aggregate({
-        where: fechaVenta ? { venta: { fechaVenta } } : undefined,
+        where: fechaVenta
+          ? { venta: { fechaVenta, esVentaInterna: false } }
+          : { venta: { esVentaInterna: false } },
         _sum: { montoCalculado: true },
       }),
       prisma.compra.aggregate({
@@ -57,7 +61,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
         select: { productoId: true, cantidad: true, precioCostoUnitario: true },
       }),
       prisma.venta.findMany({
-        where: { ...(fechaVenta ? { fechaVenta } : {}), facturado: false },
+        where: { ...(fechaVenta ? { fechaVenta } : {}), facturado: false, esVentaInterna: false },
         select: {
           costoEnvio: true,
           detalles: { select: { cantidad: true, precioVentaUnitario: true } },
