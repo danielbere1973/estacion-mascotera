@@ -20,59 +20,76 @@ export default async function DashboardPage({
       ? await getDashboardMetricsRestringido(rango, session.user.proveedorRestrictoId)
       : await getDashboardMetrics(rango);
 
+  const pctOperativa = metrics.totalIngresosConsolidados > 0
+    ? (metrics.rentabilidadSinFijos / metrics.totalIngresosConsolidados) * 100
+    : null;
+  const pctNeta = metrics.totalIngresosConsolidados > 0
+    ? (metrics.rentabilidadNeta / metrics.totalIngresosConsolidados) * 100
+    : null;
+
   const cards = [
     {
       label: "Total Ingresos",
       value: metrics.totalIngresosConsolidados,
       hint: "Ventas propias + comisión consignaciones",
       highlight: true,
+      pct: null as number | null,
     },
     {
       label: "Rentabilidad Operativa",
       value: metrics.rentabilidadSinFijos,
       hint: "Ingresos − costo mercadería − envíos − gastos variables (sin gastos fijos)",
       highlight: true,
+      pct: pctOperativa,
     },
     {
       label: "Rentabilidad Neta",
       value: metrics.rentabilidadNeta,
       hint: "Rentabilidad operativa − gastos fijos del período",
       highlight: true,
+      pct: pctNeta,
     },
     {
       label: "Gastos Fijos del período",
       value: metrics.totalGastosFijosDelPeriodo,
       hint: "Monotributo, sueldos, etc. — impactan en rentabilidad neta",
+      pct: null as number | null,
     },
     {
       label: "Total Gastado",
       value: metrics.totalGastado,
       hint: "Compras + todos los gastos",
+      pct: null as number | null,
     },
     {
       label: "Valor de Stock",
       value: metrics.valorStock,
       hint: "Stock actual a precio de costo",
+      pct: null as number | null,
     },
     {
       label: "Total Facturado",
       value: metrics.totalFacturado,
       hint: "Ventas propias + comisión neta de consignaciones",
+      pct: null as number | null,
     },
     {
       label: "Ganancia Consignaciones",
       value: metrics.gananciaConsignaciones,
       hint: "2/3 de la ganancia en ventas por consignación",
+      pct: null as number | null,
     },
     {
       label: "Costo Mercadería Vendida",
       value: metrics.costoMercaderiaVendida,
       hint: "Costo de los productos vendidos en el período",
+      pct: null as number | null,
     },
     {
       label: "Costo Mercadería Comprada",
       value: metrics.totalComprasMercaderia,
       hint: "Costo de los productos comprados en el período",
+      pct: null as number | null,
     },
   ];
 
@@ -109,17 +126,24 @@ export default async function DashboardPage({
             className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
           >
             <p className="text-sm text-gray-500">{card.label}</p>
-            <p
-              className={`mt-1 text-2xl font-semibold ${
-                card.highlight
-                  ? card.value >= 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                  : "text-gray-900"
-              }`}
-            >
-              {formatCurrency(card.value)}
-            </p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <p
+                className={`text-2xl font-semibold ${
+                  card.highlight
+                    ? card.value >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                    : "text-gray-900"
+                }`}
+              >
+                {formatCurrency(card.value)}
+              </p>
+              {card.pct !== null && (
+                <span className={`text-sm font-medium ${card.pct >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {card.pct.toFixed(1)}%
+                </span>
+              )}
+            </div>
             <p className="mt-1 text-xs text-gray-400">{card.hint}</p>
           </div>
         ))}
