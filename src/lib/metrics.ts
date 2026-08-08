@@ -25,8 +25,12 @@ export async function getDashboardMetrics(rango: RangoFechas) {
         select: {
           cantidad: true,
           precioVentaUnitario: true,
+          descuentoPorcentaje: true,
           precioCostoUnitario: true,
           producto: { select: { precioCostoUnitario: true } },
+          ventaConsignacion: {
+            select: { detalle: { select: { precioCosto: true } } },
+          },
         },
       }),
       prisma.venta.aggregate({
@@ -79,22 +83,32 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   let gananciaConsignaciones = 0;
 
   for (const d of detalles) {
-    totalFacturado += d.cantidad * Number(d.precioVentaUnitario);
-    costoMercaderiaVendida += d.cantidad * Number(d.precioCostoUnitario ?? d.producto.precioCostoUnitario);
+    const precioVenta = Number(d.precioVentaUnitario) * (1 - Number(d.descuentoPorcentaje ?? 0) / 100);
+    totalFacturado += d.cantidad * precioVenta;
+    if (d.ventaConsignacion) {
+      // Producto de consignación (RECIBIMOS): costo efectivo = precioCosto + 1/3*(precioVenta - precioCosto)
+      const costo = Number(d.ventaConsignacion.detalle.precioCosto);
+      const costoEfectivo = costo + (precioVenta - costo) / 3;
+      costoMercaderiaVendida += d.cantidad * costoEfectivo;
+    } else {
+      costoMercaderiaVendida += d.cantidad * Number(d.precioCostoUnitario ?? d.producto.precioCostoUnitario);
+    }
   }
 
-  // Consignaciones: nuestra ganancia = 2/3 de (precioVenta - costo)
+  // Consignaciones registradas sin "Nueva venta" vinculada: solo contamos nuestra comisión 2/3
   for (const v of ventasConsig) {
     const costo = Number(v.detalle.precioCosto);
-    const venta = Number(v.precioVentaReal);
-    const ganancia = venta - costo;
-    gananciaConsignaciones += (ganancia * 2 / 3) * v.cantidad;
-    // Si RECIBIMOS y la venta no vino de "Nueva venta" (no tiene DetalleVenta vinculado),
-    // sumamos al facturado acá porque si no, no está contada en ningún lado.
-    // Las que sí vienen de "Nueva venta" ya se contaron arriba vía detalleVenta.
+    const ventaReal = Number(v.precioVentaReal);
+    const ganancia = ventaReal - costo;
     if (v.detalle.consignacion.direccion === "RECIBIMOS" && !v.detalleVentaId) {
-      totalFacturado += venta * v.cantidad;
+      // Sin DetalleVenta → la venta no está en totalFacturado, sumamos solo nuestra comisión
+      gananciaConsignaciones += (ganancia * 2 / 3) * v.cantidad;
+      totalFacturado += (ganancia * 2 / 3) * v.cantidad;
+    } else if (v.detalle.consignacion.direccion === "ENTREGAMOS") {
+      // Ellos vendieron nuestros productos — nuestra parte es costo + 1/3 ganancia
+      gananciaConsignaciones += (costo + ganancia / 3) * v.cantidad;
     }
+    // Si tiene detalleVentaId (RECIBIMOS con Nueva venta): ya está en totalFacturado y costoMercaderiaVendida arriba
   }
 
   const costosEnvioVentas = Number(ventasEnvio._sum.costoEnvio ?? 0);
@@ -122,8 +136,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     costoMercaderiaVendida -
     costosEnvioVentas -
     costosCobranzaVentas -
-    totalGastosVariables +
-    gananciaConsignaciones;
+    totalGastosVariables;
 
   const rentabilidadNeta =
     rentabilidadSinFijos - totalGastosFijosDelPeriodo;
@@ -180,7 +193,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     ventasNoFacturadas,
     comprasNoFacturadas,
     gananciaConsignaciones,
-    totalIngresosConsolidados: totalFacturado + gananciaConsignaciones,
+    totalIngresosConsolidados: totalFacturado,
   };
 }
 

@@ -24,7 +24,7 @@ export default async function DashboardPage({
     {
       label: "Total Ingresos",
       value: metrics.totalIngresosConsolidados,
-      hint: "Ventas + ganancia consignaciones",
+      hint: "Ventas propias + comisión consignaciones",
       highlight: true,
     },
     {
@@ -55,9 +55,9 @@ export default async function DashboardPage({
       hint: "Stock actual a precio de costo",
     },
     {
-      label: "Ventas directas",
+      label: "Total Facturado",
       value: metrics.totalFacturado,
-      hint: "Solo ventas normales e-commerce / local",
+      hint: "Ventas propias + comisión neta de consignaciones",
     },
     {
       label: "Ganancia Consignaciones",
