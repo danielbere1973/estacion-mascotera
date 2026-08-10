@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
+import { TipoGasto } from "@prisma/client";
 
 export async function crearGasto(formData: FormData) {
   const session = await requireAdmin();
@@ -14,7 +15,8 @@ export async function crearGasto(formData: FormData) {
   const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const fechaGastoStr = formData.get("fechaGasto")?.toString();
   const pagadoPorIdStr = formData.get("pagadoPorId")?.toString();
-  const esFijo = formData.get("esFijo") === "on";
+  const tipoGasto = (formData.get("tipoGasto")?.toString() ?? "VARIABLE") as TipoGasto;
+  const esFijo = tipoGasto === "FIJO";
 
   if (!categoriaGasto) throw new Error("Seleccioná una categoría.");
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
@@ -23,6 +25,7 @@ export async function crearGasto(formData: FormData) {
     const gasto = await tx.gasto.create({
       data: {
         categoriaGasto,
+        tipoGasto,
         esFijo,
         monto,
         descripcion,
@@ -56,7 +59,8 @@ export async function actualizarGasto(formData: FormData) {
   const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const fechaGastoStr = formData.get("fechaGasto")?.toString();
   const pagadoPorIdStr = formData.get("pagadoPorId")?.toString();
-  const esFijo = formData.get("esFijo") === "on";
+  const tipoGasto = (formData.get("tipoGasto")?.toString() ?? "VARIABLE") as TipoGasto;
+  const esFijo = tipoGasto === "FIJO";
 
   if (!categoriaGasto) throw new Error("Seleccioná una categoría.");
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
@@ -66,6 +70,7 @@ export async function actualizarGasto(formData: FormData) {
       where: { id },
       data: {
         categoriaGasto,
+        tipoGasto,
         esFijo,
         monto,
         descripcion,

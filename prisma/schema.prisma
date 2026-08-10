@@ -220,16 +220,17 @@ model MedioPago {
 }
 
 model Gasto {
-  id             Int      @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   monto          Decimal
   descripcion    String?
-  fechaGasto     DateTime @default(now())
+  fechaGasto     DateTime  @default(now())
   usuarioId      Int?
   pagadoPorId    Int?
-  esFijo         Boolean  @default(false)
+  esFijo         Boolean   @default(false)
+  tipoGasto      TipoGasto @default(VARIABLE)
   categoriaGasto String
-  pagadoPor      Usuario? @relation("GastoPagadoPor", fields: [pagadoPorId], references: [id])
-  usuario        Usuario? @relation(fields: [usuarioId], references: [id])
+  pagadoPor      Usuario?  @relation("GastoPagadoPor", fields: [pagadoPorId], references: [id])
+  usuario        Usuario?  @relation(fields: [usuarioId], references: [id])
 
   @@index([fechaGasto])
 }
@@ -470,4 +471,11 @@ enum CategoriaGasto {
   PUBLICIDAD
   SOPORTE_IT
   OTROS
+}
+
+enum TipoGasto {
+  FIJO
+  VARIABLE
+  EXCEPCIONAL
+  MARKETING
 }

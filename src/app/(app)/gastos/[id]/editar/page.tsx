@@ -98,17 +98,19 @@ export default async function EditarGastoPage({
           </select>
         </div>
 
-        <div className="flex items-center gap-2 sm:col-span-2">
-          <input
-            type="checkbox"
-            name="esFijo"
-            id="esFijo-editar"
-            defaultChecked={gasto.esFijo}
-            className="rounded border-gray-300"
-          />
-          <label htmlFor="esFijo-editar" className="text-sm text-gray-700 cursor-pointer">
-            Gasto fijo (se excluye del cálculo de rentabilidad variable)
-          </label>
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-sm font-medium text-gray-700">Tipo de gasto</label>
+          <select
+            name="tipoGasto"
+            required
+            defaultValue={gasto.tipoGasto ?? (gasto.esFijo ? "FIJO" : "VARIABLE")}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="FIJO">Fijo — impacta rentabilidad neta (no operativa)</option>
+            <option value="VARIABLE">Variable — impacta rentabilidad operativa y neta</option>
+            <option value="MARKETING">Marketing — impacta rentabilidad operativa y neta</option>
+            <option value="EXCEPCIONAL">Excepcional — no impacta ninguna rentabilidad</option>
+          </select>
         </div>
 
         <div className="sm:col-span-2">

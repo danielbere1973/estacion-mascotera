@@ -92,16 +92,19 @@ export default async function GastosPage() {
           </select>
         </div>
 
-        <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-4">
-          <input
-            type="checkbox"
-            name="esFijo"
-            id="esFijo-nuevo"
-            className="rounded border-gray-300"
-          />
-          <label htmlFor="esFijo-nuevo" className="text-sm text-gray-700 cursor-pointer">
-            Gasto fijo (se excluye del cálculo de rentabilidad variable)
-          </label>
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Tipo de gasto</label>
+          <select
+            name="tipoGasto"
+            required
+            defaultValue="VARIABLE"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="FIJO">Fijo — impacta rentabilidad neta (no operativa)</option>
+            <option value="VARIABLE">Variable — impacta rentabilidad operativa y neta</option>
+            <option value="MARKETING">Marketing — impacta rentabilidad operativa y neta</option>
+            <option value="EXCEPCIONAL">Excepcional — no impacta ninguna rentabilidad</option>
+          </select>
         </div>
 
         <div className="sm:col-span-2 lg:col-span-4">
@@ -120,7 +123,7 @@ export default async function GastosPage() {
             <tr>
               <th className="px-3 py-2">Fecha</th>
               <th className="px-3 py-2">Tipo</th>
-              <th className="px-3 py-2">Fijo/Var.</th>
+              <th className="px-3 py-2">Tipo</th>
               <th className="px-3 py-2 text-right">Monto</th>
               <th className="px-3 py-2">Notas</th>
               <th className="px-3 py-2">Cargado por</th>
@@ -136,9 +139,17 @@ export default async function GastosPage() {
                   {g.categoriaGasto}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${g.esFijo ? "bg-gray-100 text-gray-600" : "bg-blue-50 text-blue-600"}`}>
-                    {g.esFijo ? "Fijo" : "Variable"}
-                  </span>
+                  {(() => {
+                    const tipo = g.tipoGasto ?? (g.esFijo ? "FIJO" : "VARIABLE");
+                    const cfg: Record<string, { label: string; cls: string }> = {
+                      FIJO:        { label: "Fijo",        cls: "bg-gray-100 text-gray-600" },
+                      VARIABLE:    { label: "Variable",    cls: "bg-blue-50 text-blue-600" },
+                      MARKETING:   { label: "Marketing",   cls: "bg-purple-50 text-purple-600" },
+                      EXCEPCIONAL: { label: "Excepcional", cls: "bg-orange-50 text-orange-600" },
+                    };
+                    const { label, cls } = cfg[tipo] ?? cfg.VARIABLE;
+                    return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
+                  })()}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
                   {formatCurrency(g.monto.toString())}

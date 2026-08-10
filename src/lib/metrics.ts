@@ -51,7 +51,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
       }),
       prisma.gasto.findMany({
         where: fechaGasto ? { fechaGasto } : undefined,
-        select: { categoriaGasto: true, esFijo: true, monto: true },
+        select: { categoriaGasto: true, esFijo: true, tipoGasto: true, monto: true },
       }),
       prisma.producto.findMany({
         select: { id: true, stockActual: true, precioCostoUnitario: true },
@@ -125,12 +125,14 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   const gastosPorCategoria = gastos.map((g) => ({
     categoria: g.categoriaGasto,
     esFijo: g.esFijo,
+    tipoGasto: g.tipoGasto,
     monto: Number(g.monto),
   }));
 
-  const totalGastosFijosDelPeriodo = gastosPorCategoria.filter((g) => g.esFijo).reduce((acc, g) => acc + g.monto, 0);
-  const totalGastosVariables = gastosPorCategoria.filter((g) => !g.esFijo).reduce((acc, g) => acc + g.monto, 0);
-  const totalGastos = totalGastosFijosDelPeriodo + totalGastosVariables;
+  const totalGastosFijosDelPeriodo = gastosPorCategoria.filter((g) => g.tipoGasto === "FIJO").reduce((acc, g) => acc + g.monto, 0);
+  const totalGastosVariables = gastosPorCategoria.filter((g) => g.tipoGasto === "VARIABLE" || g.tipoGasto === "MARKETING").reduce((acc, g) => acc + g.monto, 0);
+  const totalGastosExcepcionales = gastosPorCategoria.filter((g) => g.tipoGasto === "EXCEPCIONAL").reduce((acc, g) => acc + g.monto, 0);
+  const totalGastos = totalGastosFijosDelPeriodo + totalGastosVariables + totalGastosExcepcionales;
 
   const totalGastado = totalComprasMercaderia + totalGastos;
 
@@ -189,6 +191,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     rentabilidadSinFijos,
     totalGastosFijosDelPeriodo,
     totalGastosVariables,
+    totalGastosExcepcionales,
     valorStock,
     costoMercaderiaVendida,
     costosCobranzaVentas,

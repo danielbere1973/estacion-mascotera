@@ -52,7 +52,13 @@ export default async function DashboardPage({
     {
       label: "Gastos Fijos del período",
       value: metrics.totalGastosFijosDelPeriodo,
-      hint: "Monotributo, sueldos, etc. — impactan en rentabilidad neta",
+      hint: "Impactan rentabilidad neta pero no operativa",
+      pct: null as number | null,
+    },
+    {
+      label: "Gastos Excepcionales",
+      value: metrics.totalGastosExcepcionales,
+      hint: "Pagos únicos o infrecuentes — no impactan ninguna rentabilidad",
       pct: null as number | null,
     },
     {
