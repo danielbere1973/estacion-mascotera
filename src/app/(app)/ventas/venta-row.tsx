@@ -88,6 +88,7 @@ export function VentaExpandibleRow({
   const totalAbonado = total - descuento + Number(venta.costoEnvio);
   const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
   const pctGanancia = totalAbonado > 0 ? (ganancia / totalAbonado) * 100 : null;
+  const pctSobreCosto = costoMercaderia > 0 ? (ganancia / costoMercaderia) * 100 : null;
 
   const docLabel = venta.cliente.cuit ? "CUIT" : venta.cliente.dni ? "DNI" : null;
   const docValue = venta.cliente.cuit ?? venta.cliente.dni ?? null;
@@ -124,7 +125,12 @@ export function VentaExpandibleRow({
             {fmt(ganancia)}
             {pctGanancia !== null && (
               <span className="ml-1 text-xs font-normal opacity-70">
-                {pctGanancia.toFixed(1)}%
+                {pctGanancia.toFixed(1)}% vta
+              </span>
+            )}
+            {pctSobreCosto !== null && (
+              <span className="ml-1 text-xs font-normal opacity-50">
+                · {pctSobreCosto.toFixed(1)}% costo
               </span>
             )}
           </td>
