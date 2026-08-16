@@ -307,6 +307,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     rentabilidadSinFijos: rentabilidadNeta,
     totalGastosFijosDelPeriodo: 0,
     totalGastosVariables: 0,
+    totalGastosExcepcionales: 0,
     valorStock,
     costoMercaderiaVendida,
     costosCobranzaVentas: 0,
