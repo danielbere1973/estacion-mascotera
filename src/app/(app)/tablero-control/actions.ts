@@ -109,6 +109,17 @@ export async function eliminarColumna(id: number) {
   revalidatePath("/tablero-control");
 }
 
+export async function editarColumna(id: number, nombre: string) {
+  await requireAuth();
+
+  const nombreLimpio = nombre.trim();
+  if (!nombreLimpio) return;
+
+  await prisma.columnaTablero.update({ where: { id }, data: { nombre: nombreLimpio } });
+
+  revalidatePath("/tablero-control");
+}
+
 export async function editarTarjeta(formData: FormData) {
   await requireAuth();
 

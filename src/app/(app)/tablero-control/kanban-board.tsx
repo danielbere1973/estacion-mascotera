@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import {
   crearColumna,
   crearTarjeta,
+  editarColumna,
   editarTarjeta,
   eliminarColumna,
   eliminarTarjeta,
@@ -32,7 +33,17 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
   const [formTarjetaAbierto, setFormTarjetaAbierto] = useState(false);
   const [formColumnaAbierto, setFormColumnaAbierto] = useState(false);
   const [tarjetaEditando, setTarjetaEditando] = useState<Tarjeta | null>(null);
+  const [columnaEditandoId, setColumnaEditandoId] = useState<number | null>(null);
   const [, startTransition] = useTransition();
+
+  function guardarNombreColumna(col: Columna, nombre: string) {
+    setColumnaEditandoId(null);
+    const nombreLimpio = nombre.trim();
+    if (!nombreLimpio || nombreLimpio === col.nombre) return;
+    startTransition(() => {
+      editarColumna(col.id, nombreLimpio);
+    });
+  }
 
   function onDropEnColumna(columnaDestinoId: number) {
     setDragOverColId(null);
@@ -80,16 +91,16 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
         <h1 className="text-xl font-semibold text-gray-900">Tablero de Control</h1>
         <div className="flex gap-2">
           <button
-            onClick={() => setFormColumnaAbierto(true)}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            + Agregar Columna
-          </button>
-          <button
             onClick={() => setFormTarjetaAbierto(true)}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             + Nueva tarjeta
+          </button>
+          <button
+            onClick={() => setFormColumnaAbierto(true)}
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            + Agregar Columna
           </button>
         </div>
       </div>
@@ -195,7 +206,7 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
               } ${isDraggingThisCol ? "opacity-50" : ""}`}
             >
               <div
-                draggable
+                draggable={columnaEditandoId !== col.id}
                 onDragStart={(e) => {
                   e.stopPropagation();
                   setDragItem({ type: "column", id: col.id });
@@ -205,7 +216,21 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
                 className="flex cursor-grab items-center justify-between gap-1 rounded-t-xl px-3 py-2 active:cursor-grabbing"
                 title="Arrastrá para reordenar la columna"
               >
-                <span className="min-w-0 truncate text-xs font-semibold text-white">{col.nombre}</span>
+                {columnaEditandoId === col.id ? (
+                  <input
+                    autoFocus
+                    defaultValue={col.nombre}
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={(e) => guardarNombreColumna(col, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                      if (e.key === "Escape") setColumnaEditandoId(null);
+                    }}
+                    className="min-w-0 flex-1 rounded border border-white/40 bg-white/20 px-1.5 py-0.5 text-xs font-semibold text-white placeholder-white/70 outline-none"
+                  />
+                ) : (
+                  <span className="min-w-0 truncate text-xs font-semibold text-white">{col.nombre}</span>
+                )}
                 <div className="flex shrink-0 items-center gap-1">
                   <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-medium text-white">
                     {tarjetasCol.length}
@@ -220,6 +245,17 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
                     className="rounded px-1.5 text-sm font-bold text-white/80 hover:bg-white/20 hover:text-white"
                   >
                     −
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setColumnaEditandoId(col.id);
+                    }}
+                    title="Editar nombre de la columna"
+                    className="rounded px-1.5 text-xs text-white/80 hover:bg-white/20 hover:text-white"
+                  >
+                    ✏️
                   </button>
                 </div>
               </div>
