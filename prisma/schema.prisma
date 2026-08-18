@@ -497,7 +497,7 @@ model ColumnaTablero {
   createdAt DateTime         @default(now())
   tarjetas  TarjetaTablero[]
 
-  @@index([orden])
+  @@unique([orden])
 }
 
 model TarjetaTablero {

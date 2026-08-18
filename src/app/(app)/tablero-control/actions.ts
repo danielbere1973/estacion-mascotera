@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import { PALETA_COLORES } from "./columnas";
@@ -72,18 +73,28 @@ export async function crearColumna(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
   if (!nombre) return;
 
-  const [ultima, cantidad] = await Promise.all([
-    prisma.columnaTablero.findFirst({ orderBy: { orden: "desc" }, select: { orden: true } }),
-    prisma.columnaTablero.count(),
-  ]);
+  // Reintenta si otra request creó una columna al mismo tiempo y chocó
+  // contra el @@unique([orden]) (evita duplicar el orden, no el contenido).
+  for (let intento = 0; intento < 5; intento++) {
+    const [ultima, cantidad] = await Promise.all([
+      prisma.columnaTablero.findFirst({ orderBy: { orden: "desc" }, select: { orden: true } }),
+      prisma.columnaTablero.count(),
+    ]);
 
-  await prisma.columnaTablero.create({
-    data: {
-      nombre,
-      orden: (ultima?.orden ?? 0) + 1,
-      color: PALETA_COLORES[cantidad % PALETA_COLORES.length],
-    },
-  });
+    try {
+      await prisma.columnaTablero.create({
+        data: {
+          nombre,
+          orden: (ultima?.orden ?? 0) + 1,
+          color: PALETA_COLORES[cantidad % PALETA_COLORES.length],
+        },
+      });
+      break;
+    } catch (error) {
+      const esConflicto = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+      if (!esConflicto || intento === 4) throw error;
+    }
+  }
 
   revalidatePath("/tablero-control");
 }
