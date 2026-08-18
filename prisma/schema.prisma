@@ -489,26 +489,26 @@ enum TipoGasto {
   MARKETING
 }
 
-enum EstadoTablero {
-  INGRESO_ORDEN_PENDIENTE
-  CARGAR_ORDEN_VENTA_EM_1
-  COMPRAR_MAYORISTA
-  LISTA_PARA_DESPACHO
-  DESPACHADA_EN_CAMINO
-  PEDIDO_ENTREGADO
-  CARGAR_ORDEN_VENTA_EM_2
-  FACTURACION
-  ORDEN_CERRADA_ARCHIVADA
+model ColumnaTablero {
+  id        Int              @id @default(autoincrement())
+  nombre    String
+  color     String           @default("#2563EB")
+  orden     Int              @default(0)
+  createdAt DateTime         @default(now())
+  tarjetas  TarjetaTablero[]
+
+  @@index([orden])
 }
 
 model TarjetaTablero {
-  id        Int           @id @default(autoincrement())
+  id        Int            @id @default(autoincrement())
   titulo    String
   notas     String?
-  estado    EstadoTablero @default(INGRESO_ORDEN_PENDIENTE)
-  orden     Int           @default(0)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  columnaId Int
+  orden     Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  columna   ColumnaTablero @relation(fields: [columnaId], references: [id], onDelete: Cascade)
 
-  @@index([estado])
+  @@index([columnaId])
 }
