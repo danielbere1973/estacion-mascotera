@@ -40,14 +40,11 @@ export function EditarTarjetaModal({
 }) {
   const [ventaId, setVentaId] = useState(tarjeta.ventaId ? String(tarjeta.ventaId) : "");
 
-  const opcionesVenta = [
-    { value: "", label: "Sin venta asociada", search: "sin venta" },
-    ...ventas.map((v) => ({
-      value: String(v.id),
-      label: `#${v.id} · ${v.clienteNombre} · ${formatDate(v.fechaVenta)}`,
-      search: `${v.id} ${v.clienteNombre}`,
-    })),
-  ];
+  const opcionesVenta = ventas.map((v) => ({
+    value: String(v.id),
+    label: `#${v.id} · ${v.clienteNombre} · ${formatDate(v.fechaVenta)}`,
+    search: `${v.id} ${v.clienteNombre}`,
+  }));
 
   return (
     <div
@@ -104,7 +101,18 @@ export function EditarTarjetaModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Venta asociada</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Venta asociada</label>
+              {ventaId && (
+                <button
+                  type="button"
+                  onClick={() => setVentaId("")}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
             <Combobox
               options={opcionesVenta}
               value={ventaId}
