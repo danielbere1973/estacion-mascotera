@@ -26,6 +26,7 @@ model Usuario {
   ventasCobradas       Venta[]        @relation("VentaCobradaPor")
   ventas               Venta[]
   ventasVendidas       Venta[]        @relation("VentaVendidaPor")
+  tarjetasAsignadas    TarjetaTablero[]
 }
 
 model TipoProducto {
@@ -179,6 +180,7 @@ model Venta {
   cobradoPor        Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
   usuario           Usuario        @relation(fields: [usuarioId], references: [id])
   vendidoPor        Usuario?       @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
+  tarjetasTablero   TarjetaTablero[]
 
   @@index([fechaVenta])
   @@index([clienteId])
@@ -501,14 +503,20 @@ model ColumnaTablero {
 }
 
 model TarjetaTablero {
-  id        Int            @id @default(autoincrement())
-  titulo    String
-  notas     String?
-  columnaId Int
-  orden     Int            @default(0)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  columna   ColumnaTablero @relation(fields: [columnaId], references: [id], onDelete: Cascade)
+  id                Int            @id @default(autoincrement())
+  titulo            String
+  notas             String?
+  columnaId         Int
+  usuarioAsignadoId Int?
+  ventaId           Int?
+  orden             Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  columna           ColumnaTablero @relation(fields: [columnaId], references: [id], onDelete: Cascade)
+  usuarioAsignado   Usuario?       @relation(fields: [usuarioAsignadoId], references: [id], onDelete: SetNull)
+  venta             Venta?         @relation(fields: [ventaId], references: [id], onDelete: SetNull)
 
   @@index([columnaId])
+  @@index([usuarioAsignadoId])
+  @@index([ventaId])
 }
