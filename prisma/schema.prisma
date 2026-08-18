@@ -488,3 +488,27 @@ enum TipoGasto {
   EXCEPCIONAL
   MARKETING
 }
+
+enum EstadoTablero {
+  INGRESO_ORDEN_PENDIENTE
+  CARGAR_ORDEN_VENTA_EM_1
+  COMPRAR_MAYORISTA
+  LISTA_PARA_DESPACHO
+  DESPACHADA_EN_CAMINO
+  PEDIDO_ENTREGADO
+  CARGAR_ORDEN_VENTA_EM_2
+  FACTURACION
+  ORDEN_CERRADA_ARCHIVADA
+}
+
+model TarjetaTablero {
+  id        Int           @id @default(autoincrement())
+  titulo    String
+  notas     String?
+  estado    EstadoTablero @default(INGRESO_ORDEN_PENDIENTE)
+  orden     Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([estado])
+}
