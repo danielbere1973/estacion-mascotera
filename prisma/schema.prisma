@@ -34,22 +34,22 @@ model TipoProducto {
 }
 
 model Producto {
-  id                   Int                       @id @default(autoincrement())
-  skuInterno           String                    @unique
+  id                   Int                         @id @default(autoincrement())
+  skuInterno           String                      @unique
   nombre               String
   marca                String
   categoria            String
   presentacion         Presentacion
-  unidadMedida         UnidadMedida              @default(UNIDAD)
-  contenido            Decimal                   @default(1)
-  stockActual          Int                       @default(0)
-  precioCostoUnitario  Decimal                   @default(0)
-  margenPorcentaje     Decimal                   @default(30)
-  precioVenta          Decimal                   @default(0)
-  createdAt            DateTime                  @default(now())
-  updatedAt            DateTime                  @updatedAt
-  stockEnConsignacion  Int                       @default(0)
-  activo               Boolean                   @default(true)
+  unidadMedida         UnidadMedida                @default(UNIDAD)
+  contenido            Decimal                     @default(1)
+  stockActual          Int                         @default(0)
+  precioCostoUnitario  Decimal                     @default(0)
+  margenPorcentaje     Decimal                     @default(30)
+  precioVenta          Decimal                     @default(0)
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  stockEnConsignacion  Int                         @default(0)
+  activo               Boolean                     @default(true)
   compras              Compra[]
   detallesConsignacion DetalleConsignacion[]
   detalleVentas        DetalleVenta[]
@@ -96,32 +96,32 @@ model Compra {
 }
 
 model Cliente {
-  id                  Int                          @id @default(autoincrement())
-  nombre              String
-  apellido            String
-  direccion           String
-  telefono            String
-  email               String?
-  cuit                String?
-  dni                 String?
-  mascotas            Mascota[]
-  ordenesDropshipping OrdenDropshipping[]
+  id                   Int                         @id @default(autoincrement())
+  nombre               String
+  apellido             String
+  direccion            String
+  telefono             String
+  email                String?
+  cuit                 String?
+  dni                  String?
+  mascotas             Mascota[]
+  ordenesDropshipping  OrdenDropshipping[]
   productosRecurrentes ClienteProductoRecurrente[]
-  recordatorios       RecordatorioReposicion[]
-  ventas              Venta[]
+  recordatorios        RecordatorioReposicion[]
+  ventas               Venta[]
 }
 
 model Mascota {
-  id                  Int           @id @default(autoincrement())
-  clienteId           Int
-  tipo                TipoMascota
-  nombre              String
-  edad                String
-  tamanio             TamanioMascota
-  raza                String?
+  id                    Int            @id @default(autoincrement())
+  clienteId             Int
+  tipo                  TipoMascota
+  nombre                String
+  edad                  String
+  tamanio               TamanioMascota
+  raza                  String?
   condicionesEspeciales String?
-  creadoAt            DateTime      @default(now())
-  cliente             Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  creadoAt              DateTime       @default(now())
+  cliente               Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@index([clienteId])
 }
@@ -160,25 +160,25 @@ model RecordatorioReposicion {
 }
 
 model Venta {
-  id            Int            @id @default(autoincrement())
-  clienteId     Int
-  canalVenta    CanalVenta
-  medioPago     String
-  costoEnvio    Decimal        @default(0)
-  facturado           Boolean        @default(false)
-  numeroFactura       String?
-  fechaAcreditacion   DateTime?
-  fechaVenta          DateTime       @default(now())
-  esVentaInterna      Boolean        @default(false)
-  usuarioId     Int
-  vendidoPorId  Int?
-  cobradoPorId  Int?
-  costos        CostoVenta[]
-  detalles      DetalleVenta[]
-  cliente       Cliente        @relation(fields: [clienteId], references: [id])
-  cobradoPor    Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
-  usuario       Usuario        @relation(fields: [usuarioId], references: [id])
-  vendidoPor    Usuario?       @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
+  id                Int            @id @default(autoincrement())
+  clienteId         Int
+  canalVenta        CanalVenta
+  medioPago         String
+  costoEnvio        Decimal        @default(0)
+  facturado         Boolean        @default(false)
+  numeroFactura     String?
+  fechaAcreditacion DateTime?
+  fechaVenta        DateTime       @default(now())
+  esVentaInterna    Boolean        @default(false)
+  usuarioId         Int
+  vendidoPorId      Int?
+  cobradoPorId      Int?
+  costos            CostoVenta[]
+  detalles          DetalleVenta[]
+  cliente           Cliente        @relation(fields: [clienteId], references: [id])
+  cobradoPor        Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
+  usuario           Usuario        @relation(fields: [usuarioId], references: [id])
+  vendidoPor        Usuario?       @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
 
   @@index([fechaVenta])
   @@index([clienteId])
@@ -392,6 +392,15 @@ model OrdenDropshipping {
 
   @@index([socioId])
   @@index([estado])
+}
+
+model TiendanubeConfig {
+  id          Int      @id @default(autoincrement())
+  storeId     String   @unique
+  accessToken String
+  scope       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum RolUsuario {
