@@ -488,3 +488,27 @@ enum TipoGasto {
   EXCEPCIONAL
   MARKETING
 }
+
+model ColumnaTablero {
+  id        Int              @id @default(autoincrement())
+  nombre    String
+  color     String           @default("#2563EB")
+  orden     Int              @default(0)
+  createdAt DateTime         @default(now())
+  tarjetas  TarjetaTablero[]
+
+  @@index([orden])
+}
+
+model TarjetaTablero {
+  id        Int            @id @default(autoincrement())
+  titulo    String
+  notas     String?
+  columnaId Int
+  orden     Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  columna   ColumnaTablero @relation(fields: [columnaId], references: [id], onDelete: Cascade)
+
+  @@index([columnaId])
+}
