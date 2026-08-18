@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { crearColumna, crearTarjeta, eliminarTarjeta, moverTarjeta, reordenarColumnas } from "./actions";
+import {
+  crearColumna,
+  crearTarjeta,
+  editarTarjeta,
+  eliminarColumna,
+  eliminarTarjeta,
+  moverTarjeta,
+  reordenarColumnas,
+} from "./actions";
 
 interface Columna {
   id: number;
@@ -23,6 +31,7 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
   const [dragOverColId, setDragOverColId] = useState<number | null>(null);
   const [formTarjetaAbierto, setFormTarjetaAbierto] = useState(false);
   const [formColumnaAbierto, setFormColumnaAbierto] = useState(false);
+  const [tarjetaEditando, setTarjetaEditando] = useState<Tarjeta | null>(null);
   const [, startTransition] = useTransition();
 
   function onDropEnColumna(columnaDestinoId: number) {
@@ -47,6 +56,22 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
         reordenarColumnas(sinArrastrada);
       });
     }
+  }
+
+  function onEliminarColumna(col: Columna) {
+    if (columnas.length <= 1) {
+      window.alert("No podés eliminar la última columna del tablero.");
+      return;
+    }
+    const cantidadTarjetas = tarjetas.filter((t) => t.columnaId === col.id).length;
+    const mensaje =
+      cantidadTarjetas > 0
+        ? `¿Desea eliminar la columna "${col.nombre}"? También se van a eliminar las ${cantidadTarjetas} tarjeta(s) que tiene dentro.`
+        : `¿Desea eliminar la columna "${col.nombre}"?`;
+    if (!window.confirm(mensaje)) return;
+    startTransition(() => {
+      eliminarColumna(col.id);
+    });
   }
 
   return (
@@ -177,13 +202,26 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
                 }}
                 onDragEnd={() => setDragItem(null)}
                 style={{ backgroundColor: col.color }}
-                className="flex cursor-grab items-center justify-between rounded-t-xl px-3 py-2 active:cursor-grabbing"
+                className="flex cursor-grab items-center justify-between gap-1 rounded-t-xl px-3 py-2 active:cursor-grabbing"
                 title="Arrastrá para reordenar la columna"
               >
-                <span className="text-xs font-semibold text-white">{col.nombre}</span>
-                <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-medium text-white">
-                  {tarjetasCol.length}
-                </span>
+                <span className="min-w-0 truncate text-xs font-semibold text-white">{col.nombre}</span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-medium text-white">
+                    {tarjetasCol.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEliminarColumna(col);
+                    }}
+                    title="Eliminar columna"
+                    className="rounded px-1.5 text-sm font-bold text-white/80 hover:bg-white/20 hover:text-white"
+                  >
+                    −
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 space-y-2 overflow-y-auto p-2">
@@ -193,7 +231,8 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
                     draggable
                     onDragStart={() => setDragItem({ type: "card", id: t.id })}
                     onDragEnd={() => setDragItem(null)}
-                    className={`group cursor-grab rounded-lg border border-gray-200 bg-white p-3 text-sm shadow-sm active:cursor-grabbing ${
+                    onClick={() => setTarjetaEditando(t)}
+                    className={`group cursor-pointer rounded-lg border border-gray-200 bg-white p-3 text-sm shadow-sm hover:border-blue-300 ${
                       dragItem?.type === "card" && dragItem.id === t.id ? "opacity-50" : ""
                     }`}
                   >
@@ -201,6 +240,7 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
                       <p className="font-medium text-gray-900">{t.titulo}</p>
                       <form
                         action={eliminarTarjeta}
+                        onClick={(e) => e.stopPropagation()}
                         onSubmit={(e) => {
                           if (!window.confirm("¿Eliminar esta tarjeta?")) e.preventDefault();
                         }}
@@ -226,6 +266,63 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
           );
         })}
       </div>
+
+      {tarjetaEditando && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setTarjetaEditando(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">Editar tarjeta</h2>
+            <form
+              action={(fd) => {
+                editarTarjeta(fd);
+                setTarjetaEditando(null);
+              }}
+              className="space-y-3"
+            >
+              <input type="hidden" name="id" value={tarjetaEditando.id} />
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Título</label>
+                <input
+                  name="titulo"
+                  required
+                  autoFocus
+                  defaultValue={tarjetaEditando.titulo}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Notas</label>
+                <textarea
+                  name="notas"
+                  rows={4}
+                  defaultValue={tarjetaEditando.notas ?? ""}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTarjetaEditando(null)}
+                  className="rounded-md px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

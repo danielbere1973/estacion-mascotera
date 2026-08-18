@@ -99,3 +99,28 @@ export async function reordenarColumnas(idsEnOrden: number[]) {
 
   revalidatePath("/tablero-control");
 }
+
+export async function eliminarColumna(id: number) {
+  await requireAuth();
+
+  // onDelete: Cascade en el schema borra también las tarjetas de esa columna.
+  await prisma.columnaTablero.delete({ where: { id } });
+
+  revalidatePath("/tablero-control");
+}
+
+export async function editarTarjeta(formData: FormData) {
+  await requireAuth();
+
+  const id = Number(formData.get("id"));
+  const titulo = String(formData.get("titulo") ?? "").trim();
+  const notas = String(formData.get("notas") ?? "").trim();
+  if (!id || !titulo) return;
+
+  await prisma.tarjetaTablero.update({
+    where: { id },
+    data: { titulo, notas: notas || null },
+  });
+
+  revalidatePath("/tablero-control");
+}
