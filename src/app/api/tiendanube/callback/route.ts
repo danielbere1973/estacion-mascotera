@@ -26,6 +26,10 @@ export async function GET(req: NextRequest) {
 
     const data = (await res.json()) as { access_token: string; user_id: number; scope: string };
 
+    if (!data.access_token || !data.user_id) {
+      return NextResponse.json({ error: "Respuesta inesperada de Tiendanube", data }, { status: 502 });
+    }
+
     await prisma.tiendanubeConfig.upsert({
       where: { storeId: String(data.user_id) },
       create: {
