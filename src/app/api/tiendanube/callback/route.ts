@@ -27,7 +27,21 @@ export async function GET(req: NextRequest) {
     const data = (await res.json()) as { access_token: string; user_id: number; scope: string };
 
     if (!data.access_token || !data.user_id) {
-      return NextResponse.json({ error: "Respuesta inesperada de Tiendanube", data }, { status: 502 });
+      const clientId = process.env.TIENDANUBE_CLIENT_ID ?? "";
+      const clientSecret = process.env.TIENDANUBE_CLIENT_SECRET ?? "";
+      return NextResponse.json(
+        {
+          error: "Respuesta inesperada de Tiendanube",
+          data,
+          debug: {
+            clientIdLen: clientId.length,
+            clientIdLast4: clientId.slice(-4),
+            clientSecretLen: clientSecret.length,
+            clientSecretLast4: clientSecret.slice(-4),
+          },
+        },
+        { status: 502 },
+      );
     }
 
     await prisma.tiendanubeConfig.upsert({
