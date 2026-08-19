@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Combobox } from "@/components/combobox";
 import {
   crearColumna,
   crearTarjeta,
@@ -69,7 +70,14 @@ export function KanbanBoard({
   const [formColumnaAbierto, setFormColumnaAbierto] = useState(false);
   const [tarjetaEditando, setTarjetaEditando] = useState<Tarjeta | null>(null);
   const [columnaEditandoId, setColumnaEditandoId] = useState<number | null>(null);
+  const [clienteIdNueva, setClienteIdNueva] = useState("");
   const [, startTransition] = useTransition();
+
+  const opcionesCliente = clientes.map((c) => ({
+    value: String(c.id),
+    label: `${c.nombre} ${c.apellido}`,
+    search: `${c.nombre} ${c.apellido}`,
+  }));
 
   function guardarNombreColumna(col: Columna, nombre: string) {
     setColumnaEditandoId(null);
@@ -181,6 +189,7 @@ export function KanbanBoard({
           action={(fd) => {
             crearTarjeta(fd);
             setFormTarjetaAbierto(false);
+            setClienteIdNueva("");
           }}
           className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-end"
         >
@@ -192,6 +201,16 @@ export function KanbanBoard({
               autoFocus
               placeholder="Ej: Orden #123 - Juan Pérez"
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="flex-1 space-y-1">
+            <label className="text-sm font-medium text-gray-700">Cliente (opcional)</label>
+            <input type="hidden" name="clienteId" value={clienteIdNueva} />
+            <Combobox
+              options={opcionesCliente}
+              value={clienteIdNueva}
+              onSelect={setClienteIdNueva}
+              placeholder="Buscar cliente..."
             />
           </div>
           <div className="flex-1 space-y-1">
@@ -210,7 +229,10 @@ export function KanbanBoard({
             </button>
             <button
               type="button"
-              onClick={() => setFormTarjetaAbierto(false)}
+              onClick={() => {
+                setFormTarjetaAbierto(false);
+                setClienteIdNueva("");
+              }}
               className="rounded-md px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
             >
               Cancelar
