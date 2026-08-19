@@ -11,6 +11,7 @@ export async function crearTarjeta(formData: FormData) {
 
   const titulo = String(formData.get("titulo") ?? "").trim();
   const notas = String(formData.get("notas") ?? "").trim();
+  const clienteIdRaw = String(formData.get("clienteId") ?? "");
   if (!titulo) return;
 
   const primeraColumna = await prisma.columnaTablero.findFirst({
@@ -28,6 +29,7 @@ export async function crearTarjeta(formData: FormData) {
     data: {
       titulo,
       notas: notas || null,
+      clienteId: clienteIdRaw ? Number(clienteIdRaw) : null,
       columnaId: primeraColumna.id,
       orden: (ultima?.orden ?? 0) + 1,
     },
