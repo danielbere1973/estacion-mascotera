@@ -28,7 +28,7 @@ async function getOCrearColumnas() {
 }
 
 export default async function TableroControlPage() {
-  const [columnas, tarjetas, usuarios, ventas] = await Promise.all([
+  const [columnas, tarjetas, usuarios, ventas, clientes] = await Promise.all([
     getOCrearColumnas(),
     prisma.tarjetaTablero.findMany({
       orderBy: { orden: "asc" },
@@ -39,6 +39,7 @@ export default async function TableroControlPage() {
         columnaId: true,
         usuarioAsignadoId: true,
         ventaId: true,
+        clienteId: true,
         usuarioAsignado: { select: { nombre: true, apellido: true } },
       },
     }),
@@ -55,6 +56,10 @@ export default async function TableroControlPage() {
         cliente: { select: { nombre: true, apellido: true } },
       },
     }),
+    prisma.cliente.findMany({
+      orderBy: { nombre: "asc" },
+      select: { id: true, nombre: true, apellido: true },
+    }),
   ]);
 
   const ventasOpciones = ventas.map((v) => ({
@@ -69,6 +74,7 @@ export default async function TableroControlPage() {
       tarjetas={tarjetas}
       usuarios={usuarios}
       ventas={ventasOpciones}
+      clientes={clientes}
     />
   );
 }

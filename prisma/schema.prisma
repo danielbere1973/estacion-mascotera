@@ -110,6 +110,7 @@ model Cliente {
   productosRecurrentes ClienteProductoRecurrente[]
   recordatorios        RecordatorioReposicion[]
   ventas               Venta[]
+  tarjetasTablero      TarjetaTablero[]
 }
 
 model Mascota {
@@ -509,14 +510,17 @@ model TarjetaTablero {
   columnaId         Int
   usuarioAsignadoId Int?
   ventaId           Int?
+  clienteId         Int?
   orden             Int            @default(0)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   columna           ColumnaTablero @relation(fields: [columnaId], references: [id], onDelete: Cascade)
   usuarioAsignado   Usuario?       @relation(fields: [usuarioAsignadoId], references: [id], onDelete: SetNull)
   venta             Venta?         @relation(fields: [ventaId], references: [id], onDelete: SetNull)
+  cliente           Cliente?       @relation(fields: [clienteId], references: [id], onDelete: SetNull)
 
   @@index([columnaId])
   @@index([usuarioAsignadoId])
   @@index([ventaId])
+  @@index([clienteId])
 }
