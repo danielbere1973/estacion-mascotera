@@ -27,6 +27,7 @@ interface Tarjeta {
   ventaId: number | null;
   clienteId: number | null;
   usuarioAsignado: { nombre: string; apellido: string } | null;
+  cliente: { nombre: string; apellido: string } | null;
 }
 
 interface Usuario {
@@ -325,6 +326,11 @@ export function KanbanBoard({
                         </button>
                       </form>
                     </div>
+                    {t.cliente && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        🧑 {t.cliente.nombre} {t.cliente.apellido}
+                      </p>
+                    )}
                     {t.usuarioAsignado && (
                       <p className="mt-1 text-xs text-gray-500">
                         👤 {t.usuarioAsignado.nombre} {t.usuarioAsignado.apellido}
