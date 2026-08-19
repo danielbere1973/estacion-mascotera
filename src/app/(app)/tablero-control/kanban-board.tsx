@@ -72,11 +72,15 @@ export function KanbanBoard({
   const [columnaEditandoId, setColumnaEditandoId] = useState<number | null>(null);
   const [clienteIdNueva, setClienteIdNueva] = useState("");
   const [filtroClienteId, setFiltroClienteId] = useState("");
+  const [filtroId, setFiltroId] = useState("");
   const [, startTransition] = useTransition();
 
-  const tarjetasVisibles = filtroClienteId
-    ? tarjetas.filter((t) => String(t.clienteId) === filtroClienteId)
-    : tarjetas;
+  const filtroIdLimpio = filtroId.trim();
+  const tarjetasVisibles = tarjetas.filter((t) => {
+    if (filtroClienteId && String(t.clienteId) !== filtroClienteId) return false;
+    if (filtroIdLimpio && !String(t.id).includes(filtroIdLimpio)) return false;
+    return true;
+  });
 
   const opcionesCliente = clientes.map((c) => ({
     value: String(c.id),
@@ -152,6 +156,13 @@ export function KanbanBoard({
                 </option>
               ))}
             </select>
+            <input
+              value={filtroId}
+              onChange={(e) => setFiltroId(e.target.value)}
+              placeholder="Task ID..."
+              inputMode="numeric"
+              className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
           </div>
           <button
             onClick={() => setFormTarjetaAbierto(true)}
@@ -345,10 +356,17 @@ export function KanbanBoard({
                     onDragStart={() => setDragItem({ type: "card", id: t.id })}
                     onDragEnd={() => setDragItem(null)}
                     onClick={() => setTarjetaEditando(t)}
-                    className={`group cursor-pointer rounded-lg border border-gray-200 bg-white p-3 text-sm shadow-sm hover:border-blue-300 ${
+                    className={`group relative cursor-pointer rounded-lg border border-gray-200 bg-white p-3 pr-7 text-sm shadow-sm hover:border-blue-300 ${
                       dragItem?.type === "card" && dragItem.id === t.id ? "opacity-50" : ""
                     }`}
                   >
+                    <span
+                      style={{ backgroundColor: col.color }}
+                      title={`Task ID: ${t.id}`}
+                      className="absolute right-2 top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                    >
+                      {t.id}
+                    </span>
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium text-gray-900">{t.titulo}</p>
                       <form
