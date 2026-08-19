@@ -72,7 +72,10 @@ export function EditarTarjetaModal({
         className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Editar tarjeta</h2>
+        <div className="mb-4 flex items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-gray-900">Editar tarjeta</h2>
+          <span className="text-xs text-gray-400">Task ID: {tarjeta.id}</span>
+        </div>
         <form
           action={(fd) => {
             editarTarjeta(fd);

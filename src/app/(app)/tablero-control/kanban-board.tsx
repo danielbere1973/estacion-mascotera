@@ -351,22 +351,31 @@ export function KanbanBoard({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium text-gray-900">{t.titulo}</p>
-                      <form
-                        action={eliminarTarjeta}
-                        onClick={(e) => e.stopPropagation()}
-                        onSubmit={(e) => {
-                          if (!window.confirm("¿Eliminar esta tarjeta?")) e.preventDefault();
-                        }}
-                      >
-                        <input type="hidden" name="id" value={t.id} />
-                        <button
-                          type="submit"
-                          className="opacity-0 transition-opacity group-hover:opacity-100 text-gray-400 hover:text-red-600"
-                          title="Eliminar"
+                      <div className="flex shrink-0 items-center gap-1">
+                        <span
+                          style={{ backgroundColor: col.color }}
+                          title={`Task ID: ${t.id}`}
+                          className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
                         >
-                          ✕
-                        </button>
-                      </form>
+                          {t.id}
+                        </span>
+                        <form
+                          action={eliminarTarjeta}
+                          onClick={(e) => e.stopPropagation()}
+                          onSubmit={(e) => {
+                            if (!window.confirm("¿Eliminar esta tarjeta?")) e.preventDefault();
+                          }}
+                        >
+                          <input type="hidden" name="id" value={t.id} />
+                          <button
+                            type="submit"
+                            className="opacity-0 transition-opacity group-hover:opacity-100 text-gray-400 hover:text-red-600"
+                            title="Eliminar"
+                          >
+                            ✕
+                          </button>
+                        </form>
+                      </div>
                     </div>
                     {t.cliente && (
                       <p className="mt-1 text-xs text-gray-500">
