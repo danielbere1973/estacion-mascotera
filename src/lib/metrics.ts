@@ -130,22 +130,23 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   }));
 
   const totalGastosFijosDelPeriodo = gastosPorCategoria.filter((g) => g.tipoGasto === "FIJO").reduce((acc, g) => acc + g.monto, 0);
-  const totalGastosVariables = gastosPorCategoria.filter((g) => g.tipoGasto === "VARIABLE" || g.tipoGasto === "MARKETING").reduce((acc, g) => acc + g.monto, 0);
+  const totalGastosVariables = gastosPorCategoria.filter((g) => g.tipoGasto === "VARIABLE").reduce((acc, g) => acc + g.monto, 0);
+  const totalGastosMarketing = gastosPorCategoria.filter((g) => g.tipoGasto === "MARKETING").reduce((acc, g) => acc + g.monto, 0);
   const totalGastosExcepcionales = gastosPorCategoria.filter((g) => g.tipoGasto === "EXCEPCIONAL").reduce((acc, g) => acc + g.monto, 0);
-  const totalGastos = totalGastosFijosDelPeriodo + totalGastosVariables + totalGastosExcepcionales;
+  const totalGastos = totalGastosFijosDelPeriodo + totalGastosVariables + totalGastosMarketing + totalGastosExcepcionales;
 
   const totalGastado = totalComprasMercaderia + totalGastos;
 
-  // Rentabilidad antes de descontar gastos fijos (operativa pura)
+  // Rentabilidad operativa: venta - costo de mercadería - comisiones - envío (sin gastos de estructura)
   const rentabilidadSinFijos =
     totalFacturado -
     costoMercaderiaVendida -
     costosEnvioVentas -
-    costosCobranzaVentas -
-    totalGastosVariables;
+    costosCobranzaVentas;
 
+  // Rentabilidad neta: operativa - gastos fijos, variables, marketing y excepcionales del período
   const rentabilidadNeta =
-    rentabilidadSinFijos - totalGastosFijosDelPeriodo;
+    rentabilidadSinFijos - totalGastosFijosDelPeriodo - totalGastosVariables - totalGastosMarketing - totalGastosExcepcionales;
 
   // Costo promedio ponderado por producto a partir de las compras reales.
   // Así el valor del stock no cambia cuando se actualiza la lista de precios.
@@ -191,6 +192,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     rentabilidadSinFijos,
     totalGastosFijosDelPeriodo,
     totalGastosVariables,
+    totalGastosMarketing,
     totalGastosExcepcionales,
     valorStock,
     costoMercaderiaVendida,
