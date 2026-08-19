@@ -39,6 +39,7 @@ export default async function TableroControlPage() {
         columnaId: true,
         usuarioAsignadoId: true,
         ventaId: true,
+        usuarioAsignado: { select: { nombre: true, apellido: true } },
       },
     }),
     prisma.usuario.findMany({
