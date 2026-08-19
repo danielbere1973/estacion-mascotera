@@ -225,7 +225,7 @@ export function EditarTarjetaModal({
                       <th className="px-2 py-1 text-right">Subtotal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-gray-100 text-[10px]">
                     {productos.map((p, i) => (
                       <tr key={i}>
                         <td className="whitespace-nowrap px-2 py-1 font-mono text-gray-500">{p.sku}</td>
