@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Combobox } from "@/components/combobox";
-import { formatDate } from "@/lib/format";
-import { editarTarjeta } from "./actions";
+import { formatCurrency, formatDate } from "@/lib/format";
+import { editarTarjeta, obtenerProductosVenta } from "./actions";
+
+interface ProductoVenta {
+  sku: string;
+  descripcion: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+}
 
 interface Usuario {
   id: number;
@@ -50,6 +58,27 @@ export function EditarTarjetaModal({
 }) {
   const [ventaId, setVentaId] = useState(tarjeta.ventaId ? String(tarjeta.ventaId) : "");
   const [clienteId, setClienteId] = useState(tarjeta.clienteId ? String(tarjeta.clienteId) : "");
+  const [productos, setProductos] = useState<ProductoVenta[]>([]);
+  const [cargandoProductos, setCargandoProductos] = useState(false);
+
+  useEffect(() => {
+    if (!ventaId) return;
+    let cancelado = false;
+    Promise.resolve()
+      .then(() => {
+        if (!cancelado) setCargandoProductos(true);
+        return obtenerProductosVenta(Number(ventaId));
+      })
+      .then((r) => {
+        if (!cancelado) setProductos(r);
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoProductos(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [ventaId]);
 
   const opcionesVenta = ventas.map((v) => ({
     value: String(v.id),
@@ -171,6 +200,49 @@ export function EditarTarjetaModal({
               onSelect={setVentaId}
               placeholder="Buscar venta por cliente..."
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Productos</label>
+            {!ventaId && (
+              <p className="text-xs text-gray-400">Seleccioná una venta para ver sus productos.</p>
+            )}
+            {ventaId && cargandoProductos && (
+              <p className="text-xs text-gray-400">Cargando productos...</p>
+            )}
+            {ventaId && !cargandoProductos && productos.length === 0 && (
+              <p className="text-xs text-gray-400">Esa venta no tiene productos cargados.</p>
+            )}
+            {ventaId && !cargandoProductos && productos.length > 0 && (
+              <div className="overflow-x-auto rounded-md border border-gray-200">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 text-left text-[10px] uppercase text-gray-400">
+                    <tr>
+                      <th className="px-2 py-1">SKU</th>
+                      <th className="px-2 py-1">Descripción</th>
+                      <th className="px-2 py-1 text-right">Cant.</th>
+                      <th className="px-2 py-1 text-right">Precio Unit.</th>
+                      <th className="px-2 py-1 text-right">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {productos.map((p, i) => (
+                      <tr key={i}>
+                        <td className="whitespace-nowrap px-2 py-1 font-mono text-gray-500">{p.sku}</td>
+                        <td className="px-2 py-1 text-gray-700">{p.descripcion}</td>
+                        <td className="whitespace-nowrap px-2 py-1 text-right text-gray-700">{p.cantidad}</td>
+                        <td className="whitespace-nowrap px-2 py-1 text-right text-gray-700">
+                          {formatCurrency(p.precioUnitario)}
+                        </td>
+                        <td className="whitespace-nowrap px-2 py-1 text-right font-medium text-gray-800">
+                          {formatCurrency(p.subtotal)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">

@@ -133,6 +133,35 @@ export async function editarColumna(id: number, nombre: string) {
   revalidatePath("/tablero-control");
 }
 
+export async function obtenerProductosVenta(ventaId: number) {
+  await requireAuth();
+
+  if (!ventaId) return [];
+
+  const detalles = await prisma.detalleVenta.findMany({
+    where: { ventaId },
+    select: {
+      cantidad: true,
+      precioVentaUnitario: true,
+      descuentoPorcentaje: true,
+      producto: { select: { skuInterno: true, nombre: true } },
+    },
+  });
+
+  return detalles.map((d) => {
+    const precioUnitario = Number(d.precioVentaUnitario);
+    const descuentoPorcentaje = Number(d.descuentoPorcentaje ?? 0);
+    const subtotal = d.cantidad * precioUnitario * (1 - descuentoPorcentaje / 100);
+    return {
+      sku: d.producto.skuInterno,
+      descripcion: d.producto.nombre,
+      cantidad: d.cantidad,
+      precioUnitario,
+      subtotal,
+    };
+  });
+}
+
 export async function editarTarjeta(formData: FormData) {
   await requireAuth();
 
