@@ -17,12 +17,19 @@ interface VentaOpcion {
   clienteNombre: string;
 }
 
+interface ClienteOpcion {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
+
 interface Tarjeta {
   id: number;
   titulo: string;
   notas: string | null;
   usuarioAsignadoId: number | null;
   ventaId: number | null;
+  clienteId: number | null;
 }
 
 export function EditarTarjetaModal({
@@ -30,20 +37,29 @@ export function EditarTarjetaModal({
   columnaNombre,
   usuarios,
   ventas,
+  clientes,
   onClose,
 }: {
   tarjeta: Tarjeta;
   columnaNombre: string;
   usuarios: Usuario[];
   ventas: VentaOpcion[];
+  clientes: ClienteOpcion[];
   onClose: () => void;
 }) {
   const [ventaId, setVentaId] = useState(tarjeta.ventaId ? String(tarjeta.ventaId) : "");
+  const [clienteId, setClienteId] = useState(tarjeta.clienteId ? String(tarjeta.clienteId) : "");
 
   const opcionesVenta = ventas.map((v) => ({
     value: String(v.id),
     label: `#${v.id} · ${v.clienteNombre} · ${formatDate(v.fechaVenta)}`,
     search: `${v.id} ${v.clienteNombre}`,
+  }));
+
+  const opcionesCliente = clientes.map((c) => ({
+    value: String(c.id),
+    label: `${c.nombre} ${c.apellido}`,
+    search: `${c.nombre} ${c.apellido}`,
   }));
 
   return (
@@ -65,6 +81,7 @@ export function EditarTarjetaModal({
         >
           <input type="hidden" name="id" value={tarjeta.id} />
           <input type="hidden" name="ventaId" value={ventaId} />
+          <input type="hidden" name="clienteId" value={clienteId} />
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Título</label>
@@ -82,6 +99,27 @@ export function EditarTarjetaModal({
             <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
               {columnaNombre}
             </p>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Cliente</label>
+              {clienteId && (
+                <button
+                  type="button"
+                  onClick={() => setClienteId("")}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+            <Combobox
+              options={opcionesCliente}
+              value={clienteId}
+              onSelect={setClienteId}
+              placeholder="Buscar cliente..."
+            />
           </div>
 
           <div className="space-y-1">

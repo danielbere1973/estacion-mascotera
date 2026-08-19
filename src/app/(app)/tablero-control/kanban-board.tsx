@@ -25,6 +25,7 @@ interface Tarjeta {
   columnaId: number;
   usuarioAsignadoId: number | null;
   ventaId: number | null;
+  clienteId: number | null;
   usuarioAsignado: { nombre: string; apellido: string } | null;
 }
 
@@ -40,6 +41,12 @@ interface VentaOpcion {
   clienteNombre: string;
 }
 
+interface ClienteOpcion {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
+
 type DragItem = { type: "card" | "column"; id: number } | null;
 
 export function KanbanBoard({
@@ -47,11 +54,13 @@ export function KanbanBoard({
   tarjetas,
   usuarios,
   ventas,
+  clientes,
 }: {
   columnas: Columna[];
   tarjetas: Tarjeta[];
   usuarios: Usuario[];
   ventas: VentaOpcion[];
+  clientes: ClienteOpcion[];
 }) {
   const [dragItem, setDragItem] = useState<DragItem>(null);
   const [dragOverColId, setDragOverColId] = useState<number | null>(null);
@@ -339,6 +348,7 @@ export function KanbanBoard({
           columnaNombre={columnas.find((c) => c.id === tarjetaEditando.columnaId)?.nombre ?? ""}
           usuarios={usuarios}
           ventas={ventas}
+          clientes={clientes}
           onClose={() => setTarjetaEditando(null)}
         />
       )}

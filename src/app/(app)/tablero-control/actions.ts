@@ -139,6 +139,7 @@ export async function editarTarjeta(formData: FormData) {
   const notas = String(formData.get("notas") ?? "").trim();
   const usuarioAsignadoIdRaw = String(formData.get("usuarioAsignadoId") ?? "");
   const ventaIdRaw = String(formData.get("ventaId") ?? "");
+  const clienteIdRaw = String(formData.get("clienteId") ?? "");
   if (!id || !titulo) return;
 
   await prisma.tarjetaTablero.update({
@@ -148,6 +149,7 @@ export async function editarTarjeta(formData: FormData) {
       notas: notas || null,
       usuarioAsignadoId: usuarioAsignadoIdRaw ? Number(usuarioAsignadoIdRaw) : null,
       ventaId: ventaIdRaw ? Number(ventaIdRaw) : null,
+      clienteId: clienteIdRaw ? Number(clienteIdRaw) : null,
     },
   });
 
