@@ -38,14 +38,14 @@ export default async function DashboardPage({
     {
       label: "Rentabilidad Operativa",
       value: metrics.rentabilidadSinFijos,
-      hint: "Ingresos − costo mercadería − envíos − gastos variables (sin gastos fijos)",
+      hint: "Ingresos − costo mercadería − comisiones − envíos (sin gastos de estructura)",
       highlight: true,
       pct: pctOperativa,
     },
     {
       label: "Rentabilidad Neta",
       value: metrics.rentabilidadNeta,
-      hint: "Rentabilidad operativa − gastos fijos del período",
+      hint: "Rentabilidad operativa − gastos fijos, variables, marketing y excepcionales",
       highlight: true,
       pct: pctNeta,
     },
@@ -58,7 +58,7 @@ export default async function DashboardPage({
     {
       label: "Gastos Excepcionales",
       value: metrics.totalGastosExcepcionales,
-      hint: "Pagos únicos o infrecuentes — no impactan ninguna rentabilidad",
+      hint: "Pagos únicos o infrecuentes — impactan rentabilidad neta pero no operativa",
       pct: null as number | null,
     },
     {
