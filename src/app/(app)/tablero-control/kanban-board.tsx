@@ -5,12 +5,12 @@ import {
   crearColumna,
   crearTarjeta,
   editarColumna,
-  editarTarjeta,
   eliminarColumna,
   eliminarTarjeta,
   moverTarjeta,
   reordenarColumnas,
 } from "./actions";
+import { EditarTarjetaModal } from "./editar-tarjeta-modal";
 
 interface Columna {
   id: number;
@@ -23,11 +23,35 @@ interface Tarjeta {
   titulo: string;
   notas: string | null;
   columnaId: number;
+  usuarioAsignadoId: number | null;
+  ventaId: number | null;
+}
+
+interface Usuario {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
+
+interface VentaOpcion {
+  id: number;
+  fechaVenta: string | Date;
+  clienteNombre: string;
 }
 
 type DragItem = { type: "card" | "column"; id: number } | null;
 
-export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarjetas: Tarjeta[] }) {
+export function KanbanBoard({
+  columnas,
+  tarjetas,
+  usuarios,
+  ventas,
+}: {
+  columnas: Columna[];
+  tarjetas: Tarjeta[];
+  usuarios: Usuario[];
+  ventas: VentaOpcion[];
+}) {
   const [dragItem, setDragItem] = useState<DragItem>(null);
   const [dragOverColId, setDragOverColId] = useState<number | null>(null);
   const [formTarjetaAbierto, setFormTarjetaAbierto] = useState(false);
@@ -304,60 +328,14 @@ export function KanbanBoard({ columnas, tarjetas }: { columnas: Columna[]; tarje
       </div>
 
       {tarjetaEditando && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setTarjetaEditando(null)}
-        >
-          <div
-            className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">Editar tarjeta</h2>
-            <form
-              action={(fd) => {
-                editarTarjeta(fd);
-                setTarjetaEditando(null);
-              }}
-              className="space-y-3"
-            >
-              <input type="hidden" name="id" value={tarjetaEditando.id} />
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Título</label>
-                <input
-                  name="titulo"
-                  required
-                  autoFocus
-                  defaultValue={tarjetaEditando.titulo}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Notas</label>
-                <textarea
-                  name="notas"
-                  rows={4}
-                  defaultValue={tarjetaEditando.notas ?? ""}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setTarjetaEditando(null)}
-                  className="rounded-md px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  Guardar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <EditarTarjetaModal
+          key={tarjetaEditando.id}
+          tarjeta={tarjetaEditando}
+          columnaNombre={columnas.find((c) => c.id === tarjetaEditando.columnaId)?.nombre ?? ""}
+          usuarios={usuarios}
+          ventas={ventas}
+          onClose={() => setTarjetaEditando(null)}
+        />
       )}
     </div>
   );

@@ -28,11 +28,46 @@ async function getOCrearColumnas() {
 }
 
 export default async function TableroControlPage() {
-  const columnas = await getOCrearColumnas();
-  const tarjetas = await prisma.tarjetaTablero.findMany({
-    orderBy: { orden: "asc" },
-    select: { id: true, titulo: true, notas: true, columnaId: true },
-  });
+  const [columnas, tarjetas, usuarios, ventas] = await Promise.all([
+    getOCrearColumnas(),
+    prisma.tarjetaTablero.findMany({
+      orderBy: { orden: "asc" },
+      select: {
+        id: true,
+        titulo: true,
+        notas: true,
+        columnaId: true,
+        usuarioAsignadoId: true,
+        ventaId: true,
+      },
+    }),
+    prisma.usuario.findMany({
+      where: { activo: true },
+      orderBy: { nombre: "asc" },
+      select: { id: true, nombre: true, apellido: true },
+    }),
+    prisma.venta.findMany({
+      orderBy: { fechaVenta: "desc" },
+      select: {
+        id: true,
+        fechaVenta: true,
+        cliente: { select: { nombre: true, apellido: true } },
+      },
+    }),
+  ]);
 
-  return <KanbanBoard columnas={columnas} tarjetas={tarjetas} />;
+  const ventasOpciones = ventas.map((v) => ({
+    id: v.id,
+    fechaVenta: v.fechaVenta,
+    clienteNombre: `${v.cliente.nombre} ${v.cliente.apellido}`,
+  }));
+
+  return (
+    <KanbanBoard
+      columnas={columnas}
+      tarjetas={tarjetas}
+      usuarios={usuarios}
+      ventas={ventasOpciones}
+    />
+  );
 }
