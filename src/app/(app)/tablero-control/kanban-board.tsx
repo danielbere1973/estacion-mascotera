@@ -71,7 +71,12 @@ export function KanbanBoard({
   const [tarjetaEditando, setTarjetaEditando] = useState<Tarjeta | null>(null);
   const [columnaEditandoId, setColumnaEditandoId] = useState<number | null>(null);
   const [clienteIdNueva, setClienteIdNueva] = useState("");
+  const [filtroClienteId, setFiltroClienteId] = useState("");
   const [, startTransition] = useTransition();
+
+  const tarjetasVisibles = filtroClienteId
+    ? tarjetas.filter((t) => String(t.clienteId) === filtroClienteId)
+    : tarjetas;
 
   const opcionesCliente = clientes.map((c) => ({
     value: String(c.id),
@@ -130,9 +135,24 @@ export function KanbanBoard({
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-gray-900">Tablero de Control</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Filtros:</span>
+            <select
+              value={filtroClienteId}
+              onChange={(e) => setFiltroClienteId(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre} {c.apellido}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={() => setFormTarjetaAbierto(true)}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
@@ -243,7 +263,7 @@ export function KanbanBoard({
 
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2">
         {columnas.map((col) => {
-          const tarjetasCol = tarjetas.filter((t) => t.columnaId === col.id);
+          const tarjetasCol = tarjetasVisibles.filter((t) => t.columnaId === col.id);
           const isOver = dragOverColId === col.id;
           const isDraggingThisCol = dragItem?.type === "column" && dragItem.id === col.id;
           return (
