@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Combobox } from "@/components/combobox";
 import { formatDate } from "@/lib/format";
 import { editarTarjeta } from "./actions";
@@ -142,13 +143,23 @@ export function EditarTarjetaModal({
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700">Venta asociada</label>
               {ventaId && (
-                <button
-                  type="button"
-                  onClick={() => setVentaId("")}
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  Quitar
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setVentaId("")}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Quitar
+                  </button>
+                  <Link
+                    href={`/ventas/${ventaId}/editar`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Ir a la Venta
+                  </Link>
+                </div>
               )}
             </div>
             <Combobox
