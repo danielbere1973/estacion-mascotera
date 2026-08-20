@@ -59,7 +59,7 @@ export default async function TableroControlPage() {
     }),
     prisma.cliente.findMany({
       orderBy: { nombre: "asc" },
-      select: { id: true, nombre: true, apellido: true },
+      select: { id: true, nombre: true, apellido: true, dni: true },
     }),
   ]);
 
