@@ -80,6 +80,8 @@ export function EditarTarjetaModal({
     };
   }, [ventaId]);
 
+  const totalProductos = productos.reduce((acc, p) => acc + p.subtotal, 0);
+
   const opcionesVenta = ventas.map((v) => ({
     value: String(v.id),
     label: `#${v.id} · ${v.clienteNombre} · ${formatDate(v.fechaVenta)}`,
@@ -239,6 +241,14 @@ export function EditarTarjetaModal({
                         </td>
                       </tr>
                     ))}
+                    <tr className="border-t border-gray-200 bg-gray-50">
+                      <td colSpan={4} className="px-2 py-1 text-right font-semibold text-gray-700">
+                        Total
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-1 text-right font-semibold text-gray-900">
+                        {formatCurrency(totalProductos)}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
