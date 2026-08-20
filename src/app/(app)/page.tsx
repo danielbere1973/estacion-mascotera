@@ -38,14 +38,14 @@ export default async function DashboardPage({
     {
       label: "Rentabilidad Operativa",
       value: metrics.rentabilidadSinFijos,
-      hint: "Ingresos − costo mercadería − comisiones − envíos (sin gastos de estructura)",
+      hint: "Ingresos − costo mercadería − comisiones − envíos − gastos variables",
       highlight: true,
       pct: pctOperativa,
     },
     {
       label: "Rentabilidad Neta",
       value: metrics.rentabilidadNeta,
-      hint: "Rentabilidad operativa − gastos fijos, variables, marketing y excepcionales",
+      hint: "Rentabilidad operativa − gastos fijos, marketing y excepcionales",
       highlight: true,
       pct: pctNeta,
     },

@@ -137,16 +137,18 @@ export async function getDashboardMetrics(rango: RangoFechas) {
 
   const totalGastado = totalComprasMercaderia + totalGastos;
 
-  // Rentabilidad operativa: venta - costo de mercadería - comisiones - envío (sin gastos de estructura)
+  // Rentabilidad operativa: venta - costo de mercadería - comisiones - envío - gastos variables
+  // (los gastos variables incluyen costos directos de venta como envíos pagados por fuera de Venta.costoEnvio)
   const rentabilidadSinFijos =
     totalFacturado -
     costoMercaderiaVendida -
     costosEnvioVentas -
-    costosCobranzaVentas;
+    costosCobranzaVentas -
+    totalGastosVariables;
 
-  // Rentabilidad neta: operativa - gastos fijos, variables, marketing y excepcionales del período
+  // Rentabilidad neta: operativa - gastos fijos, marketing y excepcionales del período
   const rentabilidadNeta =
-    rentabilidadSinFijos - totalGastosFijosDelPeriodo - totalGastosVariables - totalGastosMarketing - totalGastosExcepcionales;
+    rentabilidadSinFijos - totalGastosFijosDelPeriodo - totalGastosMarketing - totalGastosExcepcionales;
 
   // Costo promedio ponderado por producto a partir de las compras reales.
   // Así el valor del stock no cambia cuando se actualiza la lista de precios.
