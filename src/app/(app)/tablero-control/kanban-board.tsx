@@ -276,6 +276,8 @@ export function KanbanBoard({
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2">
         {columnas.map((col) => {
           const tarjetasCol = tarjetasVisibles.filter((t) => t.columnaId === col.id);
+          const cantidadRealCol = tarjetas.filter((t) => t.columnaId === col.id).length;
+          const columnaSaturada = col.nombre !== "Orden Cerrada - Archivada" && cantidadRealCol >= 10;
           const isOver = dragOverColId === col.id;
           const isDraggingThisCol = dragItem?.type === "column" && dragItem.id === col.id;
           return (
@@ -318,7 +320,14 @@ export function KanbanBoard({
                     className="min-w-0 flex-1 rounded border border-white/40 bg-white/20 px-1.5 py-0.5 text-xs font-semibold text-white placeholder-white/70 outline-none"
                   />
                 ) : (
-                  <span className="min-w-0 truncate text-xs font-semibold text-white">{col.nombre}</span>
+                  <span
+                    title={columnaSaturada ? "10 o más tarjetas en esta columna" : undefined}
+                    className={`min-w-0 truncate text-xs font-semibold text-white ${
+                      columnaSaturada ? "animate-pulse" : ""
+                    }`}
+                  >
+                    {col.nombre}
+                  </span>
                 )}
                 <div className="flex shrink-0 items-center gap-1">
                   <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-medium text-white">
