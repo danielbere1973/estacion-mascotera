@@ -304,8 +304,10 @@ export function KanbanBoard({
                 }}
                 onDragEnd={() => setDragItem(null)}
                 style={{ backgroundColor: col.color }}
-                className="flex cursor-grab items-center justify-between gap-1 rounded-t-xl px-3 py-2 active:cursor-grabbing"
-                title="Arrastrá para reordenar la columna"
+                title={columnaSaturada ? "10 o más tarjetas en esta columna" : "Arrastrá para reordenar la columna"}
+                className={`flex cursor-grab items-center justify-between gap-1 rounded-t-xl px-3 py-2 active:cursor-grabbing ${
+                  columnaSaturada ? "animate-pulse" : ""
+                }`}
               >
                 {columnaEditandoId === col.id ? (
                   <input
@@ -320,12 +322,7 @@ export function KanbanBoard({
                     className="min-w-0 flex-1 rounded border border-white/40 bg-white/20 px-1.5 py-0.5 text-xs font-semibold text-white placeholder-white/70 outline-none"
                   />
                 ) : (
-                  <span
-                    title={columnaSaturada ? "10 o más tarjetas en esta columna" : undefined}
-                    className={`min-w-0 truncate text-xs font-semibold text-white ${
-                      columnaSaturada ? "animate-pulse" : ""
-                    }`}
-                  >
+                  <span className="min-w-0 truncate text-xs font-semibold text-white">
                     {col.nombre}
                   </span>
                 )}
