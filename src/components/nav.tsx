@@ -15,6 +15,7 @@ const links = [
   { href: "/gastos", label: "Gastos", icon: "💸" },
   { href: "/reportes", label: "Reportes", icon: "📊" },
   { href: "/tablero-control", label: "Tablero de Control", icon: "🎛️" },
+  { href: "/marketing", label: "Marketing", icon: "📣" },
 ];
 
 const linksRestringido = [
