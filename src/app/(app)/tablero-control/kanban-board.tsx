@@ -47,6 +47,7 @@ interface ClienteOpcion {
   id: number;
   nombre: string;
   apellido: string;
+  dni: string | null;
 }
 
 type DragItem = { type: "card" | "column"; id: number } | null;

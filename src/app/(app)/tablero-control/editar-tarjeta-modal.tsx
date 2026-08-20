@@ -30,6 +30,7 @@ interface ClienteOpcion {
   id: number;
   nombre: string;
   apellido: string;
+  dni: string | null;
 }
 
 interface Tarjeta {
@@ -94,6 +95,8 @@ export function EditarTarjetaModal({
     search: `${c.nombre} ${c.apellido}`,
   }));
 
+  const clienteSeleccionado = clientes.find((c) => String(c.id) === clienteId);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -136,25 +139,33 @@ export function EditarTarjetaModal({
             </p>
           </div>
 
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Cliente</label>
-              {clienteId && (
-                <button
-                  type="button"
-                  onClick={() => setClienteId("")}
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  Quitar
-                </button>
-              )}
+          <div className="flex gap-3">
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">Cliente</label>
+                {clienteId && (
+                  <button
+                    type="button"
+                    onClick={() => setClienteId("")}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Quitar
+                  </button>
+                )}
+              </div>
+              <Combobox
+                options={opcionesCliente}
+                value={clienteId}
+                onSelect={setClienteId}
+                placeholder="Buscar cliente..."
+              />
             </div>
-            <Combobox
-              options={opcionesCliente}
-              value={clienteId}
-              onSelect={setClienteId}
-              placeholder="Buscar cliente..."
-            />
+            <div className="w-28 space-y-1">
+              <label className="text-sm font-medium text-gray-700">DNI</label>
+              <p className="truncate rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                {clienteSeleccionado?.dni || "—"}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-1">
