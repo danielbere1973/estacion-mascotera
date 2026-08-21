@@ -22,7 +22,7 @@ type PedidoTiendanube = {
   products: {
     sku: string | null;
     name: string;
-    quantity: number;
+    quantity: string;
     price: string;
   }[];
 };
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       }
       return {
         productoId: productoPorSku.get(p.sku)!,
-        cantidad: p.quantity,
+        cantidad: Number(p.quantity),
         precioVentaUnitario: Number(p.price),
       };
     })
