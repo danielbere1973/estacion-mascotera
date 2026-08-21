@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
+import { crearVentaCore, calcularMontoCosto } from "@/lib/ventas";
 import { CanalVenta } from "@prisma/client";
 
 function parseCostos(formData: FormData) {
@@ -21,15 +22,6 @@ function parseCostos(formData: FormData) {
       incluyeEnvio: incluyeEnvios[i] === "on",
     }))
     .filter((c) => c.concepto && c.valor);
-}
-
-function calcularMontoCosto(
-  costo: { esPorcentaje: boolean; valor: number; incluyeEnvio: boolean },
-  subtotalProductos: number,
-  costoEnvio: number
-) {
-  const base = subtotalProductos + (costo.incluyeEnvio ? costoEnvio : 0);
-  return costo.esPorcentaje ? (base * costo.valor) / 100 : costo.valor;
 }
 
 export async function crearVenta(formData: FormData) {
@@ -93,109 +85,22 @@ export async function crearVenta(formData: FormData) {
   if (items.length === 0) throw new Error("Agregá al menos un producto.");
 
   const costos = parseCostos(formData);
-  const subtotalProductos = items.reduce(
-    (acc, it) => acc + it.cantidad * it.precioVentaUnitario * (1 - it.descuentoPorcentaje / 100),
-    0
-  );
 
-  // Foto de los precios de costo al momento de la venta
-  const productosCosto = await prisma.producto.findMany({
-    where: { id: { in: items.map((i) => i.productoId) } },
-    select: { id: true, precioCostoUnitario: true },
-  });
-  const preciosCosto = new Map(productosCosto.map((p) => [p.id, p.precioCostoUnitario]));
-
-  await prisma.$transaction(async (tx) => {
-    for (const item of items) {
-      const producto = await tx.producto.findUniqueOrThrow({ where: { id: item.productoId } });
-      if (item.cantidad > producto.stockActual) {
-        throw new Error(`No hay suficiente stock de "${producto.nombre}" (disponible: ${producto.stockActual}).`);
-      }
-      if (item.detalleConsignacionId) {
-        const detalle = await tx.detalleConsignacion.findUniqueOrThrow({ where: { id: item.detalleConsignacionId } });
-        const disponible = detalle.cantidad - detalle.cantidadVendida;
-        if (item.cantidad > disponible) {
-          throw new Error(`Solo hay ${disponible} unidades disponibles de "${producto.nombre}" en esa consignación.`);
-        }
-      }
-    }
-
-    const venta = await tx.venta.create({
-      data: {
-        clienteId: Number(clienteId),
-        canalVenta,
-        medioPago,
-        costoEnvio,
-        facturado,
-        esVentaInterna,
-        numeroFactura,
-        fechaVenta,
-        fechaAcreditacion,
-        vendidoPorId,
-        cobradoPorId,
-        usuarioId: Number(session.user.id),
-        detalles: {
-          create: items.map((item) => ({
-            productoId: item.productoId,
-            cantidad: item.cantidad,
-            precioVentaUnitario: item.precioVentaUnitario,
-            descuentoPorcentaje: item.descuentoPorcentaje,
-            precioCostoUnitario: preciosCosto.get(item.productoId),
-          })),
-        },
-      },
-      include: { cliente: true, detalles: true },
-    });
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const detalleVenta = venta.detalles[i];
-
-      await tx.producto.update({
-        where: { id: item.productoId },
-        data: { stockActual: { decrement: item.cantidad } },
-      });
-
-      if (item.detalleConsignacionId) {
-        await tx.ventaConsignacion.create({
-          data: {
-            detalleConsignacionId: item.detalleConsignacionId,
-            cantidad: item.cantidad,
-            precioVentaReal: item.precioVentaUnitario,
-            facturado,
-            numeroFactura,
-            fecha: fechaVenta,
-            detalleVentaId: detalleVenta.id,
-          },
-        });
-        await tx.detalleConsignacion.update({
-          where: { id: item.detalleConsignacionId },
-          data: { cantidadVendida: { increment: item.cantidad } },
-        });
-      }
-    }
-
-    for (const costo of costos) {
-      const montoCalculado = calcularMontoCosto(costo, subtotalProductos, costoEnvio);
-      await tx.costoVenta.create({
-        data: {
-          ventaId: venta.id,
-          concepto: costo.concepto,
-          esPorcentaje: costo.esPorcentaje,
-          valor: costo.valor,
-          incluyeEnvio: costo.incluyeEnvio,
-          montoCalculado,
-        },
-      });
-    }
-
-    await registrarLog(tx, {
-      usuarioId: Number(session.user.id),
-      accion: "CREAR",
-      entidad: "VENTA",
-      entidadId: venta.id,
-      detalle: `Venta a ${venta.cliente.nombre} ${venta.cliente.apellido}`,
-    });
+  await crearVentaCore({
+    clienteId: Number(clienteId),
+    canalVenta,
+    medioPago,
+    costoEnvio,
+    facturado,
+    esVentaInterna,
+    numeroFactura,
+    fechaVenta,
+    fechaAcreditacion,
+    vendidoPorId,
+    cobradoPorId,
+    usuarioId: Number(session.user.id),
+    items,
+    costos,
   });
 
   revalidatePath("/ventas");
