@@ -172,3 +172,45 @@ export async function crearVentaCore(input: CrearVentaInput, tx?: Prisma.Transac
   if (tx) return ejecutarCrearVenta(tx, input);
   return prisma.$transaction((t) => ejecutarCrearVenta(t, input));
 }
+
+async function ejecutarEliminarVenta(tx: Prisma.TransactionClient, ventaId: number, usuarioId: number) {
+  const venta = await tx.venta.findUniqueOrThrow({ where: { id: ventaId }, include: { cliente: true } });
+  const detalles = await tx.detalleVenta.findMany({
+    where: { ventaId },
+    include: { ventaConsignacion: true },
+  });
+
+  for (const d of detalles) {
+    if (d.ventaConsignacion) {
+      if (d.ventaConsignacion.liquidacionId) {
+        throw new Error("No se puede eliminar: esta venta ya fue liquidada con el socio.");
+      }
+      await tx.detalleConsignacion.update({
+        where: { id: d.ventaConsignacion.detalleConsignacionId },
+        data: { cantidadVendida: { decrement: d.ventaConsignacion.cantidad } },
+      });
+      await tx.ventaConsignacion.delete({ where: { id: d.ventaConsignacion.id } });
+    }
+    await tx.producto.update({
+      where: { id: d.productoId },
+      data: { stockActual: { increment: d.cantidad } },
+    });
+  }
+
+  await tx.venta.delete({ where: { id: ventaId } });
+
+  await registrarLog(tx, {
+    usuarioId,
+    accion: "ELIMINAR",
+    entidad: "VENTA",
+    entidadId: ventaId,
+    detalle: `Venta a ${venta.cliente.nombre} ${venta.cliente.apellido}`,
+  });
+
+  return { clienteNombre: `${venta.cliente.nombre} ${venta.cliente.apellido}` };
+}
+
+export async function eliminarVentaCore(ventaId: number, usuarioId: number, tx?: Prisma.TransactionClient) {
+  if (tx) return ejecutarEliminarVenta(tx, ventaId, usuarioId);
+  return prisma.$transaction((t) => ejecutarEliminarVenta(t, ventaId, usuarioId));
+}
