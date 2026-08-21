@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
+import { crearCompraCore } from "@/lib/compras";
 import { Presentacion, UnidadMedida } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
@@ -83,7 +84,7 @@ export async function crearCompra(formData: FormData) {
             margenPorcentaje: 30,
             precioCostoUnitario: item.precioCosto,
             precioVenta: item.precioCosto * 1.3,
-            stockActual: item.cantidad,
+            stockActual: 0,
           },
         });
         // Vincular al historial
@@ -92,16 +93,10 @@ export async function crearCompra(formData: FormData) {
           update: { productoId: producto.id, activo: true },
           create: { proveedorId: Number(proveedorId), sku: item.sku, nombre: item.nombre, precioCostoScraped: item.precioCosto, productoId: producto.id },
         });
-      } else {
-        const precioVenta = item.precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
-        await tx.producto.update({
-          where: { id: producto.id },
-          data: { precioCostoUnitario: item.precioCosto, precioVenta, stockActual: { increment: item.cantidad } },
-        });
       }
 
-      const compra = await tx.compra.create({
-        data: {
+      await crearCompraCore(
+        {
           proveedorId: Number(proveedorId),
           productoId: producto.id,
           cantidad: item.cantidad,
@@ -115,16 +110,8 @@ export async function crearCompra(formData: FormData) {
           fechaCompra,
           usuarioId: Number(session.user.id),
         },
-        include: { producto: true, proveedor: true },
-      });
-
-      await registrarLog(tx, {
-        usuarioId: Number(session.user.id),
-        accion: "CREAR",
-        entidad: "COMPRA",
-        entidadId: compra.id,
-        detalle: `${compra.producto.nombre} x${compra.cantidad} - ${compra.proveedor.nombre}`,
-      });
+        tx
+      );
     }
   });
 

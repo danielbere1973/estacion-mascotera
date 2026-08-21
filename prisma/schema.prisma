@@ -58,6 +58,7 @@ model Producto {
   ordenesDropshipping  OrdenDropshipping[]
   clientesRecurrentes  ClienteProductoRecurrente[] @relation("ClienteProductoRecurrenteProducto")
   recordatorios        RecordatorioReposicion[]
+  pendientesCompra     PendienteCompraMayorista[]
 
   @@index([categoria])
 }
@@ -71,6 +72,7 @@ model Proveedor {
   historialMayorista   HistorialStockMayorista[]
   sociosConsignacion   SocioConsignacion[]
   usuariosRestringidos Usuario[]                 @relation("UsuarioProveedorRestricto")
+  pendientesCompra     PendienteCompraMayorista[]
 }
 
 model Compra {
@@ -91,6 +93,7 @@ model Compra {
   producto            Producto  @relation(fields: [productoId], references: [id])
   proveedor           Proveedor @relation(fields: [proveedorId], references: [id])
   usuario             Usuario   @relation(fields: [usuarioId], references: [id])
+  pendientesCompra    PendienteCompraMayorista[]
 
   @@index([fechaCompra])
   @@index([productoId])
@@ -398,6 +401,25 @@ model OrdenDropshipping {
   @@index([estado])
 }
 
+model PendienteCompraMayorista {
+  id            Int                    @id @default(autoincrement())
+  productoId    Int
+  proveedorId   Int
+  cantidad      Int
+  estado        EstadoPendienteCompra  @default(PENDIENTE)
+  jobId         String?
+  errorMotivo   String?
+  compraId      Int?
+  creadoAt      DateTime               @default(now())
+  actualizadoAt DateTime               @updatedAt
+  producto      Producto               @relation(fields: [productoId], references: [id])
+  proveedor     Proveedor              @relation(fields: [proveedorId], references: [id])
+  compra        Compra?                @relation(fields: [compraId], references: [id])
+
+  @@index([estado])
+  @@index([jobId])
+}
+
 model TiendanubeConfig {
   id          Int      @id @default(autoincrement())
   storeId     String   @unique
@@ -491,6 +513,13 @@ enum TipoGasto {
   VARIABLE
   EXCEPCIONAL
   MARKETING
+}
+
+enum EstadoPendienteCompra {
+  PENDIENTE
+  EN_PROCESO
+  RESUELTO
+  FALLIDO
 }
 
 model ColumnaTablero {

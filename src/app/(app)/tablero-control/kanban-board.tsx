@@ -8,6 +8,7 @@ import {
   editarColumna,
   eliminarColumna,
   eliminarTarjeta,
+  forzarCorteCompraHym,
   moverTarjeta,
   reordenarColumnas,
 } from "./actions";
@@ -74,7 +75,26 @@ export function KanbanBoard({
   const [clienteIdNueva, setClienteIdNueva] = useState("");
   const [filtroClienteId, setFiltroClienteId] = useState("");
   const [filtroId, setFiltroId] = useState("");
+  const [corteEnCurso, setCorteEnCurso] = useState(false);
   const [, startTransition] = useTransition();
+
+  async function handleForzarCorte() {
+    if (corteEnCurso) return;
+    if (!confirm("¿Forzar el corte de compra HYM ahora? Se va a armar el carrito en HYM con todo lo pendiente.")) return;
+    setCorteEnCurso(true);
+    try {
+      const resultado = await forzarCorteCompraHym();
+      if (!resultado.ok) {
+        alert(`No se pudo iniciar el corte: ${resultado.error}`);
+      } else if (resultado.items === 0) {
+        alert("No hay pendientes de compra HYM en este momento.");
+      } else {
+        alert(`Corte iniciado: ${resultado.items} línea(s). Te va a llegar un aviso por Telegram cuando termine.`);
+      }
+    } finally {
+      setCorteEnCurso(false);
+    }
+  }
 
   const filtroIdLimpio = filtroId.trim();
   const tarjetasVisibles = tarjetas.filter((t) => {
@@ -176,6 +196,13 @@ export function KanbanBoard({
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
           >
             + Agregar Columna
+          </button>
+          <button
+            onClick={handleForzarCorte}
+            disabled={corteEnCurso}
+            className="rounded-md border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+          >
+            {corteEnCurso ? "Iniciando..." : "Forzar corte compra HYM"}
           </button>
         </div>
       </div>

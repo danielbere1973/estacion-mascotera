@@ -4,9 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { crearVentaCore } from "@/lib/ventas";
 import { buscarOCrearCliente } from "@/lib/clientes";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { registrarPendientesCompra, moverOCrearTarjetaCompraMayorista } from "@/lib/compras-mayoristas";
 
 const USUARIO_SISTEMA_EMAIL = "sistema-tiendanube@estacionmascotera.com.ar";
 const COLUMNA_INGRESO_ORDEN = "Ingreso de Orden - Pendiente";
+const COLUMNA_COMPRAR_MAYORISTA = "Comprar en Mayorista";
 
 type PedidoTiendanube = {
   id: number;
@@ -119,7 +121,8 @@ export async function POST(req: NextRequest) {
 
   let ventaId: number;
   let clienteId: number;
-  let productosStockNegativo: { nombre: string; stockActual: number }[];
+  let productosStockNegativo: { productoId: number; nombre: string; stockActual: number; faltante: number }[];
+  let huboPendienteHym: boolean;
   try {
     const resultado = await prisma.$transaction(async (tx) => {
       const cliente = await buscarOCrearCliente(tx, {
@@ -145,11 +148,19 @@ export async function POST(req: NextRequest) {
         tx
       );
 
-      return { ventaId: venta.ventaId, clienteId: cliente.clienteId, productosStockNegativo: venta.productosStockNegativo };
+      const { huboPendienteHym } = await registrarPendientesCompra(tx, venta.productosStockNegativo);
+
+      return {
+        ventaId: venta.ventaId,
+        clienteId: cliente.clienteId,
+        productosStockNegativo: venta.productosStockNegativo,
+        huboPendienteHym,
+      };
     });
     ventaId = resultado.ventaId;
     clienteId = resultado.clienteId;
     productosStockNegativo = resultado.productosStockNegativo;
+    huboPendienteHym = resultado.huboPendienteHym;
   } catch (error) {
     console.error(`order-created: error creando venta para pedido ${pedido.number}`, error);
     await sendTelegramMessage(
@@ -158,25 +169,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No se pudo crear la venta" }, { status: 500 });
   }
 
+  const tituloTarjeta = `Orden #${pedido.number} ${nombre} ${apellido}`.trim();
+
   try {
-    const columna = await prisma.columnaTablero.findFirst({ where: { nombre: COLUMNA_INGRESO_ORDEN } });
-    if (columna) {
-      const ultima = await prisma.tarjetaTablero.findFirst({
-        where: { columnaId: columna.id },
-        orderBy: { orden: "desc" },
-        select: { orden: true },
-      });
-      await prisma.tarjetaTablero.create({
-        data: {
-          titulo: `Orden #${pedido.number} ${nombre} ${apellido}`.trim(),
-          columnaId: columna.id,
-          ventaId,
-          clienteId,
-          orden: (ultima?.orden ?? 0) + 1,
-        },
-      });
+    if (huboPendienteHym) {
+      await prisma.$transaction((tx) =>
+        moverOCrearTarjetaCompraMayorista(tx, { ventaId, clienteId, titulo: tituloTarjeta })
+      );
     } else {
-      console.error(`order-created: no se encontró la columna "${COLUMNA_INGRESO_ORDEN}"`);
+      const columna = await prisma.columnaTablero.findFirst({ where: { nombre: COLUMNA_INGRESO_ORDEN } });
+      if (columna) {
+        const ultima = await prisma.tarjetaTablero.findFirst({
+          where: { columnaId: columna.id },
+          orderBy: { orden: "desc" },
+          select: { orden: true },
+        });
+        await prisma.tarjetaTablero.create({
+          data: {
+            titulo: tituloTarjeta,
+            columnaId: columna.id,
+            ventaId,
+            clienteId,
+            orden: (ultima?.orden ?? 0) + 1,
+          },
+        });
+      } else {
+        console.error(`order-created: no se encontró la columna "${COLUMNA_INGRESO_ORDEN}"`);
+      }
     }
   } catch (error) {
     console.error("order-created: error creando tarjeta de tablero", error);
@@ -185,7 +204,9 @@ export async function POST(req: NextRequest) {
   const avisoSkus = skusNoResueltos.length > 0 ? `\n⚠️ SKUs no vinculados: ${skusNoResueltos.join(", ")}` : "";
   const avisoStock =
     productosStockNegativo.length > 0
-      ? `\n📉 Stock negativo, falta cargar compra: ${productosStockNegativo.map((p) => `${p.nombre} (${p.stockActual})`).join(", ")}`
+      ? huboPendienteHym
+        ? `\n📉 Stock negativo (compra HYM automática en curso): ${productosStockNegativo.map((p) => `${p.nombre} (${p.stockActual})`).join(", ")}`
+        : `\n📉 Stock negativo, sin proveedor mayorista mapeado — reponer manualmente: ${productosStockNegativo.map((p) => `${p.nombre} (${p.stockActual})`).join(", ")}`
       : "";
   await sendTelegramMessage(
     `🛒 Nuevo pedido Tiendanube #${pedido.number}\nCliente: ${nombre} ${apellido}\nItems: ${items.length}${avisoSkus}${avisoStock}`
