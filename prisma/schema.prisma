@@ -175,6 +175,7 @@ model Venta {
   usuarioId         Int
   vendidoPorId      Int?
   cobradoPorId      Int?
+  tiendanubeOrderId Int?           @unique
   costos            CostoVenta[]
   detalles          DetalleVenta[]
   cliente           Cliente        @relation(fields: [clienteId], references: [id])

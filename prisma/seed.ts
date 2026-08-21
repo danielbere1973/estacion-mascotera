@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,12 @@ const USUARIOS = [
     apellido: "Fernandez",
     email: "pablo.fernandez@estacionmascotera.com.ar",
     password: "Hsbc9510",
+  },
+  {
+    nombre: "Sistema",
+    apellido: "Tiendanube",
+    email: "sistema-tiendanube@estacionmascotera.com.ar",
+    password: crypto.randomBytes(32).toString("hex"),
   },
 ];
 
