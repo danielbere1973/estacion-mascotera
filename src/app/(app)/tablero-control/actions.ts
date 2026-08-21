@@ -3,8 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/permissions";
+import { requireAuth, requireAdmin } from "@/lib/permissions";
+import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 import { PALETA_COLORES } from "./columnas";
+
+export async function forzarCorteCompraHym() {
+  await requireAdmin();
+  const resultado = await ejecutarCorteCompraHym();
+  revalidatePath("/tablero-control");
+  return resultado;
+}
 
 export async function crearTarjeta(formData: FormData) {
   await requireAuth();

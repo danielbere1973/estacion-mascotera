@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 import { crearVentaCore, eliminarVentaCore, calcularMontoCosto } from "@/lib/ventas";
+import { registrarPendientesCompra, moverOCrearTarjetaCompraMayorista } from "@/lib/compras-mayoristas";
+import { sendTelegramMessage } from "@/lib/telegram";
 import { CanalVenta } from "@prisma/client";
 
 function parseCostos(formData: FormData) {
@@ -85,27 +87,53 @@ export async function crearVenta(formData: FormData) {
   if (items.length === 0) throw new Error("Agregá al menos un producto.");
 
   const costos = parseCostos(formData);
+  const clienteIdNum = Number(clienteId);
 
-  await crearVentaCore({
-    clienteId: Number(clienteId),
-    canalVenta,
-    medioPago,
-    costoEnvio,
-    facturado,
-    esVentaInterna,
-    numeroFactura,
-    fechaVenta,
-    fechaAcreditacion,
-    vendidoPorId,
-    cobradoPorId,
-    usuarioId: Number(session.user.id),
-    items,
-    costos,
+  const { sinMapeoHym } = await prisma.$transaction(async (tx) => {
+    const venta = await crearVentaCore(
+      {
+        clienteId: clienteIdNum,
+        canalVenta,
+        medioPago,
+        costoEnvio,
+        facturado,
+        esVentaInterna,
+        numeroFactura,
+        fechaVenta,
+        fechaAcreditacion,
+        vendidoPorId,
+        cobradoPorId,
+        usuarioId: Number(session.user.id),
+        items,
+        costos,
+      },
+      tx
+    );
+
+    const { huboPendienteHym, sinMapeoHym } = await registrarPendientesCompra(tx, venta.productosStockNegativo);
+
+    if (huboPendienteHym) {
+      const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
+      await moverOCrearTarjetaCompraMayorista(tx, {
+        ventaId: venta.ventaId,
+        clienteId: clienteIdNum,
+        titulo: `Venta a ${cliente.nombre} ${cliente.apellido}`,
+      });
+    }
+
+    return { sinMapeoHym };
   });
+
+  if (sinMapeoHym.length > 0) {
+    await sendTelegramMessage(
+      `📉 Stock negativo, sin proveedor mayorista mapeado — reponer manualmente: ${sinMapeoHym.join(", ")}`
+    );
+  }
 
   revalidatePath("/ventas");
   revalidatePath("/inventario");
   revalidatePath("/");
+  revalidatePath("/tablero-control");
   redirect("/ventas");
 }
 

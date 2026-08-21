@@ -107,11 +107,16 @@ async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVent
     include: { cliente: true, detalles: true },
   });
 
-  const productosStockNegativo: { nombre: string; stockActual: number }[] = [];
+  const productosStockNegativo: { productoId: number; nombre: string; stockActual: number; faltante: number }[] = [];
 
   for (let i = 0; i < input.items.length; i++) {
     const item = input.items[i];
     const detalleVenta = venta.detalles[i];
+
+    const productoAntes = await tx.producto.findUniqueOrThrow({
+      where: { id: item.productoId },
+      select: { stockActual: true },
+    });
 
     const productoActualizado = await tx.producto.update({
       where: { id: item.productoId },
@@ -119,7 +124,18 @@ async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVent
     });
 
     if (productoActualizado.stockActual < 0) {
-      productosStockNegativo.push({ nombre: productoActualizado.nombre, stockActual: productoActualizado.stockActual });
+      // Solo cuenta como "faltante nuevo" la parte del déficit generada por esta
+      // venta; si el stock ya venía negativo, ese arrastre ya debería estar
+      // cubierto por un pendiente de compra anterior (evita doble conteo).
+      const faltante = Math.min(item.cantidad, Math.abs(productoActualizado.stockActual));
+      if (productoAntes.stockActual >= 0) {
+        productosStockNegativo.push({
+          productoId: productoActualizado.id,
+          nombre: productoActualizado.nombre,
+          stockActual: productoActualizado.stockActual,
+          faltante,
+        });
+      }
     }
 
     if (item.detalleConsignacionId) {

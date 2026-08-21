@@ -23,6 +23,12 @@ const USUARIOS = [
     email: "sistema-tiendanube@estacionmascotera.com.ar",
     password: crypto.randomBytes(32).toString("hex"),
   },
+  {
+    nombre: "Sistema",
+    apellido: "HYM",
+    email: "sistema-hym@estacionmascotera.com.ar",
+    password: crypto.randomBytes(32).toString("hex"),
+  },
 ];
 
 async function main() {
