@@ -11,6 +11,7 @@ const COLUMNA_INGRESO_ORDEN = "Ingreso de Orden - Pendiente";
 type PedidoTiendanube = {
   id: number;
   number: number;
+  status: string;
   customer: {
     name: string;
     email: string | null;
@@ -75,6 +76,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("order-created: error obteniendo pedido de Tiendanube", error);
     return NextResponse.json({ error: "No se pudo obtener el pedido" }, { status: 502 });
+  }
+
+  if (pedido.status === "cancelled") {
+    console.error(`order-created: pedido ${pedido.number} ya está cancelado, no se crea venta`);
+    return NextResponse.json({ ok: true, error: "Pedido cancelado" });
   }
 
   const productos = await prisma.producto.findMany({

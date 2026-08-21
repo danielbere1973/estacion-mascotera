@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
-import { crearVentaCore, calcularMontoCosto } from "@/lib/ventas";
+import { crearVentaCore, eliminarVentaCore, calcularMontoCosto } from "@/lib/ventas";
 import { CanalVenta } from "@prisma/client";
 
 function parseCostos(formData: FormData) {
@@ -320,38 +320,7 @@ export async function eliminarVenta(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Venta inválida.");
 
-  await prisma.$transaction(async (tx) => {
-    const venta = await tx.venta.findUniqueOrThrow({ where: { id }, include: { cliente: true } });
-    const detalles = await tx.detalleVenta.findMany({
-      where: { ventaId: id },
-      include: { ventaConsignacion: true },
-    });
-    for (const d of detalles) {
-      if (d.ventaConsignacion) {
-        if (d.ventaConsignacion.liquidacionId) {
-          throw new Error("No se puede eliminar: esta venta ya fue liquidada con el socio.");
-        }
-        await tx.detalleConsignacion.update({
-          where: { id: d.ventaConsignacion.detalleConsignacionId },
-          data: { cantidadVendida: { decrement: d.ventaConsignacion.cantidad } },
-        });
-        await tx.ventaConsignacion.delete({ where: { id: d.ventaConsignacion.id } });
-      }
-      await tx.producto.update({
-        where: { id: d.productoId },
-        data: { stockActual: { increment: d.cantidad } },
-      });
-    }
-    await tx.venta.delete({ where: { id } });
-
-    await registrarLog(tx, {
-      usuarioId: Number(session.user.id),
-      accion: "ELIMINAR",
-      entidad: "VENTA",
-      entidadId: id,
-      detalle: `Venta a ${venta.cliente.nombre} ${venta.cliente.apellido}`,
-    });
-  });
+  await eliminarVentaCore(id, Number(session.user.id));
 
   revalidatePath("/ventas");
   revalidatePath("/inventario");
