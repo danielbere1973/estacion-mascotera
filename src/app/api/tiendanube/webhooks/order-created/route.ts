@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
 
   let ventaId: number;
   let clienteId: number;
+  let productosStockNegativo: { nombre: string; stockActual: number }[];
   try {
     const resultado = await prisma.$transaction(async (tx) => {
       const cliente = await buscarOCrearCliente(tx, {
@@ -138,10 +139,11 @@ export async function POST(req: NextRequest) {
         tx
       );
 
-      return { ventaId: venta.ventaId, clienteId: cliente.clienteId };
+      return { ventaId: venta.ventaId, clienteId: cliente.clienteId, productosStockNegativo: venta.productosStockNegativo };
     });
     ventaId = resultado.ventaId;
     clienteId = resultado.clienteId;
+    productosStockNegativo = resultado.productosStockNegativo;
   } catch (error) {
     console.error(`order-created: error creando venta para pedido ${pedido.number}`, error);
     await sendTelegramMessage(
@@ -175,8 +177,12 @@ export async function POST(req: NextRequest) {
   }
 
   const avisoSkus = skusNoResueltos.length > 0 ? `\n⚠️ SKUs no vinculados: ${skusNoResueltos.join(", ")}` : "";
+  const avisoStock =
+    productosStockNegativo.length > 0
+      ? `\n📉 Stock negativo, falta cargar compra: ${productosStockNegativo.map((p) => `${p.nombre} (${p.stockActual})`).join(", ")}`
+      : "";
   await sendTelegramMessage(
-    `🛒 Nuevo pedido Tiendanube #${pedido.number}\nCliente: ${nombre} ${apellido}\nItems: ${items.length}${avisoSkus}`
+    `🛒 Nuevo pedido Tiendanube #${pedido.number}\nCliente: ${nombre} ${apellido}\nItems: ${items.length}${avisoSkus}${avisoStock}`
   );
 
   return NextResponse.json({ ok: true, ventaId });

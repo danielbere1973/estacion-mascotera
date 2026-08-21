@@ -62,16 +62,19 @@ async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVent
   });
   const preciosCosto = new Map(productosCosto.map((p) => [p.id, p.precioCostoUnitario]));
 
+  // Se compra a demanda: se permite vender sin stock cargado todavía y que
+  // stockActual quede en negativo hasta que se registre la compra que lo cubra.
   for (const item of input.items) {
-    const producto = await tx.producto.findUniqueOrThrow({ where: { id: item.productoId } });
-    if (item.cantidad > producto.stockActual) {
-      throw new Error(`No hay suficiente stock de "${producto.nombre}" (disponible: ${producto.stockActual}).`);
-    }
     if (item.detalleConsignacionId) {
-      const detalle = await tx.detalleConsignacion.findUniqueOrThrow({ where: { id: item.detalleConsignacionId } });
+      const detalle = await tx.detalleConsignacion.findUniqueOrThrow({
+        where: { id: item.detalleConsignacionId },
+        include: { producto: true },
+      });
       const disponible = detalle.cantidad - detalle.cantidadVendida;
       if (item.cantidad > disponible) {
-        throw new Error(`Solo hay ${disponible} unidades disponibles de "${producto.nombre}" en esa consignación.`);
+        throw new Error(
+          `Solo hay ${disponible} unidades disponibles de "${detalle.producto?.nombre ?? "producto"}" en esa consignación.`
+        );
       }
     }
   }
@@ -104,14 +107,20 @@ async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVent
     include: { cliente: true, detalles: true },
   });
 
+  const productosStockNegativo: { nombre: string; stockActual: number }[] = [];
+
   for (let i = 0; i < input.items.length; i++) {
     const item = input.items[i];
     const detalleVenta = venta.detalles[i];
 
-    await tx.producto.update({
+    const productoActualizado = await tx.producto.update({
       where: { id: item.productoId },
       data: { stockActual: { decrement: item.cantidad } },
     });
+
+    if (productoActualizado.stockActual < 0) {
+      productosStockNegativo.push({ nombre: productoActualizado.nombre, stockActual: productoActualizado.stockActual });
+    }
 
     if (item.detalleConsignacionId) {
       await tx.ventaConsignacion.create({
@@ -154,7 +163,7 @@ async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVent
     detalle: `Venta a ${venta.cliente.nombre} ${venta.cliente.apellido}`,
   });
 
-  return { ventaId: venta.id };
+  return { ventaId: venta.id, productosStockNegativo };
 }
 
 export async function crearVentaCore(input: CrearVentaInput, tx?: Prisma.TransactionClient) {
