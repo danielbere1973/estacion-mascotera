@@ -14,6 +14,7 @@ type Compra = {
   numeroPedido: string | null;
   facturado: boolean;
   numeroFactura: string | null;
+  pagado: boolean;
   proveedor: { nombre: string };
   producto: { sku: string; nombre: string };
 };
@@ -25,6 +26,7 @@ type Grupo = {
   numeroPedido: string | null;
   facturado: boolean;
   numeroFactura: string | null;
+  pagado: boolean;
   costoEnvio: number;
   items: Compra[];
   totalItems: number;
@@ -48,6 +50,7 @@ function agrupar(compras: Compra[]): Grupo[] {
         numeroPedido: c.numeroPedido,
         facturado: c.facturado,
         numeroFactura: c.numeroFactura,
+        pagado: c.pagado,
         costoEnvio: Number(c.costoEnvio ?? 0),
         items: [],
         totalItems: 0,
@@ -57,6 +60,7 @@ function agrupar(compras: Compra[]): Grupo[] {
 
     const grupo = mapa.get(clave)!;
     grupo.items.push(c);
+    grupo.pagado = grupo.pagado && c.pagado;
     grupo.totalItems += c.cantidad;
     grupo.totalCosto += c.cantidad * Number(c.precioCostoUnitario) * (1 - Number(c.descuentoPorcentaje) / 100);
   }
@@ -145,6 +149,15 @@ export function ComprasAgrupadas({
                   ) : (
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400">
                       S/F
+                    </span>
+                  )}
+                  {g.pagado ? (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 whitespace-nowrap">
+                      Pagado
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 whitespace-nowrap">
+                      Pendiente de pago
                     </span>
                   )}
                 </div>

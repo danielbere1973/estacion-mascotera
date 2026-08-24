@@ -46,6 +46,7 @@ type VentaRow = {
   costoEnvio: string;
   facturado: boolean;
   numeroFactura: string | null;
+  cobrado: boolean;
   cliente: {
     nombre: string;
     apellido: string;
@@ -135,13 +136,22 @@ export function VentaExpandibleRow({
             )}
           </td>
         )}
-        <td className="whitespace-nowrap px-3 py-2">
+        <td className="whitespace-nowrap px-3 py-2 space-x-1">
           {venta.facturado ? (
             <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
               Sí{venta.numeroFactura ? ` · ${venta.numeroFactura}` : ""}
             </span>
           ) : (
             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">No</span>
+          )}
+          {venta.cobrado ? (
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              Cobrado
+            </span>
+          ) : (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+              Pendiente de pago
+            </span>
           )}
         </td>
       </tr>

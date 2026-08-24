@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 import { crearCompraCore } from "@/lib/compras";
+import { corregirEncoding, parsearCSV, parsearPrecio } from "@/lib/csv";
 import { Presentacion, UnidadMedida } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
@@ -24,7 +25,8 @@ export async function crearCompra(formData: FormData) {
   const numeroPedido = formData.get("numeroPedido")?.toString().trim() || null;
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
-  const pagadoPorId = formData.get("pagadoPorId") ? Number(formData.get("pagadoPorId")) : null;
+  const pagado = formData.get("pagado") === "on";
+  const pagadoPorId = pagado && formData.get("pagadoPorId") ? Number(formData.get("pagadoPorId")) : null;
   const fechaCompraStr = formData.get("fechaCompra")?.toString();
   const fechaCompra = fechaCompraStr ? new Date(fechaCompraStr) : new Date();
 
@@ -33,6 +35,11 @@ export async function crearCompra(formData: FormData) {
   const cantidades = formData.getAll("itemCantidad").map((v) => Number(v));
   const precios = formData.getAll("itemPrecio").map((v) => Number(v));
   const descuentos = formData.getAll("itemDescuento").map((v) => Number(v) || 0);
+  const marcas = formData.getAll("itemMarca").map((v) => v.toString().trim());
+  const categorias = formData.getAll("itemCategoria").map((v) => v.toString().trim());
+  const presentaciones = formData.getAll("itemPresentacion").map((v) => v.toString().trim());
+  const unidades = formData.getAll("itemUnidadMedida").map((v) => v.toString().trim());
+  const contenidos = formData.getAll("itemContenido").map((v) => Number(v));
 
   const items = skus
     .map((sku, i) => ({
@@ -42,6 +49,11 @@ export async function crearCompra(formData: FormData) {
       precioLista: precios[i],
       descuentoPct: descuentos[i],
       precioCosto: precios[i] * (1 - descuentos[i] / 100),
+      marca: marcas[i] || null,
+      categoria: categorias[i] || null,
+      presentacion: (presentaciones[i] || null) as Presentacion | null,
+      unidadMedida: (unidades[i] || null) as UnidadMedida | null,
+      contenido: contenidos[i] > 0 ? contenidos[i] : null,
     }))
     .filter((item) => item.sku && item.cantidad > 0 && item.precioLista >= 0);
 
@@ -76,11 +88,11 @@ export async function crearCompra(formData: FormData) {
           data: {
             skuInterno: skuInternoAuto,
             nombre: item.nombre,
-            marca: "-",
-            categoria: tipoDefault?.nombre ?? "General",
-            presentacion: "BOLSA_CERRADA" as Presentacion,
-            unidadMedida: "KILOGRAMOS" as UnidadMedida,
-            contenido: 1,
+            marca: item.marca || "-",
+            categoria: item.categoria || tipoDefault?.nombre || "General",
+            presentacion: item.presentacion ?? ("BOLSA_CERRADA" as Presentacion),
+            unidadMedida: item.unidadMedida ?? ("KILOGRAMOS" as UnidadMedida),
+            contenido: item.contenido ?? 1,
             margenPorcentaje: 30,
             precioCostoUnitario: item.precioCosto,
             precioVenta: item.precioCosto * 1.3,
@@ -90,8 +102,15 @@ export async function crearCompra(formData: FormData) {
         // Vincular al historial
         await tx.historialStockMayorista.upsert({
           where: { proveedorId_sku: { proveedorId: Number(proveedorId), sku: item.sku } },
-          update: { productoId: producto.id, activo: true },
-          create: { proveedorId: Number(proveedorId), sku: item.sku, nombre: item.nombre, precioCostoScraped: item.precioCosto, productoId: producto.id },
+          update: { productoId: producto.id, skuInterno: producto.skuInterno, activo: true },
+          create: {
+            proveedorId: Number(proveedorId),
+            sku: item.sku,
+            nombre: item.nombre,
+            precioCostoScraped: item.precioCosto,
+            productoId: producto.id,
+            skuInterno: producto.skuInterno,
+          },
         });
       }
 
@@ -106,6 +125,7 @@ export async function crearCompra(formData: FormData) {
           numeroPedido,
           facturado,
           numeroFactura,
+          pagado,
           pagadoPorId,
           fechaCompra,
           usuarioId: Number(session.user.id),
@@ -178,6 +198,8 @@ export async function actualizarCompra(formData: FormData) {
   const numeroPedido = formData.get("numeroPedido")?.toString().trim() || null;
   const facturado = formData.get("facturado") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
+  const pagado = formData.get("pagado") === "on";
+  const pagadoPorId = pagado && formData.get("pagadoPorId") ? Number(formData.get("pagadoPorId")) : null;
 
   if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
   if (!cantidad || cantidad <= 0) throw new Error("La cantidad debe ser mayor a 0.");
@@ -276,6 +298,8 @@ export async function actualizarCompra(formData: FormData) {
         numeroPedido,
         facturado,
         numeroFactura,
+        pagado,
+        pagadoPorId,
       },
     });
 
@@ -558,86 +582,11 @@ export async function crearProductoDesdeListaMayorista(formData: FormData) {
   redirect(`/inventario/listas?proveedorId=${proveedorId}`);
 }
 
-// Las listas de precios de los mayoristas suelen venir con problemas de
-// codificación (UTF-8 leído como Latin-1, ej: "Tamaños" -> "TamaÃ±os").
-// Si detectamos el patrón típico de mojibake, lo corregimos.
-function corregirEncoding(s: string): string {
-  if (!s.includes("Ã") && !s.includes("Â")) return s;
-  try {
-    return Buffer.from(s, "latin1").toString("utf8");
-  } catch {
-    return s;
-  }
-}
-
 // Normaliza un SKU: saca el primer cero si empieza con uno y convierte a minúsculas.
 // Así "06443-0.355" → "6443-0.355" y "6410-12KG" → "6410-12kg" (evita duplicados por capitalización).
 function normalizarSku(sku: string): string {
   const s = sku.startsWith("0") ? sku.slice(1) : sku;
   return s.toLowerCase();
-}
-
-// Convierte precios con formato argentino ("$ 24.100,00") a número (24100).
-function parsearPrecio(valor: unknown): number {
-  if (typeof valor === "number") return valor;
-  const texto = String(valor ?? "").trim();
-  if (!texto) return 0;
-  const limpio = texto.replace(/[^0-9.,]/g, "");
-  const normalizado = limpio.replace(/\./g, "").replace(",", ".");
-  const numero = Number(normalizado);
-  return Number.isNaN(numero) ? 0 : numero;
-}
-
-// Parser de CSV simple (soporta campos entre comillas con comas y comillas escapadas).
-// No usamos XLSX para CSV porque convierte automáticamente celdas como
-// "$ 24.100,00" en números (perdiendo datos, ej: termina en 24.1).
-// Detecta automáticamente si el separador es ";" o ",".
-function parsearCSV(texto: string): Record<string, string>[] {
-  const lineas = texto.split(/\r\n|\n|\r/).filter((linea) => linea.length > 0);
-  if (lineas.length === 0) return [];
-
-  // Detectar separador: si la primera línea tiene más ";" que "," usamos ";"
-  const sep = (lineas[0].split(";").length > lineas[0].split(",").length) ? ";" : ",";
-
-  const parsearLinea = (linea: string): string[] => {
-    const campos: string[] = [];
-    let actual = "";
-    let dentroComillas = false;
-    for (let i = 0; i < linea.length; i++) {
-      const c = linea[i];
-      if (dentroComillas) {
-        if (c === '"') {
-          if (linea[i + 1] === '"') {
-            actual += '"';
-            i++;
-          } else {
-            dentroComillas = false;
-          }
-        } else {
-          actual += c;
-        }
-      } else if (c === '"') {
-        dentroComillas = true;
-      } else if (c === sep) {
-        campos.push(actual);
-        actual = "";
-      } else {
-        actual += c;
-      }
-    }
-    campos.push(actual);
-    return campos;
-  };
-
-  const encabezados = parsearLinea(lineas[0]);
-  return lineas.slice(1).map((linea) => {
-    const valores = parsearLinea(linea);
-    const fila: Record<string, string> = {};
-    encabezados.forEach((encabezado, i) => {
-      fila[encabezado] = valores[i] ?? "";
-    });
-    return fila;
-  });
 }
 
 // Parsea el campo Tamaño del CSV de HYM y retorna contenido y unidadMedida.

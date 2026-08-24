@@ -58,7 +58,8 @@ export async function crearVenta(formData: FormData) {
   const esVentaInterna = formData.get("esVentaInterna") === "on";
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const vendidoPorId = formData.get("vendidoPorId") ? Number(formData.get("vendidoPorId")) : null;
-  const cobradoPorId = formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
+  const cobrado = formData.get("cobrado") === "on";
+  const cobradoPorId = cobrado && formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
   const fechaVentaStr = formData.get("fechaVenta")?.toString();
   const fechaVenta = fechaVentaStr ? new Date(fechaVentaStr) : new Date();
   const fechaAcreditacionRaw = formData.get("fechaAcreditacion")?.toString().trim() || null;
@@ -89,7 +90,7 @@ export async function crearVenta(formData: FormData) {
   const costos = parseCostos(formData);
   const clienteIdNum = Number(clienteId);
 
-  const { sinMapeoHym } = await prisma.$transaction(async (tx) => {
+  const resultado = await prisma.$transaction(async (tx) => {
     const venta = await crearVentaCore(
       {
         clienteId: clienteIdNum,
@@ -102,6 +103,7 @@ export async function crearVenta(formData: FormData) {
         fechaVenta,
         fechaAcreditacion,
         vendidoPorId,
+        cobrado,
         cobradoPorId,
         usuarioId: Number(session.user.id),
         items,
@@ -121,12 +123,15 @@ export async function crearVenta(formData: FormData) {
       });
     }
 
-    return { sinMapeoHym };
+    return { sinMapeoHym, ventaId: venta.ventaId };
   });
 
-  if (sinMapeoHym.length > 0) {
+  const cliente = await prisma.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
+  await sendTelegramMessage(`🧾 Venta manual cargada: #${resultado.ventaId} — ${cliente.nombre} ${cliente.apellido}`);
+
+  if (resultado.sinMapeoHym.length > 0) {
     await sendTelegramMessage(
-      `📉 Stock negativo, sin proveedor mayorista mapeado — reponer manualmente: ${sinMapeoHym.join(", ")}`
+      `📉 Stock negativo, sin proveedor mayorista mapeado — reponer manualmente: ${resultado.sinMapeoHym.join(", ")}`
     );
   }
 
@@ -153,6 +158,8 @@ export async function actualizarVenta(formData: FormData) {
   const fechaVenta = fechaVentaStr ? new Date(fechaVentaStr) : undefined;
   const fechaAcreditacionRaw = formData.get("fechaAcreditacion")?.toString().trim() || null;
   const fechaAcreditacion = fechaAcreditacionRaw ? new Date(fechaAcreditacionRaw) : null;
+  const cobrado = formData.get("cobrado") === "on";
+  const cobradoPorId = cobrado && formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
 
   if (!canalVenta || !medioPago) throw new Error("Faltan datos de la venta.");
 
@@ -325,7 +332,7 @@ export async function actualizarVenta(formData: FormData) {
 
     await tx.venta.update({
       where: { id },
-      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, numeroFactura, fechaVenta, fechaAcreditacion },
+      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, numeroFactura, fechaVenta, fechaAcreditacion, cobrado, cobradoPorId },
     });
 
     await registrarLog(tx, {

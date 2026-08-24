@@ -4,6 +4,7 @@ import { actualizarVenta } from "../../actions";
 import { EditarVentaItems } from "./editar-venta-items";
 import { CostosVenta } from "../../costos-venta";
 import { FacturadoField } from "@/components/facturado-field";
+import { CobradoField } from "@/components/cobrado-field";
 
 export default async function EditarVentaPage({
   params,
@@ -12,7 +13,7 @@ export default async function EditarVentaPage({
 }) {
   const { id } = await params;
 
-  const [venta, productos, itemsConsignados] = await Promise.all([
+  const [venta, productos, itemsConsignados, usuarios] = await Promise.all([
     prisma.venta.findUnique({
       where: { id: Number(id) },
       include: {
@@ -32,6 +33,11 @@ export default async function EditarVentaPage({
         consignacion: { direccion: "RECIBIMOS", estado: "ABIERTA" },
       },
       include: { consignacion: { include: { socio: true } } },
+    }),
+    prisma.usuario.findMany({
+      where: { activo: true },
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+      select: { id: true, nombre: true, apellido: true },
     }),
   ]);
 
@@ -155,8 +161,16 @@ export default async function EditarVentaPage({
             />
           </div>
 
-          <div className="sm:col-span-2">
+          <div>
             <FacturadoField defaultFacturado={venta.facturado} defaultNumero={venta.numeroFactura ?? ""} />
+          </div>
+
+          <div className="flex flex-col gap-2 justify-end">
+            <CobradoField
+              usuarios={usuarios}
+              defaultCobrado={venta.cobrado}
+              defaultCobradoPorId={venta.cobradoPorId ? String(venta.cobradoPorId) : ""}
+            />
           </div>
 
           <div className="space-y-1 sm:col-span-2">

@@ -25,6 +25,7 @@ export default async function ComprasPage() {
     numeroPedido: c.numeroPedido,
     facturado: c.facturado,
     numeroFactura: c.numeroFactura,
+    pagado: c.pagado,
     proveedor: { nombre: c.proveedor.nombre },
     producto: { sku: c.producto.skuInterno, nombre: c.producto.nombre },
   }));

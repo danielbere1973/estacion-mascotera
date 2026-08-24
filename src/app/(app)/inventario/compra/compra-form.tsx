@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ProveedorSelector } from "../proveedor-selector";
 import { CompraItems } from "./compra-items";
 import { FacturadoField } from "@/components/facturado-field";
+import { PagadoField } from "@/components/pagado-field";
 import type { MayoristaItem } from "./mayorista-producto-selector";
 
 type Proveedor = { id: number; nombre: string };
@@ -13,7 +14,7 @@ export function CompraForm({
   proveedores,
   productos: _productos,
   mayoristaItems,
-  tiposProducto: _tiposProducto,
+  tiposProducto,
   usuarios,
   action,
 }: {
@@ -63,14 +64,8 @@ export function CompraForm({
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Pagado por</label>
-          <select name="pagadoPorId" defaultValue="" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-            <option value="">— Sin especificar —</option>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>{u.apellido}, {u.nombre}</option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-2 justify-end">
+          <PagadoField usuarios={usuarios} />
         </div>
 
         <div className="space-y-1">
@@ -94,7 +89,7 @@ export function CompraForm({
       <div className="border-t border-gray-100 pt-4">
         <p className="mb-2 text-sm font-medium text-gray-700">Productos</p>
         {proveedorId ? (
-          <CompraItems items={itemsDelProveedor} />
+          <CompraItems items={itemsDelProveedor} tiposProducto={tiposProducto} />
         ) : (
           <p className="text-sm text-gray-400">Seleccioná un proveedor para cargar productos.</p>
         )}

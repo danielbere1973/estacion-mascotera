@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Combobox } from "@/components/combobox";
 import { formatCurrency } from "@/lib/format";
+import { PagadoField } from "@/components/pagado-field";
 import { actualizarCompra } from "../../../actions";
 
 type MayoristaItem = {
@@ -16,10 +17,12 @@ type MayoristaItem = {
 };
 
 type Proveedor = { id: number; nombre: string };
+type Usuario = { id: number; nombre: string; apellido: string };
 
 export function EditorCompraForm({
   compra,
   proveedores,
+  usuarios,
   mayoristaItems,
 }: {
   compra: {
@@ -35,8 +38,11 @@ export function EditorCompraForm({
     numeroPedido: string | null;
     facturado: boolean;
     numeroFactura: string | null;
+    pagado: boolean;
+    pagadoPorId: number | null;
   };
   proveedores: Proveedor[];
+  usuarios: Usuario[];
   mayoristaItems: MayoristaItem[];
 }) {
   const [proveedorId, setProveedorId] = useState(String(compra.proveedorId));
@@ -149,6 +155,14 @@ export function EditorCompraForm({
           <label className="text-sm font-medium text-gray-700">N° de factura</label>
           <input name="numeroFactura" defaultValue={compra.numeroFactura ?? ""}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+        </div>
+
+        <div className="flex flex-col gap-2 justify-end">
+          <PagadoField
+            usuarios={usuarios}
+            defaultPagado={compra.pagado}
+            defaultPagadoPorId={compra.pagadoPorId ? String(compra.pagadoPorId) : ""}
+          />
         </div>
       </div>
 
