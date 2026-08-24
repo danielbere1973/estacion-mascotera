@@ -156,7 +156,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
       {rows.map((row) => {
         const producto = productos.find((p) => String(p.id) === row.productoId);
         const consignado = producto?.consignados.find((c) => String(c.detalleConsignacionId) === row.detalleConsignacionId);
-        const maxCantidad = consignado ? Math.min(consignado.disponible, producto!.stockActual) : (producto?.stockActual ?? Infinity);
+        const maxCantidad = consignado ? Math.min(consignado.disponible, producto!.stockActual) : Infinity;
         const cantidad = Number(row.cantidad) || 0;
         const precio = Number(row.precio) || 0;
         const descMonto = Number(row.descuentoMonto) || 0;
