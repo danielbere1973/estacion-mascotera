@@ -3,13 +3,14 @@ import { crearVenta } from "../actions";
 import { ClienteSelector } from "./cliente-selector";
 import { VentaItems } from "./venta-items";
 import { FacturadoField } from "@/components/facturado-field";
+import { CobradoField } from "@/components/cobrado-field";
 import { CostosVenta } from "../costos-venta";
 
 export default async function NuevaVentaPage() {
   const [clientes, productos, proveedores, comprasPorProducto, usuarios, mediosPago, itemsConsignados] = await Promise.all([
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
-      where: { activo: true, stockActual: { gt: 0 } },
+      where: { activo: true },
       orderBy: { nombre: "asc" },
       select: {
         id: true,
@@ -137,18 +138,8 @@ export default async function NuevaVentaPage() {
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Cobrado por</label>
-            <select
-              name="cobradoPorId"
-              defaultValue=""
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">— Sin especificar —</option>
-              {usuarios.map((u) => (
-                <option key={u.id} value={u.id}>{u.apellido}, {u.nombre}</option>
-              ))}
-            </select>
+          <div className="flex flex-col gap-2 justify-end">
+            <CobradoField usuarios={usuarios} />
           </div>
         </div>
 

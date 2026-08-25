@@ -30,6 +30,7 @@ export type CrearVentaInput = {
   fechaAcreditacion?: Date | null;
   usuarioId: number;
   vendidoPorId?: number | null;
+  cobrado?: boolean;
   cobradoPorId?: number | null;
   items: ItemVentaInput[];
   costos?: CostoVentaInput[];
@@ -91,6 +92,7 @@ async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVent
       fechaVenta,
       fechaAcreditacion: input.fechaAcreditacion ?? null,
       vendidoPorId: input.vendidoPorId ?? null,
+      cobrado: input.cobrado ?? false,
       cobradoPorId: input.cobradoPorId ?? null,
       usuarioId: input.usuarioId,
       tiendanubeOrderId: input.tiendanubeOrderId ?? null,

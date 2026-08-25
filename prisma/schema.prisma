@@ -88,6 +88,7 @@ model Compra {
   numeroFactura       String?
   fechaCompra         DateTime  @default(now())
   usuarioId           Int
+  pagado              Boolean   @default(false)
   pagadoPorId         Int?
   pagadoPor           Usuario?  @relation("CompraPagadaPor", fields: [pagadoPorId], references: [id])
   producto            Producto  @relation(fields: [productoId], references: [id])
@@ -177,6 +178,7 @@ model Venta {
   esVentaInterna    Boolean        @default(false)
   usuarioId         Int
   vendidoPorId      Int?
+  cobrado           Boolean        @default(false)
   cobradoPorId      Int?
   tiendanubeOrderId Int?           @unique
   costos            CostoVenta[]

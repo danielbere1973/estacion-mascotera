@@ -13,6 +13,7 @@ export type CrearCompraInput = {
   costoEnvio?: number;
   facturado?: boolean;
   numeroFactura?: string | null;
+  pagado?: boolean;
   pagadoPorId?: number | null;
   fechaCompra?: Date;
 };
@@ -41,6 +42,7 @@ async function ejecutarCrearCompra(tx: Prisma.TransactionClient, input: CrearCom
       costoEnvio: input.costoEnvio ?? 0,
       facturado: input.facturado ?? false,
       numeroFactura: input.numeroFactura ?? null,
+      pagado: input.pagado ?? false,
       pagadoPorId: input.pagadoPorId ?? null,
       fechaCompra: input.fechaCompra ?? new Date(),
       usuarioId: input.usuarioId,

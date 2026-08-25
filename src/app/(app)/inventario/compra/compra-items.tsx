@@ -13,6 +13,11 @@ type Row = {
   cantidad: string;
   descuento: string;
   modoManual: boolean;
+  marca: string;
+  categoria: string;
+  presentacion: string;
+  unidadMedida: string;
+  contenido: string;
 };
 
 function costoFinal(precio: string, descuento: string) {
@@ -21,10 +26,29 @@ function costoFinal(precio: string, descuento: string) {
   return p * (1 - d / 100);
 }
 
-export function CompraItems({ items }: { items: MayoristaItem[] }) {
-  const [rows, setRows] = useState<Row[]>([
-    { id: Date.now(), sku: "", nombre: "", precio: "", cantidad: "1", descuento: "0", modoManual: false },
-  ]);
+const filaVacia = (): Row => ({
+  id: Date.now(),
+  sku: "",
+  nombre: "",
+  precio: "",
+  cantidad: "1",
+  descuento: "0",
+  modoManual: false,
+  marca: "",
+  categoria: "",
+  presentacion: "",
+  unidadMedida: "",
+  contenido: "1",
+});
+
+export function CompraItems({
+  items,
+  tiposProducto = [],
+}: {
+  items: MayoristaItem[];
+  tiposProducto?: { id: number; nombre: string }[];
+}) {
+  const [rows, setRows] = useState<Row[]>([filaVacia()]);
 
   const opciones = items.map((i) => {
     const labelNombre = i.nombreCatalogo
@@ -52,10 +76,7 @@ export function CompraItems({ items }: { items: MayoristaItem[] }) {
   }
 
   function agregarFila() {
-    setRows((prev) => [
-      ...prev,
-      { id: Date.now(), sku: "", nombre: "", precio: "", cantidad: "1", descuento: "0", modoManual: false },
-    ]);
+    setRows((prev) => [...prev, filaVacia()]);
   }
 
   function toggleModoManual(id: number) {
@@ -128,11 +149,65 @@ export function CompraItems({ items }: { items: MayoristaItem[] }) {
                           ← Volver a buscar en la lista
                         </button>
                       )}
+                      <div className="grid grid-cols-2 gap-1 pt-1">
+                        <input
+                          placeholder="Marca"
+                          value={row.marca}
+                          onChange={(e) => update(row.id, "marca", e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                        />
+                        <select
+                          value={row.categoria}
+                          onChange={(e) => update(row.id, "categoria", e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                        >
+                          <option value="">Categoría...</option>
+                          {tiposProducto.map((t) => (
+                            <option key={t.id} value={t.nombre}>{t.nombre}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={row.presentacion}
+                          onChange={(e) => update(row.id, "presentacion", e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                        >
+                          <option value="">Presentación...</option>
+                          <option value="BOLSA_CERRADA">Bolsa Cerrada</option>
+                          <option value="CAJA_CERRADA">Caja Cerrada</option>
+                          <option value="INDIVIDUAL">Individual</option>
+                        </select>
+                        <select
+                          value={row.unidadMedida}
+                          onChange={(e) => update(row.id, "unidadMedida", e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                        >
+                          <option value="">Unidad...</option>
+                          <option value="KILOGRAMOS">Kilogramos</option>
+                          <option value="GRAMOS">Gramos</option>
+                          <option value="LITROS">Litros</option>
+                          <option value="MILILITROS">Mililitros</option>
+                          <option value="UNIDAD">Unidad</option>
+                        </select>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="Contenido"
+                          value={row.contenido}
+                          onChange={(e) => update(row.id, "contenido", e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                        />
+                      </div>
                     </div>
                   )}
                   {/* campos hidden para enviar al server */}
                   <input type="hidden" name="itemSku" value={row.sku} />
                   <input type="hidden" name="itemNombre" value={row.nombre} />
+                  <input type="hidden" name="itemMarca" value={row.marca} />
+                  <input type="hidden" name="itemCategoria" value={row.categoria} />
+                  <input type="hidden" name="itemPresentacion" value={row.presentacion} />
+                  <input type="hidden" name="itemUnidadMedida" value={row.unidadMedida} />
+                  <input type="hidden" name="itemContenido" value={row.contenido} />
                 </td>
                 <td className="py-1.5 pr-2">
                   <input
