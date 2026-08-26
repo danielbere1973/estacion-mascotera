@@ -5,6 +5,7 @@ import { crearVentaCore } from "@/lib/ventas";
 import { buscarOCrearCliente } from "@/lib/clientes";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { registrarPendientesCompra, moverOCrearTarjetaCompraMayorista } from "@/lib/compras-mayoristas";
+import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 
 const USUARIO_SISTEMA_EMAIL = "sistema-tiendanube@estacionmascotera.com.ar";
 const COLUMNA_INGRESO_ORDEN = "Ingreso de Orden - Pendiente";
@@ -199,6 +200,12 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error("order-created: error creando tarjeta de tablero", error);
+  }
+
+  if (huboPendienteHym) {
+    ejecutarCorteCompraHym().catch((error) =>
+      console.error("order-created: error disparando corte de compras HYM inmediato", error)
+    );
   }
 
   const avisoSkus = skusNoResueltos.length > 0 ? `\n⚠️ SKUs no vinculados: ${skusNoResueltos.join(", ")}` : "";

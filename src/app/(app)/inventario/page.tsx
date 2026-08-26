@@ -158,13 +158,19 @@ export default async function InventarioPage({
           <tbody className="divide-y divide-gray-100">
             {productos.map((p) => (
               <ProductoRow key={p.id} p={{
-                ...p,
+                id: p.id,
+                skuInterno: p.skuInterno,
+                nombre: p.nombre,
+                marca: p.marca,
+                stockActual: p.stockActual,
                 precioCostoUnitario: Number(p.precioCostoUnitario),
                 precioVenta: Number(p.precioVenta),
                 historialStock: p.historialStock.map((h) => ({
-                  ...h,
+                  id: h.id,
+                  sku: h.sku,
                   precioCostoScraped: Number(h.precioCostoScraped),
                   precioConDescuento: h.precioConDescuento !== null ? Number(h.precioConDescuento) : null,
+                  proveedor: h.proveedor,
                 })),
               }} />
             ))}
