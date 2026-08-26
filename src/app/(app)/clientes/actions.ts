@@ -6,6 +6,29 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { TipoMascota, TamanioMascota } from "@prisma/client";
 
+export async function crearCliente(formData: FormData) {
+  await requireAdmin();
+
+  const nombre = formData.get("nombre")?.toString().trim();
+  const apellido = formData.get("apellido")?.toString().trim();
+  const direccion = formData.get("direccion")?.toString().trim();
+  const telefono = formData.get("telefono")?.toString().trim();
+  const email = formData.get("email")?.toString().trim() || null;
+  const cuit = formData.get("cuit")?.toString().trim() || null;
+  const dni = formData.get("dni")?.toString().trim() || null;
+
+  if (!nombre || !apellido || !direccion || !telefono) {
+    throw new Error("Faltan datos obligatorios.");
+  }
+
+  await prisma.cliente.create({
+    data: { nombre, apellido, direccion, telefono, email, cuit, dni },
+  });
+
+  revalidatePath("/clientes");
+  revalidatePath("/ventas");
+}
+
 export async function actualizarCliente(formData: FormData) {
   await requireAdmin();
 

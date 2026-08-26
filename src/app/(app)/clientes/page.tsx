@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
+import { AltaClienteModal } from "./alta-cliente-modal";
 
 export default async function ClientesPage() {
   await requireAdmin();
@@ -14,12 +15,15 @@ export default async function ClientesPage() {
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Clientes</h1>
-        <Link
-          href="/clientes/reposicion"
-          className="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
-        >
-          Reposiciones pendientes
-        </Link>
+        <div className="flex items-center gap-2">
+          <AltaClienteModal />
+          <Link
+            href="/clientes/reposicion"
+            className="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
+          >
+            Reposiciones pendientes
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
