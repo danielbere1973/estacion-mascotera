@@ -100,7 +100,9 @@ export async function ejecutarCorteCompraHym(): Promise<ResultadoCorteCompraHym>
     return { ok: false, error: "No se pudo iniciar el job" };
   }
 
-  await sendTelegramMessage(`🛒 Corte de compras HYM iniciado: ${items.length} línea(s).`);
+  await sendTelegramMessage(`🛒 Corte de compras HYM iniciado: ${items.length} línea(s).`, {
+    botones: [[{ text: "✅ Ya compré", callback_data: `mover_tarjetas_hym:${jobId}` }]],
+  });
 
   return { ok: true, items: items.length, jobId };
 }

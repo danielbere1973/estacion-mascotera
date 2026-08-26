@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireAdmin } from "@/lib/permissions";
 import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
+import { moverTarjetaCore } from "@/lib/tablero";
 import { PALETA_COLORES } from "./columnas";
 
 export async function forzarCorteCompraHym() {
@@ -48,21 +49,7 @@ export async function crearTarjeta(formData: FormData) {
 
 export async function moverTarjeta(id: number, columnaId: number) {
   await requireAuth();
-
-  const columnaExiste = await prisma.columnaTablero.findUnique({ where: { id: columnaId } });
-  if (!columnaExiste) return;
-
-  const ultima = await prisma.tarjetaTablero.findFirst({
-    where: { columnaId },
-    orderBy: { orden: "desc" },
-    select: { orden: true },
-  });
-
-  await prisma.tarjetaTablero.update({
-    where: { id },
-    data: { columnaId, orden: (ultima?.orden ?? 0) + 1 },
-  });
-
+  await moverTarjetaCore(id, columnaId);
   revalidatePath("/tablero-control");
 }
 

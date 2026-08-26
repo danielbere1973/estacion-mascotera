@@ -30,6 +30,7 @@ const adminLinks = [
   { href: "/actividad", label: "Actividad", icon: "📋" },
   { href: "/admin/medios-pago", label: "Medios de pago", icon: "💳" },
   { href: "/inventario/tipos", label: "Categorías", icon: "🏷️" },
+  { href: "/mayoristas-hym", label: "Precios HYM", icon: "💲" },
 ];
 
 function NavLink({ href, label, icon }: { href: string; label: string; icon: string }) {
