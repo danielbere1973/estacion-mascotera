@@ -1,7 +1,27 @@
 import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export const HYM_PROVEEDOR_ID = 5;
 export const COLUMNA_COMPRAR_MAYORISTA = "Comprar en Mayorista";
+export const COLUMNA_LISTA_PARA_DESPACHO = "Lista para despacho";
+
+// Resuelve una línea PendienteCompraMayorista que HYM marcó "sin stock":
+// si Daniel/Pablo confirman por WhatsApp que sí hay stock real, vuelve a
+// PENDIENTE para que el próximo corte la reintente; si confirman que no
+// hay stock, pasa a FALLIDO y no se vuelve a procesar automáticamente.
+export async function resolverPendienteSinStock(pendienteId: number, hayStockReal: boolean) {
+  if (hayStockReal) {
+    await prisma.pendienteCompraMayorista.update({
+      where: { id: pendienteId },
+      data: { estado: "PENDIENTE", errorMotivo: null, jobId: null },
+    });
+  } else {
+    await prisma.pendienteCompraMayorista.update({
+      where: { id: pendienteId },
+      data: { estado: "FALLIDO" },
+    });
+  }
+}
 
 // Mueve la tarjeta de una venta a "Comprar en Mayorista", o si la venta
 // todavía no tiene tarjeta (ej. venta manual, que no crea tarjetas), crea una

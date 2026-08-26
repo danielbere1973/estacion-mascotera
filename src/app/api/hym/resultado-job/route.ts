@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verificarTokenCallbackHym } from "@/lib/hym-callback";
 import { crearCompraCore } from "@/lib/compras";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { sendTelegramMessage, type BotonInline } from "@/lib/telegram";
 import { HYM_PROVEEDOR_ID } from "@/lib/compras-mayoristas";
 
 const USUARIO_SISTEMA_EMAIL = "sistema-hym@estacionmascotera.com.ar";
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const usuarioSistema = await prisma.usuario.findFirstOrThrow({ where: { email: USUARIO_SISTEMA_EMAIL } });
 
   let ok = 0;
-  const sinStock: string[] = [];
+  const sinStock: { pendienteId: number; nombre: string }[] = [];
   const otrosFallos: { nombre: string; motivo: string }[] = [];
   const requierenRevision: string[] = [];
 
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (motivo === "sin_stock_hym") {
-      sinStock.push(pendiente.producto.nombre);
+      sinStock.push({ pendienteId: pendiente.id, nombre: pendiente.producto.nombre });
     } else {
       otrosFallos.push({ nombre: pendiente.producto.nombre, motivo });
     }
@@ -109,7 +109,9 @@ export async function POST(req: NextRequest) {
 
   const partes = [`🧾 Compra HYM (job ${body.jobId}): ${ok} OK`];
   if (sinStock.length > 0) {
-    partes.push(`\n⚠️ HYM marca sin stock (confirmar por WhatsApp, no asumir stock 0): ${sinStock.join(", ")}`);
+    partes.push(
+      `\n⚠️ HYM marca sin stock (confirmar por WhatsApp, no asumir stock 0): ${sinStock.map((s) => s.nombre).join(", ")}`
+    );
   }
   if (otrosFallos.length > 0) {
     partes.push(`\n❌ Fallidos: ${otrosFallos.map((f) => `${f.nombre} (${f.motivo})`).join(", ")}`);
@@ -117,7 +119,13 @@ export async function POST(req: NextRequest) {
   if (requierenRevision.length > 0) {
     partes.push(`\n🚨 Requieren revisión manual (fallan repetidamente): ${requierenRevision.join(", ")}`);
   }
-  await sendTelegramMessage(partes.join(""));
+
+  const botonesSinStock: BotonInline[][] = sinStock.map((s) => [
+    { text: `✅ Hay stock: ${s.nombre}`, callback_data: `sin_stock:${s.pendienteId}:si` },
+    { text: `❌ No hay: ${s.nombre}`, callback_data: `sin_stock:${s.pendienteId}:no` },
+  ]);
+
+  await sendTelegramMessage(partes.join(""), botonesSinStock.length > 0 ? { botones: botonesSinStock } : undefined);
 
   return NextResponse.json({ ok: true, procesadas: body.resultados.length, exitosas: ok });
 }
