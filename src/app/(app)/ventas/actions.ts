@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 import { crearVentaCore, eliminarVentaCore, calcularMontoCosto } from "@/lib/ventas";
 import { registrarPendientesCompra, moverOCrearTarjetaCompraMayorista } from "@/lib/compras-mayoristas";
+import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { CanalVenta } from "@prisma/client";
 
@@ -123,11 +124,17 @@ export async function crearVenta(formData: FormData) {
       });
     }
 
-    return { sinMapeoHym, ventaId: venta.ventaId };
+    return { sinMapeoHym, huboPendienteHym, ventaId: venta.ventaId };
   });
 
   const cliente = await prisma.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
   await sendTelegramMessage(`🧾 Venta manual cargada: #${resultado.ventaId} — ${cliente.nombre} ${cliente.apellido}`);
+
+  if (resultado.huboPendienteHym) {
+    ejecutarCorteCompraHym().catch((error) =>
+      console.error("crearVenta: error disparando corte de compras HYM inmediato", error)
+    );
+  }
 
   if (resultado.sinMapeoHym.length > 0) {
     await sendTelegramMessage(

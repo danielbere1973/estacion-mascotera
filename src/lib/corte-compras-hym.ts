@@ -12,8 +12,9 @@ export type ResultadoCorteCompraHym =
 
 // Junta las líneas PENDIENTE de compra a HYM, las marca EN_PROCESO y le pasa
 // el lote al servicio Python (que arma el carrito en el sitio de HYM, sin
-// confirmar la compra). Se puede disparar por el cron de las 12:00 o a
-// demanda (botón "Forzar corte ahora").
+// confirmar la compra). Se dispara inmediatamente después de cada venta que
+// genera un pendiente nuevo; el cron diario de las 12:00 queda como respaldo
+// por si el disparo inmediato falla (ngrok caído, timeout, etc.).
 export async function ejecutarCorteCompraHym(): Promise<ResultadoCorteCompraHym> {
   const limiteTimeout = new Date(Date.now() - HORAS_TIMEOUT_EN_PROCESO * 60 * 60 * 1000);
   await prisma.pendienteCompraMayorista.updateMany({
