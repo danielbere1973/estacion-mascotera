@@ -29,6 +29,27 @@ export async function crearCliente(formData: FormData) {
   revalidatePath("/ventas");
 }
 
+export async function eliminarCliente(formData: FormData) {
+  await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Cliente inválido.");
+
+  try {
+    await prisma.cliente.delete({ where: { id } });
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : String(error);
+    if (mensaje.includes("foreign key constraint") || mensaje.includes("violates")) {
+      throw new Error(
+        "No se puede dar de baja: este cliente tiene ventas u otros registros asociados. Para conservar el historial, no se puede eliminar."
+      );
+    }
+    throw error;
+  }
+
+  revalidatePath("/clientes");
+}
+
 export async function actualizarCliente(formData: FormData) {
   await requireAdmin();
 

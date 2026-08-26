@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
+import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { AltaClienteModal } from "./alta-cliente-modal";
+import { eliminarCliente } from "./actions";
 
 export default async function ClientesPage() {
   await requireAdmin();
@@ -62,6 +64,15 @@ export default async function ClientesPage() {
                     >
                       Editar
                     </Link>
+                    <form action={eliminarCliente}>
+                      <input type="hidden" name="id" value={c.id} />
+                      <ConfirmSubmitButton
+                        confirmMessage={`¿Dar de baja a ${c.nombre} ${c.apellido}? Esta acción no se puede deshacer.`}
+                        className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                      >
+                        Baja
+                      </ConfirmSubmitButton>
+                    </form>
                   </div>
                 </td>
               </tr>
