@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const HYM_PROVEEDOR_ID = 5;
+export const COLUMNA_INGRESO_ORDEN = "Ingreso de Orden - Pendiente";
 export const COLUMNA_COMPRAR_MAYORISTA = "Comprar en Mayorista";
 export const COLUMNA_LISTA_PARA_DESPACHO = "Lista para despacho";
 
@@ -61,6 +62,37 @@ export async function moverOCrearTarjetaCompraMayorista(
       },
     });
   }
+}
+
+// Crea la tarjeta de seguimiento de una venta que no disparó compra a
+// mayorista (stock suficiente, o stock negativo sin proveedor mapeado):
+// entra directo a la primera columna del tablero para que quede visible
+// igual que cualquier otro pedido.
+export async function crearTarjetaIngresoOrden(
+  tx: Prisma.TransactionClient,
+  params: { ventaId: number; clienteId: number; titulo: string }
+) {
+  const columna = await tx.columnaTablero.findFirst({ where: { nombre: COLUMNA_INGRESO_ORDEN } });
+  if (!columna) {
+    console.error(`crearTarjetaIngresoOrden: no se encontró la columna "${COLUMNA_INGRESO_ORDEN}"`);
+    return;
+  }
+
+  const ultima = await tx.tarjetaTablero.findFirst({
+    where: { columnaId: columna.id },
+    orderBy: { orden: "desc" },
+    select: { orden: true },
+  });
+
+  await tx.tarjetaTablero.create({
+    data: {
+      titulo: params.titulo,
+      columnaId: columna.id,
+      ventaId: params.ventaId,
+      clienteId: params.clienteId,
+      orden: (ultima?.orden ?? 0) + 1,
+    },
+  });
 }
 
 // Por cada producto que quedó con stock negativo, acumula (o crea) una línea
