@@ -4,13 +4,18 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireAdmin } from "@/lib/permissions";
-import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
+import { armarPreviewCorteHym, ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 import { moverTarjetaCore } from "@/lib/tablero";
 import { PALETA_COLORES } from "./columnas";
 
-export async function forzarCorteCompraHym() {
+export async function previsualizarCorteHym() {
   await requireAdmin();
-  const resultado = await ejecutarCorteCompraHym();
+  return armarPreviewCorteHym();
+}
+
+export async function forzarCorteCompraHym(excluirLineaIds: number[] = []) {
+  await requireAdmin();
+  const resultado = await ejecutarCorteCompraHym(excluirLineaIds);
   revalidatePath("/tablero-control");
   return resultado;
 }

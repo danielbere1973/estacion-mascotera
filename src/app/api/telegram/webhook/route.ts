@@ -4,10 +4,11 @@ import {
   verificarSecretoTelegram,
   esChatAutorizado,
   sendTelegramMessage,
+  editTelegramMessage,
   answerCallbackQuery,
 } from "@/lib/telegram";
 import { moverTarjetasComprMayoristaADespacho } from "@/lib/tablero";
-import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
+import { armarPreviewCorteHym, ejecutarCorteCompraHym, type ItemPreviewCorteHym } from "@/lib/corte-compras-hym";
 import { resolverPendienteSinStock } from "@/lib/compras-mayoristas";
 
 type TelegramUpdate = {
@@ -15,7 +16,7 @@ type TelegramUpdate = {
   callback_query?: {
     id: string;
     data?: string;
-    message?: { chat: { id: number } };
+    message?: { chat: { id: number }; message_id: number };
   };
 };
 
@@ -60,7 +61,48 @@ async function manejarMensaje(chatId: string, texto: string) {
   await sendTelegramMessage(lineas.join("\n\n"), { chatId, botones: botonCorteHym });
 }
 
-async function manejarCallback(chatId: string, callbackData: string): Promise<string> {
+function textoPreviewCorteHym(conMapeo: ItemPreviewCorteHym[], sinMapeo: ItemPreviewCorteHym[]): string {
+  if (conMapeo.length === 0 && sinMapeo.length === 0) {
+    return "No había pendientes de HYM.";
+  }
+
+  const partes: string[] = [];
+
+  if (conMapeo.length > 0) {
+    const lineas = conMapeo.map((i) => `• ${i.nombre} (SKU ${i.skuInterno}) x${i.cantidad}`);
+    partes.push(`<b>Se pedirían a HYM:</b>\n${lineas.join("\n")}`);
+  } else {
+    partes.push("No hay items con mapeo HYM pendientes.");
+  }
+
+  if (sinMapeo.length > 0) {
+    const lineas = sinMapeo.map((i) => `• ${i.nombre} (SKU ${i.skuInterno}) x${i.cantidad}`);
+    partes.push(`<b>⚠️ Sin mapeo HYM (gestionar en otro lado):</b>\n${lineas.join("\n")}`);
+  }
+
+  return partes.join("\n\n");
+}
+
+function botonesPreviewCorteHym(conMapeo: ItemPreviewCorteHym[], excluidos: number[] = []) {
+  const botones = conMapeo.map((i) => [
+    {
+      text: `❌ Sacar: ${i.nombre}`,
+      callback_data: `corte_hym_sacar:${[...excluidos, i.lineaId].join(",")}`,
+    },
+  ]);
+  if (conMapeo.length > 0) {
+    botones.push([
+      { text: "✅ Confirmar pedido", callback_data: `corte_hym_confirmar:${excluidos.join(",")}` },
+    ]);
+  }
+  return botones;
+}
+
+async function manejarCallback(
+  chatId: string,
+  callbackData: string,
+  messageId: number | undefined
+): Promise<string> {
   const [accion, ...params] = callbackData.split(":");
 
   if (accion === "mover_tarjetas_hym") {
@@ -73,9 +115,40 @@ async function manejarCallback(chatId: string, callbackData: string): Promise<st
   }
 
   if (accion === "corte_hym" && params[0] === "forzar") {
-    const resultado = await ejecutarCorteCompraHym();
+    const { conMapeo, sinMapeo } = await armarPreviewCorteHym();
+    if (conMapeo.length === 0 && sinMapeo.length === 0) return "No había pendientes de HYM.";
+    await sendTelegramMessage(textoPreviewCorteHym(conMapeo, sinMapeo), {
+      chatId,
+      botones: botonesPreviewCorteHym(conMapeo),
+    });
+    return "Vista previa enviada.";
+  }
+
+  if (accion === "corte_hym_sacar") {
+    const excluidos = params[0]?.split(",").map(Number).filter((n) => !Number.isNaN(n)) ?? [];
+    if (excluidos.length === 0 || !messageId) return "Callback inválido.";
+    const { conMapeo, sinMapeo } = await armarPreviewCorteHym();
+    const restante = conMapeo.filter((i) => !excluidos.includes(i.lineaId));
+    await editTelegramMessage(
+      chatId,
+      messageId,
+      textoPreviewCorteHym(restante, sinMapeo),
+      botonesPreviewCorteHym(restante, excluidos)
+    );
+    return "Sacado de la vista previa.";
+  }
+
+  if (accion === "corte_hym_confirmar") {
+    if (!messageId) return "Callback inválido.";
+    const excluidos = params[0] ? params[0].split(",").map(Number).filter((n) => !Number.isNaN(n)) : [];
+    const resultado = await ejecutarCorteCompraHym(excluidos);
     if (!resultado.ok) return `🚨 Error forzando corte HYM: ${resultado.error}`;
-    return resultado.items === 0 ? "No había pendientes de HYM." : `🛒 Corte HYM iniciado: ${resultado.items} línea(s).`;
+    const texto =
+      resultado.items === 0
+        ? "No había pendientes de HYM."
+        : `🛒 Corte HYM confirmado: ${resultado.items} línea(s).`;
+    await editTelegramMessage(chatId, messageId, texto);
+    return "Confirmado.";
   }
 
   if (accion === "sin_stock") {
@@ -114,7 +187,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true });
       }
 
-      const textoRespuesta = await manejarCallback(chatId, cq.data);
+      const textoRespuesta = await manejarCallback(chatId, cq.data, cq.message?.message_id);
       await answerCallbackQuery(cq.id, textoRespuesta);
       return NextResponse.json({ ok: true });
     }
