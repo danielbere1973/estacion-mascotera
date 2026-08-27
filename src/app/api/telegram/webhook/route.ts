@@ -22,6 +22,7 @@ type TelegramUpdate = {
 const LIMITE_RESULTADOS_BUSQUEDA = 10;
 
 async function manejarMensaje(chatId: string, texto: string) {
+  console.log("telegram/webhook: manejarMensaje inicio", { chatId, texto });
   const textoLimpio = texto.trim();
   if (!textoLimpio || textoLimpio.startsWith("/")) {
     await sendTelegramMessage(
@@ -94,14 +95,20 @@ export async function POST(req: NextRequest) {
   try {
     const secretHeader = req.headers.get("x-telegram-bot-api-secret-token");
     if (!verificarSecretoTelegram(secretHeader)) {
+      console.error("telegram/webhook: secreto invalido", {
+        recibidoLen: secretHeader?.length ?? 0,
+        esperadoLen: (process.env.TELEGRAM_WEBHOOK_SECRET ?? "").length,
+      });
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const update = (await req.json()) as TelegramUpdate;
+    console.log("telegram/webhook: update recibido", JSON.stringify(update));
 
     if (update.callback_query) {
       const cq = update.callback_query;
       const chatId = cq.message?.chat.id.toString();
+      console.log("telegram/webhook: callback_query", { chatId, data: cq.data, autorizado: chatId ? esChatAutorizado(chatId) : false });
       if (!chatId || !esChatAutorizado(chatId) || !cq.data) {
         await answerCallbackQuery(cq.id);
         return NextResponse.json({ ok: true });
@@ -114,8 +121,17 @@ export async function POST(req: NextRequest) {
 
     if (update.message) {
       const chatId = update.message.chat.id.toString();
-      if (esChatAutorizado(chatId) && update.message.text) {
+      const autorizado = esChatAutorizado(chatId);
+      console.log("telegram/webhook: message", {
+        chatId,
+        text: update.message.text,
+        autorizado,
+        TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+        TELEGRAM_CHAT_ID_2: process.env.TELEGRAM_CHAT_ID_2,
+      });
+      if (autorizado && update.message.text) {
         await manejarMensaje(chatId, update.message.text);
+        console.log("telegram/webhook: manejarMensaje completado");
       }
       return NextResponse.json({ ok: true });
     }
@@ -123,6 +139,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("telegram/webhook: error procesando update", error);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, error: String(error) });
   }
 }
