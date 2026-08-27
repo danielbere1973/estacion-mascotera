@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { crearVentaCore } from "@/lib/ventas";
 import { buscarOCrearCliente } from "@/lib/clientes";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { registrarPendientesCompra, moverOCrearTarjetaCompraMayorista } from "@/lib/compras-mayoristas";
+import {
+  registrarPendientesCompra,
+  moverOCrearTarjetaCompraMayorista,
+  crearTarjetaIngresoOrden,
+} from "@/lib/compras-mayoristas";
 import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 
 const USUARIO_SISTEMA_EMAIL = "sistema-tiendanube@estacionmascotera.com.ar";
-const COLUMNA_INGRESO_ORDEN = "Ingreso de Orden - Pendiente";
-const COLUMNA_COMPRAR_MAYORISTA = "Comprar en Mayorista";
 
 type PedidoTiendanube = {
   id: number;
@@ -178,25 +180,9 @@ export async function POST(req: NextRequest) {
         moverOCrearTarjetaCompraMayorista(tx, { ventaId, clienteId, titulo: tituloTarjeta })
       );
     } else {
-      const columna = await prisma.columnaTablero.findFirst({ where: { nombre: COLUMNA_INGRESO_ORDEN } });
-      if (columna) {
-        const ultima = await prisma.tarjetaTablero.findFirst({
-          where: { columnaId: columna.id },
-          orderBy: { orden: "desc" },
-          select: { orden: true },
-        });
-        await prisma.tarjetaTablero.create({
-          data: {
-            titulo: tituloTarjeta,
-            columnaId: columna.id,
-            ventaId,
-            clienteId,
-            orden: (ultima?.orden ?? 0) + 1,
-          },
-        });
-      } else {
-        console.error(`order-created: no se encontró la columna "${COLUMNA_INGRESO_ORDEN}"`);
-      }
+      await prisma.$transaction((tx) =>
+        crearTarjetaIngresoOrden(tx, { ventaId, clienteId, titulo: tituloTarjeta })
+      );
     }
   } catch (error) {
     console.error("order-created: error creando tarjeta de tablero", error);

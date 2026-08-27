@@ -6,7 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 import { crearVentaCore, eliminarVentaCore, calcularMontoCosto } from "@/lib/ventas";
-import { registrarPendientesCompra, moverOCrearTarjetaCompraMayorista } from "@/lib/compras-mayoristas";
+import {
+  registrarPendientesCompra,
+  moverOCrearTarjetaCompraMayorista,
+  crearTarjetaIngresoOrden,
+} from "@/lib/compras-mayoristas";
 import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { CanalVenta } from "@prisma/client";
@@ -115,12 +119,19 @@ export async function crearVenta(formData: FormData) {
 
     const { huboPendienteHym, sinMapeoHym } = await registrarPendientesCompra(tx, venta.productosStockNegativo);
 
+    const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
+    const tituloTarjeta = `Venta a ${cliente.nombre} ${cliente.apellido}`;
     if (huboPendienteHym) {
-      const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
       await moverOCrearTarjetaCompraMayorista(tx, {
         ventaId: venta.ventaId,
         clienteId: clienteIdNum,
-        titulo: `Venta a ${cliente.nombre} ${cliente.apellido}`,
+        titulo: tituloTarjeta,
+      });
+    } else {
+      await crearTarjetaIngresoOrden(tx, {
+        ventaId: venta.ventaId,
+        clienteId: clienteIdNum,
+        titulo: tituloTarjeta,
       });
     }
 
