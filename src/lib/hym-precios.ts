@@ -295,15 +295,17 @@ export async function aplicarCambioHym(
 ): Promise<{ ok: true } | { ok: false; status: number; detalle: string }> {
   const body: Record<string, unknown> = {};
 
+  // Tiendanube ignora silenciosamente price/promotional_price: null (responde 200
+  // sin cambiar nada) — hay que mandar string vacío para vaciarlos de verdad.
   if (fila.esVaciarPorSinStock) {
-    body.price = null;
-    body.promotional_price = null;
+    body.price = "";
+    body.promotional_price = "";
   } else {
     if (typeof fila.nuevoPrecio === "number") {
       body.price = String(fila.nuevoPrecio);
     }
     if (fila.nuevoPromocional !== undefined) {
-      body.promotional_price = fila.nuevoPromocional === null ? null : String(fila.nuevoPromocional);
+      body.promotional_price = fila.nuevoPromocional === null ? "" : String(fila.nuevoPromocional);
     }
   }
 
