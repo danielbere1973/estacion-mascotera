@@ -73,9 +73,11 @@ export async function answerCallbackQuery(callbackQueryId: string, texto?: strin
 }
 
 export function esChatAutorizado(chatId: string): boolean {
-  const autorizados = [process.env.TELEGRAM_CHAT_ID, process.env.TELEGRAM_CHAT_ID_2].filter(
-    (id): id is string => Boolean(id)
-  );
+  const autorizados = [process.env.TELEGRAM_CHAT_ID, process.env.TELEGRAM_CHAT_ID_2]
+    .filter((id): id is string => Boolean(id))
+    .flatMap((id) => id.split(","))
+    .map((id) => id.trim())
+    .filter(Boolean);
   return autorizados.includes(chatId);
 }
 
