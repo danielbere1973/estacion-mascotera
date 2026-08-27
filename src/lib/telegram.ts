@@ -47,6 +47,39 @@ export async function sendTelegramMessage(
   );
 }
 
+export async function editTelegramMessage(
+  chatId: string,
+  messageId: number,
+  text: string,
+  botones?: BotonInline[][]
+): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) {
+    console.error("Telegram: falta TELEGRAM_BOT_TOKEN, no se edita el mensaje.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: "HTML",
+        ...(botones ? { reply_markup: { inline_keyboard: botones } } : {}),
+      }),
+    });
+
+    if (!res.ok) {
+      console.error(`Telegram: error en editMessageText (${res.status}): ${await res.text()}`);
+    }
+  } catch (error) {
+    console.error("Telegram: excepción en editMessageText", error);
+  }
+}
+
 export async function answerCallbackQuery(callbackQueryId: string, texto?: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {

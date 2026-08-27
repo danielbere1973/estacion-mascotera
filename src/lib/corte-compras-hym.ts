@@ -10,20 +10,78 @@ export type ResultadoCorteCompraHym =
   | { ok: true; items: number; jobId: string }
   | { ok: false; error: string };
 
-// Junta las líneas PENDIENTE de compra a HYM, las marca EN_PROCESO y le pasa
-// el lote al servicio Python (que arma el carrito en el sitio de HYM, sin
-// confirmar la compra). Se dispara inmediatamente después de cada venta que
-// genera un pendiente nuevo; el cron diario de las 12:00 queda como respaldo
-// por si el disparo inmediato falla (ngrok caído, timeout, etc.).
-export async function ejecutarCorteCompraHym(): Promise<ResultadoCorteCompraHym> {
+export type ItemPreviewCorteHym = {
+  lineaId: number;
+  skuInterno: string;
+  nombre: string;
+  cantidad: number;
+};
+
+export type PreviewCorteHym = {
+  conMapeo: ItemPreviewCorteHym[];
+  sinMapeo: ItemPreviewCorteHym[];
+};
+
+async function reactivarPendientesTrabados() {
   const limiteTimeout = new Date(Date.now() - HORAS_TIMEOUT_EN_PROCESO * 60 * 60 * 1000);
   await prisma.pendienteCompraMayorista.updateMany({
     where: { estado: "EN_PROCESO", actualizadoAt: { lt: limiteTimeout } },
     data: { estado: "PENDIENTE", jobId: null },
   });
+}
+
+// Arma la vista previa de lo que se pediría a HYM: separa los pendientes que
+// tienen mapeo HYM activo (se pedirían) de los que no (hay que gestionarlos
+// en otro lado). No toca la base de datos ni dispara el job del scraper.
+export async function armarPreviewCorteHym(): Promise<PreviewCorteHym> {
+  await reactivarPendientesTrabados();
 
   const pendientes = await prisma.pendienteCompraMayorista.findMany({
     where: { estado: "PENDIENTE", proveedorId: HYM_PROVEEDOR_ID },
+    include: { producto: { select: { nombre: true, skuInterno: true } } },
+  });
+
+  const codigosHym = await prisma.historialStockMayorista.findMany({
+    where: {
+      proveedorId: HYM_PROVEEDOR_ID,
+      productoId: { in: pendientes.map((p) => p.productoId) },
+      activo: true,
+    },
+    select: { productoId: true, sku: true },
+  });
+  const codigoPorProducto = new Map(codigosHym.map((c) => [c.productoId, c.sku]));
+
+  const conMapeo: ItemPreviewCorteHym[] = [];
+  const sinMapeo: ItemPreviewCorteHym[] = [];
+
+  for (const p of pendientes) {
+    const item = { lineaId: p.id, skuInterno: p.producto.skuInterno, nombre: p.producto.nombre, cantidad: p.cantidad };
+    if (codigoPorProducto.has(p.productoId)) {
+      conMapeo.push(item);
+    } else {
+      sinMapeo.push(item);
+    }
+  }
+
+  return { conMapeo, sinMapeo };
+}
+
+// Junta las líneas PENDIENTE de compra a HYM, las marca EN_PROCESO y le pasa
+// el lote al servicio Python (que arma el carrito en el sitio de HYM, sin
+// confirmar la compra). Se dispara inmediatamente después de cada venta que
+// genera un pendiente nuevo; el cron diario de las 12:00 queda como respaldo
+// por si el disparo inmediato falla (ngrok caído, timeout, etc.). `excluirLineaIds`
+// permite sacar líneas puntuales (ej. desde la vista previa de Telegram, cuando
+// Daniel prefiere comprar ese producto en otro lado aunque HYM lo tenga).
+export async function ejecutarCorteCompraHym(excluirLineaIds: number[] = []): Promise<ResultadoCorteCompraHym> {
+  await reactivarPendientesTrabados();
+
+  const pendientes = await prisma.pendienteCompraMayorista.findMany({
+    where: {
+      estado: "PENDIENTE",
+      proveedorId: HYM_PROVEEDOR_ID,
+      ...(excluirLineaIds.length > 0 ? { id: { notIn: excluirLineaIds } } : {}),
+    },
     include: { producto: { select: { nombre: true, skuInterno: true } } },
   });
 
