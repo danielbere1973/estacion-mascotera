@@ -739,6 +739,12 @@ export async function importarExcel(formData: FormData) {
     const tamanios = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim() || null;
     const estadoStockMayorista = String(fila["Estado de stock"] ?? "").trim() || null;
     const tipoProducto = String(fila["Tipo"] ?? fila["Categoria"] ?? "").trim() || null;
+    // Código real de HYM (texto, preserva ceros a la izquierda) — distinto del
+    // campo "sku" interno, que históricamente lleva el tamaño concatenado
+    // (ej. "106-3kg") porque HYM antes reutilizaba un código para todas las
+    // variantes. Hoy HYM asigna un código único por variante. Viene en la
+    // columna "Codigo" del CSV que exporta el scraper (main.py).
+    const codigoHym = String(fila["Codigo"] ?? "").trim() || null;
 
     let producto = productosPorSku.get(sku) ?? null;
 
@@ -791,11 +797,13 @@ export async function importarExcel(formData: FormData) {
         activo: true,
         fechaImportacion: ahora,
         ...(producto?.id ? { productoId: producto.id } : {}),
+        ...(codigoHym ? { codigoHym } : {}),
       },
       create: {
         productoId: producto?.id ?? null,
         proveedorId: Number(proveedorId),
         sku,
+        codigoHym,
         nombre,
         precioCostoScraped: precioCosto,
         precioConDescuento,
