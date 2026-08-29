@@ -24,7 +24,7 @@ export function DetallesMailForm({
         <button
           type="button"
           onClick={borrarCampania}
-          className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
         >
           Borrar campaña
         </button>
