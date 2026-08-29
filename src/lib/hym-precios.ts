@@ -11,12 +11,12 @@ type VarianteTN = {
 };
 type ProductoTN = { id: number; name: { es?: string }; variants: VarianteTN[] };
 
-type FilaHym = { Contactenacion: string; SKUInterno: string };
+type FilaHym = { Codigo: string; SKUInterno: string };
 
 // Exclusiones confirmadas manualmente tras revisar contra sistema_em:
 // - 6523-0.850: el SKU está mal asignado en Tiendanube a un producto distinto,
 //   no al pouch húmedo real de HYM (que no existe en TN).
-const EXCLUIR_SKU_CSV = new Set(["6523-0.850"]);
+const EXCLUIR_SKU_CSV = new Set(["06523"]);
 
 export type FilaCambioHym = {
   skuHym: string;
@@ -125,11 +125,11 @@ export async function calcularCambiosHym(
   }
   const filasHym = XLSX.utils.sheet_to_json<FilaHym>(sheetHym);
 
-  const indiceContactenacion = new Map<string, string>();
+  const indiceCodigoHym = new Map<string, string>();
   for (const f of filasHym) {
-    const key = String(f.Contactenacion ?? "").toLowerCase().trim();
+    const key = String(f.Codigo ?? "").toLowerCase().trim();
     const skuInterno = String(f.SKUInterno ?? "").trim();
-    if (key && skuInterno) indiceContactenacion.set(key, skuInterno);
+    if (key && skuInterno) indiceCodigoHym.set(key, skuInterno);
   }
 
   const cambios: FilaCambioHym[] = [];
@@ -149,7 +149,7 @@ export async function calcularCambiosHym(
     const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
     if (!skuCsv) continue;
 
-    const skuInterno = indiceContactenacion.get(skuCsv);
+    const skuInterno = indiceCodigoHym.get(skuCsv);
     if (!skuInterno) {
       sinSkuInterno++;
       sinResolver.push({

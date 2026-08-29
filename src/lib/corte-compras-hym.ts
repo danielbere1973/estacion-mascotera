@@ -47,9 +47,11 @@ export async function armarPreviewCorteHym(): Promise<PreviewCorteHym> {
       productoId: { in: pendientes.map((p) => p.productoId) },
       activo: true,
     },
-    select: { productoId: true, sku: true },
+    select: { productoId: true, sku: true, codigoHym: true },
   });
-  const codigoPorProducto = new Map(codigosHym.map((c) => [c.productoId, c.sku]));
+  const codigoPorProducto = new Map(
+    codigosHym.map((c) => [c.productoId, c.codigoHym ?? c.sku.split("-")[0]])
+  );
 
   const conMapeo: ItemPreviewCorteHym[] = [];
   const sinMapeo: ItemPreviewCorteHym[] = [];
@@ -95,9 +97,11 @@ export async function ejecutarCorteCompraHym(excluirLineaIds: number[] = []): Pr
       productoId: { in: pendientes.map((p) => p.productoId) },
       activo: true,
     },
-    select: { productoId: true, sku: true },
+    select: { productoId: true, sku: true, codigoHym: true },
   });
-  const codigoPorProducto = new Map(codigosHym.map((c) => [c.productoId, c.sku]));
+  const codigoPorProducto = new Map(
+    codigosHym.map((c) => [c.productoId, c.codigoHym ?? c.sku.split("-")[0]])
+  );
 
   const jobId = randomUUID();
   const items = pendientes
