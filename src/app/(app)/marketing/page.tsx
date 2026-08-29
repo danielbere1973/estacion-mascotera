@@ -11,7 +11,7 @@ export default async function MarketingPage() {
   });
 
   return (
-    <div className="w-full space-y-4">
+    <div className="flex h-full flex-col gap-4">
       <h1 className="text-xl font-semibold text-gray-900">Marketing — Crear campaña</h1>
       <PromoForm clientes={clientes} />
     </div>
