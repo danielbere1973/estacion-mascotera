@@ -61,8 +61,8 @@ export function PromoForm({ clientes }: { clientes: Cliente[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 sm:flex-row sm:items-stretch">
         <SeleccionClientes
           clientes={clientes}
           seleccionados={seleccionados}
@@ -73,7 +73,10 @@ export function PromoForm({ clientes }: { clientes: Cliente[] }) {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
-          Total de clientes seleccionados: <span className="font-semibold">{seleccionados.size}</span>
+          Clientes seleccionados:{" "}
+          <span className="font-semibold">
+            {seleccionados.size} de {clientes.length}
+          </span>
         </p>
 
         <div className="flex items-center gap-3">
