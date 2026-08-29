@@ -1,12 +1,19 @@
-export default function MarketingPage() {
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/permissions";
+import { PromoForm } from "./promo-form";
+
+export default async function MarketingPage() {
+  await requireAdmin();
+
+  const clientes = await prisma.cliente.findMany({
+    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    select: { id: true, nombre: true, apellido: true, email: true },
+  });
+
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <div className="text-6xl">🚧👷📣👷🚧</div>
-      <h1 className="text-2xl font-semibold text-gray-900">Módulo en construcción</h1>
-      <p className="max-w-sm text-sm text-gray-500">
-        Estamos trabajando en el módulo de Marketing. Pronto vas a poder gestionar campañas y
-        contenido desde acá.
-      </p>
+    <div className="w-full space-y-4">
+      <h1 className="text-xl font-semibold text-gray-900">Marketing — Crear campaña</h1>
+      <PromoForm clientes={clientes} />
     </div>
   );
 }
