@@ -61,10 +61,18 @@ export function DetallesMailForm({
       return;
     }
 
+    // Algunos navegadores pierden la selección mientras el diálogo nativo
+    // (prompt) está abierto — se guarda una copia para restaurarla después.
+    const rangeGuardado = range.cloneRange();
+
     const url = window.prompt("Pegá la URL del link (ej: https://www.instagram.com/...)", "https://");
     if (!url) return;
 
     cuerpo.focus();
+    const seleccionActual = window.getSelection();
+    seleccionActual?.removeAllRanges();
+    seleccionActual?.addRange(rangeGuardado);
+
     document.execCommand("createLink", false, url);
   }
 
