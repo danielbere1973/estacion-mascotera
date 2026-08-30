@@ -1,5 +1,6 @@
 "use server";
 
+import { put } from "@vercel/blob";
 import { requireAdmin } from "@/lib/permissions";
 
 // Resend solo permite enviar "from" un dominio verificado.
@@ -8,6 +9,30 @@ const FROM_ADDRESS = "Estación Mascotera <no-reply@estacionmascotera.com.ar>";
 // Remitente fijo: recibe la copia de confirmación y es el "Reply-To" de
 // todas las campañas. No es configurable desde el formulario a propósito.
 const REMITENTE_FIJO = "contacto@estacionmascotera.com.ar";
+
+export async function subirImagenMail(formData: FormData): Promise<{ url?: string; error?: string }> {
+  await requireAdmin();
+
+  const archivo = formData.get("file");
+  if (!(archivo instanceof File)) {
+    return { error: "Archivo inválido." };
+  }
+  if (!archivo.type.startsWith("image/")) {
+    return { error: "Solo se pueden subir imágenes." };
+  }
+
+  try {
+    const blob = await put(`marketing/${archivo.name}`, archivo, {
+      access: "public",
+      addRandomSuffix: true,
+    });
+    return { url: blob.url };
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Error desconocido al subir la imagen.",
+    };
+  }
+}
 
 export async function enviarCampania({
   titulo,
