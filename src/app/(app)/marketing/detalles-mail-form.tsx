@@ -69,10 +69,30 @@ export function DetallesMailForm({
     if (!url) return;
 
     cuerpo.focus();
+
+    // Si lo seleccionado es una sola imagen (sin texto alrededor), la
+    // envolvemos en <a> a mano: execCommand("createLink") no es confiable
+    // para envolver elementos que no son texto en todos los navegadores.
+    const contenidoClonado = rangeGuardado.cloneContents();
+    const imagenes = contenidoClonado.querySelectorAll("img");
+    const esSoloImagen =
+      imagenes.length === 1 && (contenidoClonado.textContent ?? "").trim() === "";
+
+    if (esSoloImagen) {
+      try {
+        const link = document.createElement("a");
+        link.href = url;
+        rangeGuardado.surroundContents(link);
+        return;
+      } catch {
+        // Si por algún motivo no se puede envolver directo (rango parcial,
+        // etc.), seguimos con el camino de texto como respaldo.
+      }
+    }
+
     const seleccionActual = window.getSelection();
     seleccionActual?.removeAllRanges();
     seleccionActual?.addRange(rangeGuardado);
-
     document.execCommand("createLink", false, url);
   }
 
