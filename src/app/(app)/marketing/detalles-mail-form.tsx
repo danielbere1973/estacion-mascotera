@@ -4,16 +4,13 @@ import type { RefObject } from "react";
 
 export function DetallesMailForm({
   tituloRef,
-  remitenteRef,
   cuerpoRef,
 }: {
   tituloRef: RefObject<HTMLInputElement | null>;
-  remitenteRef: RefObject<HTMLInputElement | null>;
   cuerpoRef: RefObject<HTMLDivElement | null>;
 }) {
   function borrarCampania() {
     if (tituloRef.current) tituloRef.current.value = "";
-    if (remitenteRef.current) remitenteRef.current.value = "";
     if (cuerpoRef.current) cuerpoRef.current.innerHTML = "";
   }
 
@@ -41,13 +38,9 @@ export function DetallesMailForm({
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Remitente</label>
-          <input
-            ref={remitenteRef}
-            name="remitente"
-            type="email"
-            placeholder="ejemplo@estacionmascotera.com.ar"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
+          <p className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+            contacto@estacionmascotera.com.ar
+          </p>
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-1">
           <label className="text-sm font-medium text-gray-700">Cuerpo del mail</label>

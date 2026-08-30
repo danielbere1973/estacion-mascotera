@@ -2,20 +2,19 @@
 
 import { requireAdmin } from "@/lib/permissions";
 
-// Resend solo permite enviar "from" un dominio verificado. El campo
-// "Remitente" del formulario se usa como destinatario de la copia de
-// confirmación y como "Reply-To": si el cliente contesta, la respuesta
-// llega a esa casilla.
+// Resend solo permite enviar "from" un dominio verificado.
 const FROM_ADDRESS = "Estación Mascotera <no-reply@estacionmascotera.com.ar>";
+
+// Remitente fijo: recibe la copia de confirmación y es el "Reply-To" de
+// todas las campañas. No es configurable desde el formulario a propósito.
+const REMITENTE_FIJO = "contacto@estacionmascotera.com.ar";
 
 export async function enviarCampania({
   titulo,
-  remitente,
   cuerpoHtml,
   destinatarios,
 }: {
   titulo: string;
-  remitente: string;
   cuerpoHtml: string;
   destinatarios: string[];
 }): Promise<{ ok?: boolean; error?: string }> {
@@ -34,9 +33,9 @@ export async function enviarCampania({
       },
       body: JSON.stringify({
         from: FROM_ADDRESS,
-        to: [remitente],
+        to: [REMITENTE_FIJO],
         bcc: destinatarios,
-        reply_to: remitente,
+        reply_to: REMITENTE_FIJO,
         subject: titulo,
         html: cuerpoHtml,
       }),

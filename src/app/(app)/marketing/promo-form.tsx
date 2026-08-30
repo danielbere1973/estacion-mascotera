@@ -15,7 +15,6 @@ type Cliente = {
 export function PromoForm({ clientes }: { clientes: Cliente[] }) {
   const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
   const tituloRef = useRef<HTMLInputElement>(null);
-  const remitenteRef = useRef<HTMLInputElement>(null);
   const cuerpoRef = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
@@ -24,7 +23,6 @@ export function PromoForm({ clientes }: { clientes: Cliente[] }) {
     setMensaje(null);
 
     const titulo = tituloRef.current?.value.trim() ?? "";
-    const remitente = remitenteRef.current?.value.trim() ?? "";
     const cuerpoHtml = cuerpoRef.current?.innerHTML.trim() ?? "";
     const destinatarios = clientes
       .filter((c) => seleccionados.has(c.id) && c.email)
@@ -38,17 +36,13 @@ export function PromoForm({ clientes }: { clientes: Cliente[] }) {
       setMensaje({ tipo: "error", texto: "Completá el título del mail." });
       return;
     }
-    if (!remitente) {
-      setMensaje({ tipo: "error", texto: "Completá el remitente." });
-      return;
-    }
     if (!cuerpoHtml) {
       setMensaje({ tipo: "error", texto: "Completá el cuerpo del mail." });
       return;
     }
 
     startTransition(async () => {
-      const resultado = await enviarCampania({ titulo, remitente, cuerpoHtml, destinatarios });
+      const resultado = await enviarCampania({ titulo, cuerpoHtml, destinatarios });
       if (resultado?.error) {
         setMensaje({ tipo: "error", texto: resultado.error });
       } else {
@@ -68,7 +62,7 @@ export function PromoForm({ clientes }: { clientes: Cliente[] }) {
           seleccionados={seleccionados}
           onCambiarSeleccionados={setSeleccionados}
         />
-        <DetallesMailForm tituloRef={tituloRef} remitenteRef={remitenteRef} cuerpoRef={cuerpoRef} />
+        <DetallesMailForm tituloRef={tituloRef} cuerpoRef={cuerpoRef} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
