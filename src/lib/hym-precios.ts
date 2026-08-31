@@ -288,11 +288,7 @@ export async function calcularCambiosHym(
   };
 }
 
-export async function aplicarCambioHym(
-  storeId: string,
-  accessToken: string,
-  fila: FilaCambioHym,
-): Promise<{ ok: true } | { ok: false; status: number; detalle: string }> {
+function armarBodyCambioHym(fila: FilaCambioHym): Record<string, unknown> {
   const body: Record<string, unknown> = {};
 
   // Tiendanube ignora silenciosamente price/promotional_price: null (responde 200
@@ -313,10 +309,18 @@ export async function aplicarCambioHym(
     body.stock = fila.nuevoStock;
   }
 
-  if (Object.keys(body).length === 0) return { ok: true };
+  return body;
+}
 
+async function ejecutarPutVariante(
+  storeId: string,
+  accessToken: string,
+  productId: number,
+  variantId: number,
+  body: Record<string, unknown>,
+): Promise<{ ok: true } | { ok: false; status: number; detalle: string }> {
   const res = await fetch(
-    `https://api.tiendanube.com/v1/${storeId}/products/${fila.tnProductId}/variants/${fila.tnVariantId}`,
+    `https://api.tiendanube.com/v1/${storeId}/products/${productId}/variants/${variantId}`,
     {
       method: "PUT",
       headers: {
@@ -331,4 +335,74 @@ export async function aplicarCambioHym(
   if (res.ok) return { ok: true };
   const detalle = await res.text();
   return { ok: false, status: res.status, detalle };
+}
+
+function numeroOVacio(v: string | null): number | null {
+  if (v === null || v === "") return null;
+  const n = parseFloat(v);
+  return Number.isNaN(n) ? null : n;
+}
+
+// Compara lo que se pidió mandar contra el estado real que devuelve Tiendanube
+// después del PUT. Tiendanube a veces responde 200 sin haber aplicado el
+// cambio (glitch observado en producción), así que no alcanza con el status.
+function coincideConLoPedido(body: Record<string, unknown>, variante: VarianteTN): boolean {
+  if ("price" in body) {
+    const esperado = body.price === "" ? null : parseFloat(String(body.price));
+    if (numeroOVacio(variante.price) !== esperado) return false;
+  }
+  if ("promotional_price" in body) {
+    const esperado = body.promotional_price === "" ? null : parseFloat(String(body.promotional_price));
+    if (numeroOVacio(variante.promotional_price) !== esperado) return false;
+  }
+  if ("stock" in body) {
+    if (variante.stock !== body.stock) return false;
+  }
+  return true;
+}
+
+async function traerVariante(
+  storeId: string,
+  accessToken: string,
+  productId: number,
+  variantId: number,
+): Promise<VarianteTN | null> {
+  const res = await fetch(
+    `https://api.tiendanube.com/v1/${storeId}/products/${productId}/variants/${variantId}`,
+    { headers: { Authentication: `bearer ${accessToken}`, "User-Agent": "Sistema-EM-Sync (danielbere@gmail.com)" } },
+  );
+  if (!res.ok) return null;
+  return (await res.json()) as VarianteTN;
+}
+
+export async function aplicarCambioHym(
+  storeId: string,
+  accessToken: string,
+  fila: FilaCambioHym,
+): Promise<{ ok: true } | { ok: false; status: number; detalle: string }> {
+  const body = armarBodyCambioHym(fila);
+  if (Object.keys(body).length === 0) return { ok: true };
+
+  for (let intento = 1; intento <= 2; intento++) {
+    const resultado = await ejecutarPutVariante(storeId, accessToken, fila.tnProductId, fila.tnVariantId, body);
+    if (!resultado.ok) {
+      if (intento === 2) return resultado;
+      continue;
+    }
+
+    const varianteReal = await traerVariante(storeId, accessToken, fila.tnProductId, fila.tnVariantId);
+    if (varianteReal && coincideConLoPedido(body, varianteReal)) {
+      return { ok: true };
+    }
+
+    if (intento === 2) {
+      return {
+        ok: false,
+        status: 0,
+        detalle: "Tiendanube respondió OK pero el valor no quedó aplicado al releer la variante (reintentado 1 vez)",
+      };
+    }
+  }
+
+  return { ok: false, status: 0, detalle: "No se pudo verificar el cambio" };
 }
