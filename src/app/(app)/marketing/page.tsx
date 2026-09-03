@@ -6,7 +6,7 @@ export default async function MarketingPage() {
   await requireAdmin();
 
   const clientes = await prisma.cliente.findMany({
-    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    orderBy: [{ nombre: "asc" }, { apellido: "asc" }],
     select: { id: true, nombre: true, apellido: true, email: true },
   });
 
