@@ -10,6 +10,7 @@ import {
 import { moverTarjetasComprMayoristaADespacho } from "@/lib/tablero";
 import { armarPreviewCorteHym, ejecutarCorteCompraHym, type ItemPreviewCorteHym } from "@/lib/corte-compras-hym";
 import { resolverPendienteSinStock } from "@/lib/compras-mayoristas";
+import { armarNivelRaiz, armarNivelCategoria } from "@/lib/categorias-telegram";
 
 type TelegramUpdate = {
   message?: { chat: { id: number }; text?: string };
@@ -27,8 +28,8 @@ async function manejarMensaje(chatId: string, texto: string) {
   const textoLimpio = texto.trim();
   if (!textoLimpio || textoLimpio.startsWith("/")) {
     await sendTelegramMessage(
-      "Hola! Escribí parte del nombre, marca o SKU de un producto para consultar precio y stock.",
-      { chatId }
+      "Hola! Escribí parte del nombre, marca o SKU de un producto para consultar precio y stock, o navegá por categorías.",
+      { chatId, botones: [[{ text: "🗂 Ver categorías", callback_data: "cat_root" }]] }
     );
     return;
   }
@@ -44,21 +45,24 @@ async function manejarMensaje(chatId: string, texto: string) {
     },
     take: LIMITE_RESULTADOS_BUSQUEDA,
     orderBy: [{ marca: "asc" }, { nombre: "asc" }],
-    select: { nombre: true, marca: true, skuInterno: true, stockActual: true, precioVenta: true },
+    select: { nombre: true, nombreTiendanube: true, marca: true, skuInterno: true, stockActual: true, precioVenta: true },
   });
 
-  const botonCorteHym = [[{ text: "🛒 Forzar corte HYM ahora", callback_data: "corte_hym:forzar" }]];
+  const botonesRespuesta = [
+    [{ text: "🛒 Forzar corte HYM ahora", callback_data: "corte_hym:forzar" }],
+    [{ text: "🗂 Ver categorías", callback_data: "cat_root" }],
+  ];
 
   if (productos.length === 0) {
-    await sendTelegramMessage(`No encontré productos para "${textoLimpio}".`, { chatId, botones: botonCorteHym });
+    await sendTelegramMessage(`No encontré productos para "${textoLimpio}".`, { chatId, botones: botonesRespuesta });
     return;
   }
 
   const lineas = productos.map(
     (p) =>
-      `<b>${p.nombre}</b> (${p.marca}) — SKU ${p.skuInterno}\nStock: ${p.stockActual} — $${Number(p.precioVenta).toFixed(2)}`
+      `<b>${p.nombreTiendanube ?? p.nombre}</b> (${p.marca}) — SKU ${p.skuInterno}\nStock: ${p.stockActual} — $${Number(p.precioVenta).toFixed(2)}`
   );
-  await sendTelegramMessage(lineas.join("\n\n"), { chatId, botones: botonCorteHym });
+  await sendTelegramMessage(lineas.join("\n\n"), { chatId, botones: botonesRespuesta });
 }
 
 function textoPreviewCorteHym(conMapeo: ItemPreviewCorteHym[], sinMapeo: ItemPreviewCorteHym[]): string {
@@ -149,6 +153,31 @@ async function manejarCallback(
         : `🛒 Corte HYM confirmado: ${resultado.items} línea(s).`;
     await editTelegramMessage(chatId, messageId, texto);
     return "Confirmado.";
+  }
+
+  if (accion === "cat_root") {
+    const { texto, botones } = await armarNivelRaiz();
+    if (messageId) {
+      await editTelegramMessage(chatId, messageId, texto, botones);
+    } else {
+      await sendTelegramMessage(texto, { chatId, botones });
+    }
+    return "Categorías.";
+  }
+
+  if (accion === "cat") {
+    const [idParam, paginaParam] = (params[0] ?? "").split(",");
+    const categoriaId = Number(idParam);
+    const pagina = paginaParam ? Number(paginaParam) : 1;
+    if (!categoriaId || Number.isNaN(categoriaId)) return "Callback inválido.";
+    const nivel = await armarNivelCategoria(categoriaId, Number.isNaN(pagina) ? 1 : pagina);
+    if (!nivel) return "Categoría no encontrada.";
+    if (messageId) {
+      await editTelegramMessage(chatId, messageId, nivel.texto, nivel.botones);
+    } else {
+      await sendTelegramMessage(nivel.texto, { chatId, botones: nivel.botones });
+    }
+    return "Navegando categoría.";
   }
 
   if (accion === "sin_stock") {
