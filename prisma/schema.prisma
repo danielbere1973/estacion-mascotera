@@ -38,6 +38,7 @@ model Producto {
   id                   Int                         @id @default(autoincrement())
   skuInterno           String                      @unique
   nombre               String
+  nombreTiendanube     String?
   marca                String
   categoria            String
   presentacion         Presentacion
@@ -59,8 +60,32 @@ model Producto {
   clientesRecurrentes  ClienteProductoRecurrente[] @relation("ClienteProductoRecurrenteProducto")
   recordatorios        RecordatorioReposicion[]
   pendientesCompra     PendienteCompraMayorista[]
+  categoriasTiendanube ProductoCategoriaTiendanube[]
 
   @@index([categoria])
+}
+
+model CategoriaTiendanube {
+  id        Int                            @id
+  nombre    String
+  parentId  Int?
+  parent    CategoriaTiendanube?           @relation("CategoriaTiendanubeJerarquia", fields: [parentId], references: [id])
+  hijas     CategoriaTiendanube[]          @relation("CategoriaTiendanubeJerarquia")
+  visible   Boolean                        @default(true)
+  productos ProductoCategoriaTiendanube[]
+  updatedAt DateTime                       @updatedAt
+
+  @@index([parentId])
+}
+
+model ProductoCategoriaTiendanube {
+  productoId  Int
+  categoriaId Int
+  producto    Producto            @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  categoria   CategoriaTiendanube @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@id([productoId, categoriaId])
+  @@index([categoriaId])
 }
 
 model Proveedor {
