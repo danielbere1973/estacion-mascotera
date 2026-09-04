@@ -30,6 +30,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
           descuentoPorcentaje: true,
           precioCostoUnitario: true,
           producto: { select: { precioCostoUnitario: true } },
+          venta: { select: { vendidoPor: { select: { nombre: true } } } },
           ventaConsignacion: {
             select: { detalle: { select: { precioCosto: true } } },
           },
@@ -85,10 +86,25 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   let totalFacturado = 0;
   let costoMercaderiaVendida = 0;
   let gananciaConsignaciones = 0;
+  const ventasPorVendedor = new Map<string, number>([
+    ["Daniel", 0],
+    ["Pablo", 0],
+    ["Estación Mascotera", 0],
+  ]);
 
   for (const d of detalles) {
     const precioVenta = Number(d.precioVentaUnitario) * (1 - Number(d.descuentoPorcentaje ?? 0) / 100);
-    totalFacturado += d.cantidad * precioVenta;
+    const montoVenta = d.cantidad * precioVenta;
+    totalFacturado += montoVenta;
+
+    const nombreVendedor = d.venta.vendidoPor?.nombre ?? "";
+    const clave = nombreVendedor.startsWith("Daniel")
+      ? "Daniel"
+      : nombreVendedor.startsWith("Pablo")
+        ? "Pablo"
+        : "Estación Mascotera";
+    ventasPorVendedor.set(clave, (ventasPorVendedor.get(clave) ?? 0) + montoVenta);
+
     if (d.ventaConsignacion) {
       // Producto de consignación (RECIBIMOS): costo efectivo = precioCosto + 1/3*(precioVenta - precioCosto)
       const costo = Number(d.ventaConsignacion.detalle.precioCosto);
@@ -205,6 +221,11 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     comprasNoFacturadas,
     gananciaConsignaciones,
     totalIngresosConsolidados: totalFacturado,
+    ventasPorVendedor: {
+      daniel: ventasPorVendedor.get("Daniel") ?? 0,
+      pablo: ventasPorVendedor.get("Pablo") ?? 0,
+      estacionMascotera: ventasPorVendedor.get("Estación Mascotera") ?? 0,
+    },
   };
 }
 
@@ -321,6 +342,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     comprasNoFacturadas,
     gananciaConsignaciones: 0,
     totalIngresosConsolidados: totalFacturado,
+    ventasPorVendedor: { daniel: 0, pablo: 0, estacionMascotera: 0 },
   };
 }
 

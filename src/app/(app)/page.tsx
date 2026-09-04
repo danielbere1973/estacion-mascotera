@@ -155,6 +155,29 @@ export default async function DashboardPage({
         ))}
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-gray-500">Vendido por Daniel</p>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">
+            {formatCurrency(metrics.ventasPorVendedor.daniel)}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-gray-500">Vendido por Pablo</p>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">
+            {formatCurrency(metrics.ventasPorVendedor.pablo)}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-gray-500">Vendido por Estación Mascotera</p>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">
+            {formatCurrency(metrics.ventasPorVendedor.estacionMascotera)}
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <p className="text-sm text-gray-500">Ventas sin facturar</p>
