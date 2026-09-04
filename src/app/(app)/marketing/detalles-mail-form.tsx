@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ClipboardEvent, type RefObject } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 import { subirImagenMail } from "./actions";
 
 const FUENTES = [
@@ -59,6 +59,7 @@ export function DetallesMailForm({
   cuerpoRef: RefObject<HTMLDivElement | null>;
 }) {
   const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const [arrastrandoImagen, setArrastrandoImagen] = useState(false);
   const [mostrarPaletaColor, setMostrarPaletaColor] = useState(false);
   const [fuenteSeleccionActual, setFuenteSeleccionActual] = useState("");
   const [tamanioSeleccionActual, setTamanioSeleccionActual] = useState("");
@@ -119,17 +120,7 @@ export function DetallesMailForm({
     });
   }
 
-  async function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    const itemImagen = Array.from(items).find((item) => item.type.startsWith("image/"));
-    if (!itemImagen) return; // texto normal: dejar el pegado default del navegador
-
-    e.preventDefault();
-    const archivo = itemImagen.getAsFile();
-    if (!archivo) return;
-
+  async function subirEInsertarImagen(archivo: File) {
     setSubiendoImagen(true);
     try {
       const formData = new FormData();
@@ -143,6 +134,71 @@ export function DetallesMailForm({
       document.execCommand("insertHTML", false, `<img src="${resultado.url}" alt="" />`);
     } finally {
       setSubiendoImagen(false);
+    }
+  }
+
+  async function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const itemImagen = Array.from(items).find((item) => item.type.startsWith("image/"));
+    if (!itemImagen) return; // texto normal: dejar el pegado default del navegador
+
+    e.preventDefault();
+    const archivo = itemImagen.getAsFile();
+    if (!archivo) return;
+
+    await subirEInsertarImagen(archivo);
+  }
+
+  function handleDragOver(e: DragEvent<HTMLDivElement>) {
+    // Solo intercepta cuando lo que se arrastra son archivos reales (desde
+    // el explorador de Windows u otra app) — no toca el arrastre interno de
+    // texto/imágenes ya existentes dentro del editor.
+    if (!Array.from(e.dataTransfer.types).includes("Files")) return;
+    e.preventDefault();
+    setArrastrandoImagen(true);
+  }
+
+  function handleDragLeave() {
+    setArrastrandoImagen(false);
+  }
+
+  async function handleDrop(e: DragEvent<HTMLDivElement>) {
+    const tieneArchivos = Array.from(e.dataTransfer?.types ?? []).includes("Files");
+    if (!tieneArchivos) return;
+
+    e.preventDefault();
+    setArrastrandoImagen(false);
+
+    // Intenta ubicar el cursor donde se soltó el archivo, si el navegador lo permite.
+    const cuerpo = cuerpoRef.current;
+    if (cuerpo) {
+      cuerpo.focus();
+      const doc = document as Document & {
+        caretRangeFromPoint?: (x: number, y: number) => Range | null;
+      };
+      const rango = doc.caretRangeFromPoint?.(e.clientX, e.clientY);
+      // Solo se usa si realmente cae dentro del cuerpo del mail — si por
+      // algún motivo el navegador devuelve una posición fuera, se deja el
+      // cursor donde estaba (mejor al final que insertar en otro lugar).
+      if (rango && cuerpo.contains(rango.commonAncestorContainer)) {
+        const seleccion = window.getSelection();
+        seleccion?.removeAllRanges();
+        seleccion?.addRange(rango);
+      }
+    }
+
+    const archivos = Array.from(e.dataTransfer?.files ?? []).filter((f) =>
+      f.type.startsWith("image/")
+    );
+    if (archivos.length === 0) {
+      window.alert("Solo se pueden soltar imágenes.");
+      return;
+    }
+
+    for (const archivo of archivos) {
+      await subirEInsertarImagen(archivo);
     }
   }
 
@@ -336,8 +392,13 @@ export function DetallesMailForm({
             contentEditable
             suppressContentEditableWarning
             onPaste={handlePaste}
-            data-placeholder="Pegá acá el texto o las imágenes del mail..."
-            className="min-h-0 flex-1 overflow-y-auto rounded-md border border-gray-300 px-3 py-2 text-sm empty:before:text-gray-400 empty:before:content-[attr(data-placeholder)] [&_img]:my-2 [&_img]:max-w-full [&_a]:text-blue-600 [&_a]:underline"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            data-placeholder="Pegá o arrastrá acá el texto o las imágenes del mail..."
+            className={`min-h-0 flex-1 overflow-y-auto rounded-md border px-3 py-2 text-sm empty:before:text-gray-400 empty:before:content-[attr(data-placeholder)] [&_img]:my-2 [&_img]:max-w-full [&_a]:text-blue-600 [&_a]:underline ${
+              arrastrandoImagen ? "border-2 border-dashed border-blue-500 bg-blue-50" : "border-gray-300"
+            }`}
           />
         </div>
       </div>
