@@ -47,7 +47,9 @@ export async function armarListaClientes(pagina: number = 1): Promise<{ texto: s
   if (pagina > 1) filaPaginacion.push({ text: "⬅️ Anterior", callback_data: `clientes_lista:${pagina - 1}` });
   if (hayMas) filaPaginacion.push({ text: "➡️ Siguiente", callback_data: `clientes_lista:${pagina + 1}` });
 
-  const botones: BotonInline[][] = [];
+  const botones: BotonInline[][] = paginaClientes.map((c) => [
+    { text: `🛒 Ver ventas: ${c.nombre} ${c.apellido}`, callback_data: `ventas_cliente:${c.id}` },
+  ]);
   if (filaPaginacion.length > 0) botones.push(filaPaginacion);
   botones.push(botonVolver(null));
 
