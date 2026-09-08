@@ -22,7 +22,7 @@ export async function armarNivelRaiz(): Promise<{ texto: string; botones: BotonI
 export async function armarListaClientes(pagina: number = 1): Promise<{ texto: string; botones: BotonInline[][] }> {
   const skip = (pagina - 1) * CLIENTES_POR_PAGINA;
   const clientes = await prisma.cliente.findMany({
-    orderBy: [{ nombre: "asc" }, { apellido: "asc" }],
+    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
     include: { _count: { select: { ventas: true } } },
     skip,
     take: CLIENTES_POR_PAGINA + 1,
