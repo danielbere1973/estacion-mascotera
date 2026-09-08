@@ -41,7 +41,7 @@ export async function armarListaClientes(pagina: number = 1): Promise<{ texto: s
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const lineas = paginaClientes.map(
     (c) =>
-      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 ${c.direccion}\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
+      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 <a href="https://waze.com/ul?q=${encodeURIComponent(c.direccion)}&navigate=yes">${c.direccion}</a>\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
   );
 
   const filaPaginacion: BotonInline[] = [];
