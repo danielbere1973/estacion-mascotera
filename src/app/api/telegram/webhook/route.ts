@@ -10,7 +10,7 @@ import {
 import { moverTarjetasComprMayoristaADespacho } from "@/lib/tablero";
 import { armarPreviewCorteHym, ejecutarCorteCompraHym, type ItemPreviewCorteHym } from "@/lib/corte-compras-hym";
 import { resolverPendienteSinStock, resolverPendienteManual } from "@/lib/compras-mayoristas";
-import { armarNivelRaiz, armarNivelCategoria } from "@/lib/categorias-telegram";
+import { armarNivelRaiz, armarNivelCategoria, armarListaClientes } from "@/lib/categorias-telegram";
 import { transcribirVozTelegram } from "@/lib/transcripcion";
 import { ejecutarComandoVoz } from "@/lib/comandos-voz";
 
@@ -254,6 +254,17 @@ async function manejarCallback(
       await sendTelegramMessage(nivel.texto, { chatId, botones: nivel.botones });
     }
     return "Navegando categoría.";
+  }
+
+  if (accion === "clientes_lista") {
+    const pagina = params[0] ? Number(params[0]) : 1;
+    const nivel = await armarListaClientes(Number.isNaN(pagina) ? 1 : pagina);
+    if (messageId) {
+      await editTelegramMessage(chatId, messageId, nivel.texto, nivel.botones);
+    } else {
+      await sendTelegramMessage(nivel.texto, { chatId, botones: nivel.botones });
+    }
+    return "Clientes.";
   }
 
   if (accion === "sin_stock") {
