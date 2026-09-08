@@ -76,6 +76,12 @@ export default async function InventarioPage({
             Vinculaciones
           </Link>
           <Link
+            href="/inventario/pendientes-hym"
+            className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
+          >
+            Pendientes mayorista
+          </Link>
+          <Link
             href="/inventario/compras"
             className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
           >

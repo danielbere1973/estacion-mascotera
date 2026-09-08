@@ -24,6 +24,16 @@ export async function resolverPendienteSinStock(pendienteId: number, hayStockRea
   }
 }
 
+// Marca un pendiente como RESUELTO sin pasar por HYM: se usa cuando ya se
+// compró el producto por fuera (otro proveedor, en persona, etc.) y no tiene
+// sentido que el próximo corte lo vuelva a pedir.
+export async function resolverPendienteManual(pendienteId: number) {
+  await prisma.pendienteCompraMayorista.update({
+    where: { id: pendienteId },
+    data: { estado: "RESUELTO", jobId: null },
+  });
+}
+
 // Mueve la tarjeta de una venta a "Comprar en Mayorista", o si la venta
 // todavía no tiene tarjeta (ej. venta manual, que no crea tarjetas), crea una
 // directamente en esa columna.
