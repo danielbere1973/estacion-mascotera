@@ -33,13 +33,24 @@ const adminLinks = [
   { href: "/mayoristas-hym", label: "Precios HYM", icon: "💲" },
 ];
 
-function NavLink({ href, label, icon }: { href: string; label: string; icon: string }) {
+function NavLink({
+  href,
+  label,
+  icon,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
         active
           ? "bg-blue-600 text-white"
@@ -55,9 +66,11 @@ function NavLink({ href, label, icon }: { href: string; label: string; icon: str
 export function Sidebar({
   isAdmin,
   isRestringido,
+  onNavigate,
 }: {
   isAdmin: boolean;
   isRestringido: boolean;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const [adminOpen, setAdminOpen] = useState(
@@ -85,7 +98,7 @@ export function Sidebar({
       {/* Links principales */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {visibleLinks.map((link) => (
-          <NavLink key={link.href} {...link} />
+          <NavLink key={link.href} {...link} onNavigate={onNavigate} />
         ))}
 
         {isAdmin && (
@@ -107,7 +120,7 @@ export function Sidebar({
             {adminOpen && (
               <div className="mt-1 space-y-1">
                 {adminLinks.map((link) => (
-                  <NavLink key={link.href} {...link} />
+                  <NavLink key={link.href} {...link} onNavigate={onNavigate} />
                 ))}
               </div>
             )}
@@ -118,10 +131,27 @@ export function Sidebar({
   );
 }
 
-export function TopBar({ userName }: { userName: string }) {
+export function TopBar({
+  userName,
+  onToggleSidebar,
+}: {
+  userName: string;
+  onToggleSidebar?: () => void;
+}) {
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6">
-      <div />
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6">
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label="Abrir menú"
+          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 md:hidden"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
       <div className="flex items-center gap-4">
         <span className="text-sm text-gray-500">{userName}</span>
         <button
@@ -132,6 +162,49 @@ export function TopBar({ userName }: { userName: string }) {
         </button>
       </div>
     </header>
+  );
+}
+
+// Shell con estado del drawer del sidebar en mobile: en desktop (md+) el
+// sidebar queda fijo como antes; por debajo de md arranca oculto y se
+// muestra/oculta con el botón hamburguesa del TopBar, como un panel
+// superpuesto con backdrop.
+export function AppShell({
+  isAdmin,
+  isRestringido,
+  userName,
+  children,
+}: {
+  isAdmin: boolean;
+  isRestringido: boolean;
+  userName: string;
+  children: React.ReactNode;
+}) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-60 transition-transform duration-200 ease-in-out md:static md:z-auto md:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <Sidebar isAdmin={isAdmin} isRestringido={isRestringido} onNavigate={() => setSidebarOpen(false)} />
+      </div>
+
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopBar userName={userName} onToggleSidebar={() => setSidebarOpen((o) => !o)} />
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">{children}</main>
+      </div>
+    </div>
   );
 }
 
