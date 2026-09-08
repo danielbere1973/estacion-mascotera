@@ -125,7 +125,7 @@ function botonesPreviewCorteHym(conMapeo: ItemPreviewCorteHym[], excluidos: numb
   ]);
   if (conMapeo.length > 0) {
     botones.push([
-      { text: "✅ Confirmar pedido", callback_data: `corte_hym_confirmar:${excluidos.join(",")}` },
+      { text: "✅ Confirmar pedido", callback_data: `corte_hym_confirmar_pedir:${excluidos.join(",")}` },
     ]);
   }
   return botones;
@@ -185,6 +185,40 @@ async function manejarCallback(
       botonesPreviewCorteHym(restante, excluidos)
     );
     return "✅ Marcado como comprado por fuera.";
+  }
+
+  if (accion === "corte_hym_confirmar_pedir") {
+    if (!messageId) return "Callback inválido.";
+    const excluidos = params[0] ? params[0].split(",").map(Number).filter((n) => !Number.isNaN(n)) : [];
+    const { conMapeo, sinMapeo } = await armarPreviewCorteHym();
+    const restante = conMapeo.filter((i) => !excluidos.includes(i.lineaId));
+    if (restante.length === 0) return "No había pendientes de HYM.";
+    await editTelegramMessage(
+      chatId,
+      messageId,
+      `⚠️ ¿Seguro? Esto va a agregar ${restante.length} producto(s) al carrito REAL de HYM:\n\n${restante
+        .map((i) => `• ${i.nombre} x${i.cantidad}`)
+        .join("\n")}`,
+      [
+        [{ text: "✅ Sí, confirmar", callback_data: `corte_hym_confirmar:${excluidos.join(",")}` }],
+        [{ text: "◀️ Cancelar, volver", callback_data: `corte_hym_cancelar:${excluidos.join(",")}` }],
+      ]
+    );
+    return "Confirmá para continuar.";
+  }
+
+  if (accion === "corte_hym_cancelar") {
+    if (!messageId) return "Callback inválido.";
+    const excluidos = params[0] ? params[0].split(",").map(Number).filter((n) => !Number.isNaN(n)) : [];
+    const { conMapeo, sinMapeo } = await armarPreviewCorteHym();
+    const restante = conMapeo.filter((i) => !excluidos.includes(i.lineaId));
+    await editTelegramMessage(
+      chatId,
+      messageId,
+      textoPreviewCorteHym(restante, sinMapeo),
+      botonesPreviewCorteHym(restante, excluidos)
+    );
+    return "Cancelado.";
   }
 
   if (accion === "corte_hym_confirmar") {
