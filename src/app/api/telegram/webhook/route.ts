@@ -9,11 +9,13 @@ import {
 } from "@/lib/telegram";
 import { moverTarjetasComprMayoristaADespacho } from "@/lib/tablero";
 import { armarPreviewCorteHym, ejecutarCorteCompraHym, type ItemPreviewCorteHym } from "@/lib/corte-compras-hym";
-import { resolverPendienteSinStock } from "@/lib/compras-mayoristas";
+import { resolverPendienteSinStock, resolverPendienteManual } from "@/lib/compras-mayoristas";
 import { armarNivelRaiz, armarNivelCategoria } from "@/lib/categorias-telegram";
+import { transcribirVozTelegram } from "@/lib/transcripcion";
+import { ejecutarComandoVoz } from "@/lib/comandos-voz";
 
 type TelegramUpdate = {
-  message?: { chat: { id: number }; text?: string };
+  message?: { chat: { id: number }; text?: string; voice?: { file_id: string } };
   callback_query?: {
     id: string;
     data?: string;
@@ -65,6 +67,25 @@ async function manejarMensaje(chatId: string, texto: string) {
   await sendTelegramMessage(lineas.join("\n\n"), { chatId, botones: botonesRespuesta });
 }
 
+async function manejarMensajeVoz(chatId: string, fileId: string) {
+  const texto = await transcribirVozTelegram(fileId);
+  if (!texto) {
+    await sendTelegramMessage("🎙 No pude transcribir el audio, probá de nuevo.", { chatId });
+    return;
+  }
+
+  const resultado = await ejecutarComandoVoz(texto);
+  if (!resultado) {
+    await sendTelegramMessage(
+      `🎙 Entendí: "${texto}", pero no reconozco ese comando. Probá "buscar alimento para perros/gatos marca X" o "crear venta para [cliente]".`,
+      { chatId }
+    );
+    return;
+  }
+
+  await sendTelegramMessage(resultado.texto, { chatId });
+}
+
 function textoPreviewCorteHym(conMapeo: ItemPreviewCorteHym[], sinMapeo: ItemPreviewCorteHym[]): string {
   if (conMapeo.length === 0 && sinMapeo.length === 0) {
     return "No había pendientes de HYM.";
@@ -88,11 +109,19 @@ function textoPreviewCorteHym(conMapeo: ItemPreviewCorteHym[], sinMapeo: ItemPre
 }
 
 function botonesPreviewCorteHym(conMapeo: ItemPreviewCorteHym[], excluidos: number[] = []) {
-  const botones = conMapeo.map((i) => [
-    {
-      text: `❌ Sacar: ${i.nombre}`,
-      callback_data: `corte_hym_sacar:${[...excluidos, i.lineaId].join(",")}`,
-    },
+  const botones = conMapeo.flatMap((i) => [
+    [
+      {
+        text: `❌ Sacar (de este pedido): ${i.nombre}`,
+        callback_data: `corte_hym_sacar:${[...excluidos, i.lineaId].join(",")}`,
+      },
+    ],
+    [
+      {
+        text: `✅ Ya lo compré por fuera: ${i.nombre}`,
+        callback_data: `corte_hym_resuelto:${i.lineaId}:${excluidos.join(",")}`,
+      },
+    ],
   ]);
   if (conMapeo.length > 0) {
     botones.push([
@@ -140,6 +169,22 @@ async function manejarCallback(
       botonesPreviewCorteHym(restante, excluidos)
     );
     return "Sacado de la vista previa.";
+  }
+
+  if (accion === "corte_hym_resuelto") {
+    const lineaId = Number(params[0]);
+    const excluidos = params[1] ? params[1].split(",").map(Number).filter((n) => !Number.isNaN(n)) : [];
+    if (!lineaId || !messageId) return "Callback inválido.";
+    await resolverPendienteManual(lineaId);
+    const { conMapeo, sinMapeo } = await armarPreviewCorteHym();
+    const restante = conMapeo.filter((i) => !excluidos.includes(i.lineaId));
+    await editTelegramMessage(
+      chatId,
+      messageId,
+      textoPreviewCorteHym(restante, sinMapeo),
+      botonesPreviewCorteHym(restante, excluidos)
+    );
+    return "✅ Marcado como comprado por fuera.";
   }
 
   if (accion === "corte_hym_confirmar") {
@@ -231,7 +276,10 @@ export async function POST(req: NextRequest) {
         TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
         TELEGRAM_CHAT_ID_2: process.env.TELEGRAM_CHAT_ID_2,
       });
-      if (autorizado && update.message.text) {
+      if (autorizado && update.message.voice) {
+        await manejarMensajeVoz(chatId, update.message.voice.file_id);
+        console.log("telegram/webhook: manejarMensajeVoz completado");
+      } else if (autorizado && update.message.text) {
         await manejarMensaje(chatId, update.message.text);
         console.log("telegram/webhook: manejarMensaje completado");
       }
