@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { BotonInline } from "@/lib/telegram";
 
 const PRODUCTOS_POR_PAGINA = 8;
+const CLIENTES_POR_PAGINA = 5;
 
 function botonVolver(parentId: number | null): BotonInline[] {
   return [{ text: "◀️ Volver", callback_data: parentId ? `cat:${parentId}` : "cat_root" }];
@@ -14,7 +15,43 @@ export async function armarNivelRaiz(): Promise<{ texto: string; botones: BotonI
   });
 
   const botones = raices.map((c) => [{ text: c.nombre, callback_data: `cat:${c.id}` }]);
+  botones.push([{ text: "👤 Clientes", callback_data: "clientes_lista" }]);
   return { texto: "🗂 Elegí una categoría:", botones };
+}
+
+export async function armarListaClientes(pagina: number = 1): Promise<{ texto: string; botones: BotonInline[][] }> {
+  const skip = (pagina - 1) * CLIENTES_POR_PAGINA;
+  const clientes = await prisma.cliente.findMany({
+    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    include: { _count: { select: { ventas: true } } },
+    skip,
+    take: CLIENTES_POR_PAGINA + 1,
+  });
+
+  const hayMas = clientes.length > CLIENTES_POR_PAGINA;
+  const paginaClientes = clientes.slice(0, CLIENTES_POR_PAGINA);
+
+  if (paginaClientes.length === 0) {
+    return {
+      texto: pagina === 1 ? "👤 No hay clientes cargados todavía." : "👤 No hay más clientes.",
+      botones: [botonVolver(null)],
+    };
+  }
+
+  const lineas = paginaClientes.map(
+    (c) =>
+      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 ${c.direccion}\n🛒 Ventas: ${c._count.ventas}`
+  );
+
+  const filaPaginacion: BotonInline[] = [];
+  if (pagina > 1) filaPaginacion.push({ text: "⬅️ Anterior", callback_data: `clientes_lista:${pagina - 1}` });
+  if (hayMas) filaPaginacion.push({ text: "➡️ Siguiente", callback_data: `clientes_lista:${pagina + 1}` });
+
+  const botones: BotonInline[][] = [];
+  if (filaPaginacion.length > 0) botones.push(filaPaginacion);
+  botones.push(botonVolver(null));
+
+  return { texto: `👤 <b>Clientes</b>\n\n${lineas.join("\n\n")}`, botones };
 }
 
 export async function armarNivelCategoria(
