@@ -38,18 +38,17 @@ export async function armarListaClientes(pagina: number = 1): Promise<{ texto: s
     };
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const lineas = paginaClientes.map(
     (c) =>
-      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 ${c.direccion}\n🛒 Ventas: ${c._count.ventas}`
+      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 ${c.direccion}\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
   );
 
   const filaPaginacion: BotonInline[] = [];
   if (pagina > 1) filaPaginacion.push({ text: "⬅️ Anterior", callback_data: `clientes_lista:${pagina - 1}` });
   if (hayMas) filaPaginacion.push({ text: "➡️ Siguiente", callback_data: `clientes_lista:${pagina + 1}` });
 
-  const botones: BotonInline[][] = paginaClientes.map((c) => [
-    { text: `🛒 Ver ventas: ${c.nombre} ${c.apellido}`, callback_data: `ventas_cliente:${c.id}` },
-  ]);
+  const botones: BotonInline[][] = [];
   if (filaPaginacion.length > 0) botones.push(filaPaginacion);
   botones.push(botonVolver(null));
 

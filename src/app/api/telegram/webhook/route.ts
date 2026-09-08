@@ -91,62 +91,12 @@ async function manejarBusquedaCliente(chatId: string, nombreBuscado: string) {
     return;
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const lineas = clientes.map(
     (c) =>
-      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 ${c.direccion}\n🛒 Ventas: ${c._count.ventas}`
+      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 ${c.direccion}\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
   );
-  const botones = clientes.map((c) => [
-    { text: `🛒 Ver ventas: ${c.nombre} ${c.apellido}`, callback_data: `ventas_cliente:${c.id}` },
-  ]);
-  await sendTelegramMessage(lineas.join("\n\n"), { chatId, botones });
-}
-
-const LIMITE_VENTAS_CLIENTE = 10;
-
-async function enviarVentasCliente(chatId: string, clienteId: number) {
-  const cliente = await prisma.cliente.findUnique({
-    where: { id: clienteId },
-    select: { nombre: true, apellido: true },
-  });
-  if (!cliente) {
-    await sendTelegramMessage("No encontré ese cliente.", { chatId });
-    return;
-  }
-
-  const ventas = await prisma.venta.findMany({
-    where: { clienteId },
-    include: { detalles: true },
-    orderBy: { fechaVenta: "desc" },
-    take: LIMITE_VENTAS_CLIENTE,
-  });
-
-  if (ventas.length === 0) {
-    await sendTelegramMessage(`🛒 ${cliente.nombre} ${cliente.apellido} no tiene ventas registradas.`, { chatId });
-    return;
-  }
-
-  const NOMBRE_CANAL: Record<string, string> = {
-    TIENDANUBE: "Tiendanube",
-    WHATSAPP: "WhatsApp",
-    TELEFONO: "Teléfono",
-  };
-
-  const lineas = ventas.map((v) => {
-    const subtotal = v.detalles.reduce((acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario), 0);
-    const descuento = v.detalles.reduce(
-      (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario) * (Number(d.descuentoPorcentaje) / 100),
-      0
-    );
-    const total = subtotal - descuento + Number(v.costoEnvio);
-    const fecha = v.fechaVenta.toLocaleDateString("es-AR");
-    return `📅 ${fecha} — ${NOMBRE_CANAL[v.canalVenta] ?? v.canalVenta} · ${v.medioPago}\n$${total.toFixed(2)}`;
-  });
-
-  const nota = ventas.length === LIMITE_VENTAS_CLIENTE ? `\n\n(mostrando las últimas ${LIMITE_VENTAS_CLIENTE})` : "";
-  await sendTelegramMessage(
-    `🛒 <b>Ventas de ${cliente.nombre} ${cliente.apellido}</b>\n\n${lineas.join("\n\n")}${nota}`,
-    { chatId }
-  );
+  await sendTelegramMessage(lineas.join("\n\n"), { chatId });
 }
 
 async function manejarMensajeVoz(chatId: string, fileId: string) {
@@ -305,13 +255,6 @@ async function manejarCallback(
       await sendTelegramMessage(nivel.texto, { chatId, botones: nivel.botones });
     }
     return "Navegando categoría.";
-  }
-
-  if (accion === "ventas_cliente") {
-    const clienteId = Number(params[0]);
-    if (!clienteId || Number.isNaN(clienteId)) return "Callback inválido.";
-    await enviarVentasCliente(chatId, clienteId);
-    return "Ventas enviadas.";
   }
 
   if (accion === "clientes_lista") {
