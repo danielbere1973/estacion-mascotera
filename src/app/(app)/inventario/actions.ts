@@ -699,12 +699,52 @@ export async function importarExcel(formData: FormData) {
   // Matching por SKU de proveedor a través del historial
   const historialItems = await prisma.historialStockMayorista.findMany({
     where: { proveedorId: Number(proveedorId), productoId: { not: null } },
-    select: { sku: true, productoId: true, producto: { select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true } } },
+    select: {
+      sku: true,
+      codigoHym: true,
+      productoId: true,
+      producto: { select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true } },
+    },
   });
   const productosPorSku = new Map(
     historialItems
       .filter((h) => h.producto)
       .map((h) => [h.sku, h.producto!])
+  );
+
+  // Fallbacks para cuando el "sku" de HYM cambió (histórico inestable, ver
+  // comentario sobre codigoHym más abajo) y el match directo por sku falla:
+  // 1) por codigoHym, que es el código real y estable de HYM por variante.
+  // 2) por HistorialStockMayorista.skuInterno, un campo de texto libre que se
+  //    edita a mano desde /inventario/listas para mapear manualmente un ítem
+  //    del mayorista a un producto del catálogo cuando el matching automático
+  //    no encuentra nada (ver actualizarItemMayorista más arriba).
+  const productosPorCodigoHym = new Map(
+    historialItems
+      .filter((h) => h.producto && h.codigoHym)
+      .map((h) => [h.codigoHym!, h.producto!])
+  );
+  const historialConSkuInternoManual = await prisma.historialStockMayorista.findMany({
+    where: { proveedorId: Number(proveedorId), skuInterno: { not: null } },
+    select: { sku: true, skuInterno: true },
+  });
+  const skusInternoManualesUnicos = [...new Set(historialConSkuInternoManual.map((h) => h.skuInterno!))];
+  const productosPorSkuInterno = new Map(
+    skusInternoManualesUnicos.length > 0
+      ? (
+          await prisma.producto.findMany({
+            where: { skuInterno: { in: skusInternoManualesUnicos } },
+            select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true },
+          })
+        ).map((p) => [p.skuInterno, p])
+      : []
+  );
+  // Del sku (de proveedor) importado al producto vinculado manualmente vía
+  // HistorialStockMayorista.skuInterno para ese mismo sku.
+  const productoPorSkuViaMapeoManual = new Map(
+    historialConSkuInternoManual
+      .map((h) => [h.sku, productosPorSkuInterno.get(h.skuInterno!)] as const)
+      .filter((entrada): entrada is [string, NonNullable<(typeof entrada)[1]>] => Boolean(entrada[1]))
   );
 
   let actualizados = 0;
@@ -747,6 +787,15 @@ export async function importarExcel(formData: FormData) {
     const codigoHym = String(fila["Codigo"] ?? "").trim() || null;
 
     let producto = productosPorSku.get(sku) ?? null;
+    // Si no matcheó por sku (que en HYM históricamente puede haber cambiado
+    // entre importaciones), intentamos primero por codigoHym y después por
+    // el mapeo manual antes de asumir que es un producto realmente nuevo.
+    if (!producto && importandoHym && codigoHym) {
+      producto = productosPorCodigoHym.get(codigoHym) ?? null;
+    }
+    if (!producto && importandoHym) {
+      producto = productoPorSkuViaMapeoManual.get(sku) ?? null;
+    }
 
     if (producto) {
       // Producto ya existe — actualizar precio si es HYM (lista madre)
