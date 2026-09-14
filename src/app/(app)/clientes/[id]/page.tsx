@@ -55,20 +55,20 @@ export default async function ClienteHistorialPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-xl font-semibold text-gray-900">
             {cliente.apellido}, {cliente.nombre}
           </h1>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-500">
-            <span>{cliente.telefono}</span>
-            {cliente.email && <span>{cliente.email}</span>}
-            <span>{cliente.direccion}</span>
+            <span className="break-words">{cliente.telefono}</span>
+            {cliente.email && <span className="break-all">{cliente.email}</span>}
+            <span className="break-words">{cliente.direccion}</span>
           </div>
         </div>
         <Link
           href={`/clientes/${clienteId}/editar`}
-          className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          className="self-start rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 shrink-0"
         >
           Editar
         </Link>
@@ -153,10 +153,10 @@ export default async function ClienteHistorialPage({
 
           return (
             <div key={venta.id} className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
                   <div className="text-sm font-medium text-gray-900">{formatDate(venta.fechaVenta)}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">
+                  <div className="text-xs text-gray-500 mt-0.5 break-words">
                     {venta.canalVenta === "TIENDANUBE" ? "Tiendanube" : venta.canalVenta === "WHATSAPP" ? "WhatsApp" : "Teléfono"}
                     {" · "}{venta.medioPago}
                     {venta.facturado && venta.numeroFactura && ` · Factura ${venta.numeroFactura}`}
@@ -172,11 +172,11 @@ export default async function ClienteHistorialPage({
 
               <div className="space-y-1">
                 {venta.detalles.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-700">
+                  <div key={d.id} className="flex items-start justify-between gap-3 text-sm">
+                    <span className="min-w-0 break-words text-gray-700">
                       {d.cantidad}× {d.producto.marca} {d.producto.nombre}
                     </span>
-                    <span className="text-gray-500 shrink-0 ml-4">
+                    <span className="text-gray-500 shrink-0">
                       {formatCurrency(d.cantidad * Number(d.precioVentaUnitario))}
                     </span>
                   </div>

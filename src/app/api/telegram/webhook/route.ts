@@ -10,7 +10,7 @@ import {
 import { moverTarjetasComprMayoristaADespacho } from "@/lib/tablero";
 import { armarPreviewCorteHym, ejecutarCorteCompraHym, type ItemPreviewCorteHym } from "@/lib/corte-compras-hym";
 import { resolverPendienteSinStock, resolverPendienteManual } from "@/lib/compras-mayoristas";
-import { armarNivelRaiz, armarNivelCategoria } from "@/lib/categorias-telegram";
+import { armarNivelRaiz, armarNivelCategoria, armarListaClientes } from "@/lib/categorias-telegram";
 import { transcribirVozTelegram } from "@/lib/transcripcion";
 import { ejecutarComandoVoz } from "@/lib/comandos-voz";
 
@@ -30,9 +30,15 @@ async function manejarMensaje(chatId: string, texto: string) {
   const textoLimpio = texto.trim();
   if (!textoLimpio || textoLimpio.startsWith("/")) {
     await sendTelegramMessage(
-      "Hola! Escribí parte del nombre, marca o SKU de un producto para consultar precio y stock, o navegá por categorías.",
+      "Hola! Escribí parte del nombre, marca o SKU de un producto para consultar precio y stock, navegá por categorías, o escribí \"cliente <nombre>\" para ver sus datos.",
       { chatId, botones: [[{ text: "🗂 Ver categorías", callback_data: "cat_root" }]] }
     );
+    return;
+  }
+
+  const matchCliente = textoLimpio.match(/^clientes?\s+(.+)/i);
+  if (matchCliente) {
+    await manejarBusquedaCliente(chatId, matchCliente[1].trim());
     return;
   }
 
@@ -65,6 +71,32 @@ async function manejarMensaje(chatId: string, texto: string) {
       `<b>${p.nombreTiendanube ?? p.nombre}</b> (${p.marca}) — SKU ${p.skuInterno}\nStock: ${p.stockActual} — $${Number(p.precioVenta).toFixed(2)}`
   );
   await sendTelegramMessage(lineas.join("\n\n"), { chatId, botones: botonesRespuesta });
+}
+
+async function manejarBusquedaCliente(chatId: string, nombreBuscado: string) {
+  const clientes = await prisma.cliente.findMany({
+    where: {
+      OR: [
+        { nombre: { contains: nombreBuscado, mode: "insensitive" } },
+        { apellido: { contains: nombreBuscado, mode: "insensitive" } },
+      ],
+    },
+    take: LIMITE_RESULTADOS_BUSQUEDA,
+    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    include: { _count: { select: { ventas: true } } },
+  });
+
+  if (clientes.length === 0) {
+    await sendTelegramMessage(`No encontré clientes para "${nombreBuscado}".`, { chatId });
+    return;
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const lineas = clientes.map(
+    (c) =>
+      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 <a href="https://waze.com/ul?q=${encodeURIComponent(c.direccion)}&navigate=yes">${c.direccion}</a>\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
+  );
+  await sendTelegramMessage(lineas.join("\n\n"), { chatId });
 }
 
 async function manejarMensajeVoz(chatId: string, fileId: string) {
@@ -257,6 +289,17 @@ async function manejarCallback(
       await sendTelegramMessage(nivel.texto, { chatId, botones: nivel.botones });
     }
     return "Navegando categoría.";
+  }
+
+  if (accion === "clientes_lista") {
+    const pagina = params[0] ? Number(params[0]) : 1;
+    const nivel = await armarListaClientes(Number.isNaN(pagina) ? 1 : pagina);
+    if (messageId) {
+      await editTelegramMessage(chatId, messageId, nivel.texto, nivel.botones);
+    } else {
+      await sendTelegramMessage(nivel.texto, { chatId, botones: nivel.botones });
+    }
+    return "Clientes.";
   }
 
   if (accion === "sin_stock") {
