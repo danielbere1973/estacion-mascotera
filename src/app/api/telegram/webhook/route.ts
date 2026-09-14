@@ -109,7 +109,7 @@ async function manejarMensajeVoz(chatId: string, fileId: string) {
   const resultado = await ejecutarComandoVoz(texto);
   if (!resultado) {
     await sendTelegramMessage(
-      `🎙 Entendí: "${texto}", pero no reconozco ese comando. Probá "buscar alimento para perros/gatos marca X" o "crear venta para [cliente]".`,
+      `🎙 Entendí: "${texto}", pero no reconozco ese comando. Probá "buscar alimento para perros/gatos marca X", "buscar cliente [nombre]" o "crear venta para [cliente]".`,
       { chatId }
     );
     return;
