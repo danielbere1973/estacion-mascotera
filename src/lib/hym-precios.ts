@@ -13,6 +13,10 @@ type ProductoTN = { id: number; name: { es?: string }; variants: VarianteTN[] };
 
 type FilaHym = { Codigo: string; SKUInterno: string };
 
+const COL_COSTO_HYM = 8; // columna I
+const COL_PRECIO_PROMO = 10; // columna K
+const COL_PRECIO_LISTA = 11; // columna L
+
 // Exclusiones confirmadas manualmente tras revisar contra sistema_em:
 // - 6523-0.850: el SKU está mal asignado en Tiendanube a un producto distinto,
 //   no al pouch húmedo real de HYM (que no existe en TN).
@@ -405,4 +409,86 @@ export async function aplicarCambioHym(
   }
 
   return { ok: false, status: 0, detalle: "No se pudo verificar el cambio" };
+}
+
+// Actualiza en el propio Excel de mapeo HYM (hoja "productos_con_variantes"):
+// - columna I: costo HYM tomado de productos.csv (Precio Lista)
+// - columna K: precio promocional vigente en Tiendanube (o el de lista si no hay promo)
+// - columna L: precio de lista vigente en Tiendanube
+// Solo toca filas cuyo Código matchea el CSV Y cuyo SKUInterno tiene variante real
+// en Tiendanube; el resto queda intacto (son productos de HYM que no están en la tienda).
+export async function generarExcelActualizadoHym(
+  storeId: string,
+  accessToken: string,
+  csvBuffer: Buffer,
+  hymXlsxBuffer: Buffer,
+): Promise<Buffer> {
+  const productosTN = await traerProductosTiendanube(storeId, accessToken);
+
+  const indiceSku = new Map<string, VarianteTN>();
+  for (const p of productosTN) {
+    for (const v of p.variants) {
+      const sku = v.sku?.trim().toUpperCase() ?? "";
+      if (sku) indiceSku.set(sku, v);
+    }
+  }
+
+  const textoCsv = corregirEncoding(csvBuffer.toString("utf-8"));
+  const filasCsv = parsearCSV(textoCsv);
+  const costoPorSkuCsv = new Map<string, number>();
+  for (const fila of filasCsv) {
+    const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
+    if (!skuCsv) continue;
+    const costo = parsearPrecioArs(String(fila["Precio Lista"] ?? ""));
+    if (costo !== null) costoPorSkuCsv.set(skuCsv, costo);
+  }
+
+  const wbHym = XLSX.read(hymXlsxBuffer, { type: "buffer" });
+  const sheetHym = wbHym.Sheets["productos_con_variantes"];
+  if (!sheetHym) {
+    throw new Error(
+      "El Excel de mapeo no tiene la hoja \"productos_con_variantes\". Verificá que sea el archivo Productos-Cambios_HyM.xlsx correcto.",
+    );
+  }
+  const filasHym = XLSX.utils.sheet_to_json<FilaHym>(sheetHym);
+
+  const rango = XLSX.utils.decode_range(sheetHym["!ref"] ?? "A1");
+  rango.e.c = Math.max(rango.e.c, COL_PRECIO_LISTA);
+
+  for (let i = 0; i < filasHym.length; i++) {
+    const filaExcel = rango.s.r + 1 + i; // fila 0 es el header
+    const codigo = String(filasHym[i].Codigo ?? "").toLowerCase().trim();
+    const skuInterno = String(filasHym[i].SKUInterno ?? "").trim();
+    if (!codigo || !skuInterno) continue;
+
+    const costo = costoPorSkuCsv.get(codigo);
+    if (costo === undefined) continue;
+
+    const variante = indiceSku.get(skuInterno.toUpperCase());
+    if (!variante) continue;
+
+    const precioLista = variante.price ? parseFloat(variante.price) : null;
+    const precioPromo = variante.promotional_price ? parseFloat(variante.promotional_price) : null;
+
+    sheetHym[XLSX.utils.encode_cell({ r: filaExcel, c: COL_COSTO_HYM })] = { t: "n", v: costo };
+
+    if (precioLista === null || Number.isNaN(precioLista)) {
+      delete sheetHym[XLSX.utils.encode_cell({ r: filaExcel, c: COL_PRECIO_PROMO })];
+      delete sheetHym[XLSX.utils.encode_cell({ r: filaExcel, c: COL_PRECIO_LISTA })];
+      continue;
+    }
+
+    const precioAMostrarComoPromo =
+      precioPromo !== null && !Number.isNaN(precioPromo) ? precioPromo : precioLista;
+
+    sheetHym[XLSX.utils.encode_cell({ r: filaExcel, c: COL_PRECIO_PROMO })] = {
+      t: "n",
+      v: precioAMostrarComoPromo,
+    };
+    sheetHym[XLSX.utils.encode_cell({ r: filaExcel, c: COL_PRECIO_LISTA })] = { t: "n", v: precioLista };
+  }
+
+  sheetHym["!ref"] = XLSX.utils.encode_range(rango);
+
+  return XLSX.write(wbHym, { type: "buffer", bookType: "xlsx" });
 }

@@ -11,16 +11,22 @@ export function SubirArchivosHym() {
   const [resultado, setResultado] = useState<ResultadoCalculoHym | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [archivos, setArchivos] = useState<{ csv: File; hymExcel: File } | null>(null);
+
   function calcular() {
     setError(null);
     setResultado(null);
+    setArchivos(null);
     if (!formRef.current) return;
     const formData = new FormData(formRef.current);
+    const csv = formData.get("csv") as File | null;
+    const hymExcel = formData.get("hymExcel") as File | null;
 
     startTransition(async () => {
       try {
         const res = await calcularPreviewHym(formData);
         setResultado(res);
+        if (csv && hymExcel) setArchivos({ csv, hymExcel });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error al calcular los cambios.");
       }
@@ -68,7 +74,7 @@ export function SubirArchivosHym() {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {resultado && <TablaCambiosHym resultado={resultado} />}
+      {resultado && archivos && <TablaCambiosHym resultado={resultado} archivos={archivos} />}
     </div>
   );
 }
