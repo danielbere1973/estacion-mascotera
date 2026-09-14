@@ -163,7 +163,7 @@ export async function ejecutarCorteCompraHym(excluirLineaIds: number[] = []): Pr
   }
 
   await sendTelegramMessage(`🛒 Corte de compras HYM iniciado: ${items.length} línea(s).`, {
-    botones: [[{ text: "✅ Ya compré", callback_data: `mover_tarjetas_hym:${jobId}` }]],
+    botones: [[{ text: "📦 Ya confirmé la compra en HYM (mover tarjetas)", callback_data: `mover_tarjetas_hym:${jobId}` }]],
   });
 
   return { ok: true, items: items.length, jobId };

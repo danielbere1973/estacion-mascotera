@@ -80,6 +80,8 @@ export async function editTelegramMessage(
   }
 }
 
+const LIMITE_TEXTO_CALLBACK_ANSWER = 200;
+
 export async function answerCallbackQuery(callbackQueryId: string, texto?: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
@@ -87,13 +89,20 @@ export async function answerCallbackQuery(callbackQueryId: string, texto?: strin
     return;
   }
 
+  // Telegram trunca del lado del servidor a los 200 caracteres, cortando
+  // feo a mitad de palabra. Truncamos nosotros con "..." para que se vea bien.
+  const textoAcortado =
+    texto && texto.length > LIMITE_TEXTO_CALLBACK_ANSWER
+      ? texto.slice(0, LIMITE_TEXTO_CALLBACK_ANSWER - 3) + "..."
+      : texto;
+
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         callback_query_id: callbackQueryId,
-        ...(texto ? { text: texto } : {}),
+        ...(textoAcortado ? { text: textoAcortado } : {}),
       }),
     });
 

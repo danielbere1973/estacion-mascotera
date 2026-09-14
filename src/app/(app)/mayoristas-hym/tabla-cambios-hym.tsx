@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { aplicarLoteHym } from "./actions";
+import { aplicarLoteHym, generarExcelActualizadoAction } from "./actions";
 import type { FilaCambioHym, ResultadoCalculoHym } from "@/lib/hym-precios";
 
 const TAMANIO_LOTE = 15;
@@ -40,12 +40,20 @@ function categoriaDeFila(f: FilaCambioHym): FiltroStat | null {
 const MOTIVO_SIN_SKU_INTERNO = "SIN SKU INTERNO - no está en el Excel de mapeo HYM";
 const MOTIVO_SIN_VARIANTE_TN = "SIN VARIANTE EN TIENDANUBE - no es de este proveedor o falta cargar SKU";
 
-export function TablaCambiosHym({ resultado }: { resultado: ResultadoCalculoHym }) {
+export function TablaCambiosHym({
+  resultado,
+  archivos,
+}: {
+  resultado: ResultadoCalculoHym;
+  archivos: { csv: File; hymExcel: File };
+}) {
   const [excluidas, setExcluidas] = useState<Set<string>>(new Set());
   const [aplicacion, setAplicacion] = useState<EstadoAplicacion | null>(null);
   const [filtro, setFiltro] = useState<FiltroStat | null>(null);
   const [soloConCambioPrecio, setSoloConCambioPrecio] = useState(false);
   const [soloConCambioStock, setSoloConCambioStock] = useState(false);
+  const [generandoExcel, setGenerandoExcel] = useState(false);
+  const [errorExcel, setErrorExcel] = useState<string | null>(null);
 
   const filasAAplicar = useMemo(
     () => resultado.cambios.filter((f) => !f.sinCambioReal && !excluidas.has(f.skuHym)),
@@ -112,6 +120,30 @@ export function TablaCambiosHym({ resultado }: { resultado: ResultadoCalculoHym 
     }
 
     setAplicacion({ enCurso: false, procesados: total, total, exitosos, errores, terminado: true });
+  }
+
+  async function descargarExcelActualizado() {
+    setErrorExcel(null);
+    setGenerandoExcel(true);
+    try {
+      const formData = new FormData();
+      formData.set("csv", archivos.csv);
+      formData.set("hymExcel", archivos.hymExcel);
+      const base64 = await generarExcelActualizadoAction(formData);
+
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Productos-Cambios_HyM-actualizado.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErrorExcel(e instanceof Error ? e.message : "Error al generar el Excel actualizado.");
+    } finally {
+      setGenerandoExcel(false);
+    }
   }
 
   return (
@@ -207,6 +239,14 @@ export function TablaCambiosHym({ resultado }: { resultado: ResultadoCalculoHym 
                   ))}
                 </ul>
               )}
+              <button
+                onClick={descargarExcelActualizado}
+                disabled={generandoExcel}
+                className="mt-3 rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900 disabled:opacity-50"
+              >
+                {generandoExcel ? "Generando Excel..." : "Descargar Excel de mapeo actualizado"}
+              </button>
+              {errorExcel && <p className="mt-2 text-xs text-red-600">{errorExcel}</p>}
             </div>
           )}
         </div>
