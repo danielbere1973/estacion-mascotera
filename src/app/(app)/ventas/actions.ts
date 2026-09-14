@@ -61,6 +61,7 @@ export async function crearVenta(formData: FormData) {
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const facturado = formData.get("facturado") === "on";
   const esVentaInterna = formData.get("esVentaInterna") === "on";
+  const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const vendidoPorId = formData.get("vendidoPorId") ? Number(formData.get("vendidoPorId")) : null;
   const cobrado = formData.get("cobrado") === "on";
@@ -104,6 +105,7 @@ export async function crearVenta(formData: FormData) {
         costoEnvio,
         facturado,
         esVentaInterna,
+        descripcion,
         numeroFactura,
         fechaVenta,
         fechaAcreditacion,
@@ -171,6 +173,7 @@ export async function actualizarVenta(formData: FormData) {
   const costoEnvio = Number(formData.get("costoEnvio") || 0);
   const facturado = formData.get("facturado") === "on";
   const esVentaInterna = formData.get("esVentaInterna") === "on";
+  const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const fechaVentaStr = formData.get("fechaVenta")?.toString().trim();
   const fechaVenta = fechaVentaStr ? new Date(fechaVentaStr) : undefined;
@@ -350,7 +353,7 @@ export async function actualizarVenta(formData: FormData) {
 
     await tx.venta.update({
       where: { id },
-      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, numeroFactura, fechaVenta, fechaAcreditacion, cobrado, cobradoPorId },
+      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, descripcion, numeroFactura, fechaVenta, fechaAcreditacion, cobrado, cobradoPorId },
     });
 
     await registrarLog(tx, {

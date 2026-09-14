@@ -147,6 +147,16 @@ export default async function NuevaVentaPage() {
 
         <CostosVenta />
 
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Descripción (opcional)</label>
+          <textarea
+            name="descripcion"
+            rows={2}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Notas sobre la venta..."
+          />
+        </div>
+
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input type="checkbox" name="esVentaInterna" className="h-4 w-4 rounded border-gray-300 text-blue-600" />
           <span className="text-sm font-medium text-gray-700">Venta interna (no cuenta en rentabilidad)</span>

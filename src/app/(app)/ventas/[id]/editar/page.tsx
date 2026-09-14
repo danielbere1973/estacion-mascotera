@@ -146,6 +146,17 @@ export default async function EditarVentaPage({
           <span className="text-sm font-medium text-gray-700">Venta interna (no cuenta en rentabilidad)</span>
         </label>
 
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Descripción (opcional)</label>
+          <textarea
+            name="descripcion"
+            rows={2}
+            defaultValue={venta.descripcion ?? ""}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Notas sobre la venta..."
+          />
+        </div>
+
         <EditarVentaItems detalles={detalles} productos={productosPlain} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

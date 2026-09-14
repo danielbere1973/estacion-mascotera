@@ -201,6 +201,7 @@ model Venta {
   fechaAcreditacion DateTime?
   fechaVenta        DateTime       @default(now())
   esVentaInterna    Boolean        @default(false)
+  descripcion       String?
   usuarioId         Int
   vendidoPorId      Int?
   cobrado           Boolean        @default(false)

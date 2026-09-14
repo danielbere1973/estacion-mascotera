@@ -45,6 +45,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
   ]);
   const [nextKey, setNextKey] = useState(1);
   const [filtroProveedorId, setFiltroProveedorId] = useState("");
+  const [soloConStock, setSoloConStock] = useState(false);
   const [costoEnvio, setCostoEnvio] = useState(0);
 
   function addRow() {
@@ -114,32 +115,44 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
 
   const totalACobrar = totalProductos + costoEnvio;
 
-  const productosFiltrados = filtroProveedorId
-    ? productos.filter((p) => p.proveedorIds.includes(Number(filtroProveedorId)))
-    : productos;
+  const productosFiltrados = productos
+    .filter((p) => !filtroProveedorId || p.proveedorIds.includes(Number(filtroProveedorId)))
+    .filter((p) => !soloConStock || p.stockActual !== 0);
 
   const opciones = productosFiltrados.map((p) => ({
     value: String(p.id),
     label: `${p.skuInterno} · ${p.nombre}`,
     search: `${p.skuInterno} ${p.nombre}`,
+    hint: `Stock: ${p.stockActual}`,
   }));
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <label className="text-sm font-medium text-gray-700">Productos</label>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-500">Filtrar por proveedor</label>
-          <select
-            value={filtroProveedorId}
-            onChange={(e) => setFiltroProveedorId(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-1 text-xs"
-          >
-            <option value="">Todos los proveedores</option>
-            {proveedores.map((prov) => (
-              <option key={prov.id} value={prov.id}>{prov.nombre}</option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none pb-1.5">
+            <input
+              type="checkbox"
+              checked={soloConStock}
+              onChange={(e) => setSoloConStock(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600"
+            />
+            <span className="text-xs font-medium text-gray-600">Solo productos con stock distinto de 0</span>
+          </label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-500">Filtrar por proveedor</label>
+            <select
+              value={filtroProveedorId}
+              onChange={(e) => setFiltroProveedorId(e.target.value)}
+              className="rounded-md border border-gray-300 px-2 py-1 text-xs"
+            >
+              <option value="">Todos los proveedores</option>
+              {proveedores.map((prov) => (
+                <option key={prov.id} value={prov.id}>{prov.nombre}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
