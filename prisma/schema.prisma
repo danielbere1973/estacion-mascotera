@@ -201,6 +201,7 @@ model Venta {
   fechaAcreditacion DateTime?
   fechaVenta        DateTime       @default(now())
   esVentaInterna    Boolean        @default(false)
+  descripcion       String?
   usuarioId         Int
   vendidoPorId      Int?
   cobrado           Boolean        @default(false)
@@ -305,6 +306,21 @@ model HistorialStockMayorista {
   @@index([fechaImportacion])
   @@index([sku])
   @@index([proveedorId])
+}
+
+model SincronizacionHym {
+  id             Int      @id @default(autoincrement())
+  fecha          DateTime @default(now())
+  origen         String // "automatico" (scraper) o "manual" (pantalla mayoristas-hym)
+  exitosos       Int
+  erroresCount   Int
+  totalFilasCsv  Int
+  resumenJson    Json // ResultadoCalculoHym["resumen"]
+  cambiosJson    Json // FilaCambioHym[] efectivamente aplicadas (incluye no-ok con detalle)
+  erroresJson    Json // { sku, status, detalle }[]
+  excelActualizado Boolean @default(false)
+
+  @@index([fecha])
 }
 
 model SocioConsignacion {

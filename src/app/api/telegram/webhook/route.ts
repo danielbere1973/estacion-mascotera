@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   verificarSecretoTelegram,
@@ -109,7 +109,7 @@ async function manejarMensajeVoz(chatId: string, fileId: string) {
   const resultado = await ejecutarComandoVoz(texto);
   if (!resultado) {
     await sendTelegramMessage(
-      `🎙 Entendí: "${texto}", pero no reconozco ese comando. Probá "buscar alimento para perros/gatos marca X" o "crear venta para [cliente]".`,
+      `🎙 Entendí: "${texto}", pero no reconozco ese comando. Probá "buscar alimento para perros/gatos marca X", "buscar cliente [nombre]" o "crear venta para [cliente]".`,
       { chatId }
     );
     return;
@@ -354,8 +354,16 @@ export async function POST(req: NextRequest) {
         TELEGRAM_CHAT_ID_2: process.env.TELEGRAM_CHAT_ID_2,
       });
       if (autorizado && update.message.voice) {
-        await manejarMensajeVoz(chatId, update.message.voice.file_id);
-        console.log("telegram/webhook: manejarMensajeVoz completado");
+        // Transcribir + ejecutar el comando puede tardar más que el timeout de
+        // webhook de Telegram (pocos segundos). Se responde 200 OK ya mismo y se
+        // procesa en background con after(), que Vercel garantiza que corre hasta
+        // terminar aunque ya se haya devuelto la respuesta HTTP.
+        const fileId = update.message.voice.file_id;
+        after(() =>
+          manejarMensajeVoz(chatId, fileId)
+            .then(() => console.log("telegram/webhook: manejarMensajeVoz completado"))
+            .catch((error) => console.error("telegram/webhook: error en manejarMensajeVoz", error))
+        );
       } else if (autorizado && update.message.text) {
         await manejarMensaje(chatId, update.message.text);
         console.log("telegram/webhook: manejarMensaje completado");

@@ -24,6 +24,7 @@ export type CrearVentaInput = {
   costoEnvio?: number;
   facturado?: boolean;
   esVentaInterna?: boolean;
+  descripcion?: string | null;
   numeroFactura?: string | null;
   tiendanubeOrderId?: number | null;
   fechaVenta?: Date;
@@ -88,6 +89,7 @@ async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVent
       costoEnvio,
       facturado,
       esVentaInterna: input.esVentaInterna ?? false,
+      descripcion: input.descripcion ?? null,
       numeroFactura,
       fechaVenta,
       fechaAcreditacion: input.fechaAcreditacion ?? null,

@@ -98,12 +98,20 @@ export default async function VentasPage({
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Ventas</h1>
         {!esRestringido && (
-          <Link
-            href="/ventas/nueva"
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            + Nueva venta
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/ventas/uso-interno"
+              className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            >
+              Uso interno / Contenido
+            </Link>
+            <Link
+              href="/ventas/nueva"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              + Nueva venta
+            </Link>
+          </div>
         )}
       </div>
 

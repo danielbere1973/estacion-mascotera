@@ -52,11 +52,17 @@ export type ResultadoComandoVoz = { texto: string } | null;
 // los comandos simples soportados. Devuelve null si el texto no matchea
 // ningún comando conocido (el caller decide qué hacer, ej. avisar que no
 // entendió). Comandos deliberadamente simples (matching de palabras clave,
-// no NLU): "buscar alimento para perros/gatos marca X" y "crear venta para
-// [cliente]". Confirmar pedido HYM queda siempre manual, no por voz.
+// no NLU): "buscar alimento para perros/gatos marca X", "buscar cliente [nombre]"
+// y "crear venta para [cliente]". Confirmar pedido HYM queda siempre manual, no
+// por voz.
 export async function ejecutarComandoVoz(textoOriginal: string): Promise<ResultadoComandoVoz> {
   const texto = textoOriginal.toLowerCase().trim();
   if (!texto) return null;
+
+  const matchCliente = texto.match(/\bcliente(?:s)?[:\s]+(.+)/i);
+  if (matchCliente) {
+    return buscarClientePorNombre(matchCliente[1].trim());
+  }
 
   if (/\b(alimento|comida)\b/.test(texto) || /\bbuscar\b/.test(texto)) {
     return buscarAlimentoPorEspecieYMarca(texto);
@@ -67,6 +73,34 @@ export async function ejecutarComandoVoz(textoOriginal: string): Promise<Resulta
   }
 
   return null;
+}
+
+async function buscarClientePorNombre(nombreBuscado: string): Promise<ResultadoComandoVoz> {
+  if (!nombreBuscado) return null;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
+  const clientes = await prisma.cliente.findMany({
+    where: {
+      OR: [
+        { nombre: { contains: nombreBuscado, mode: "insensitive" } },
+        { apellido: { contains: nombreBuscado, mode: "insensitive" } },
+      ],
+    },
+    take: LIMITE_RESULTADOS,
+    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    include: { _count: { select: { ventas: true } } },
+  });
+
+  if (clientes.length === 0) {
+    return { texto: `🎙 No encontré clientes para "${nombreBuscado}".` };
+  }
+
+  const lineas = clientes.map(
+    (c) =>
+      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 <a href="https://waze.com/ul?q=${encodeURIComponent(c.direccion)}&navigate=yes">${c.direccion}</a>\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
+  );
+  return { texto: `🎙 ${lineas.join("\n\n")}` };
 }
 
 async function buscarAlimentoPorEspecieYMarca(texto: string): Promise<ResultadoComandoVoz> {

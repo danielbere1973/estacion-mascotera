@@ -7,6 +7,7 @@ export type ComboboxOption = {
   value: string;
   label: string;
   search: string;
+  hint?: string;
 };
 
 function normalizar(s: string): string {
@@ -98,10 +99,10 @@ export function Combobox({
               setQuery(o.label);
               setOpen(false);
             }}
-            className="cursor-pointer px-3 py-2 hover:bg-blue-50"
+            className="flex items-center justify-between gap-2 cursor-pointer px-3 py-2 hover:bg-blue-50"
           >
-            <span className="font-mono text-xs text-gray-400 mr-2">{o.value}</span>
-            {o.label}
+            <span>{o.label}</span>
+            {o.hint && <span className="shrink-0 text-xs text-gray-400">{o.hint}</span>}
           </li>
         ))
       )}

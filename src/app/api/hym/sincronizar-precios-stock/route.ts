@@ -83,6 +83,19 @@ export async function POST(req: NextRequest) {
   }
   await sendTelegramMessage(partes.join(""));
 
+  await prisma.sincronizacionHym.create({
+    data: {
+      origen: "automatico",
+      exitosos: exitosos.length,
+      erroresCount: errores.length,
+      totalFilasCsv: resultado.resumen.totalFilasCsv,
+      resumenJson: resultado.resumen,
+      cambiosJson: aAplicar,
+      erroresJson: errores,
+      excelActualizado: excelActualizadoBase64 !== null,
+    },
+  });
+
   return NextResponse.json({
     ok: true,
     exitosos: exitosos.length,
