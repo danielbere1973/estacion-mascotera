@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FilaCambioHym } from "@/lib/hym-precios";
+import type { FilaCambioHym, FilaSinResolver } from "@/lib/hym-precios";
 import type { SincronizacionHym } from "@prisma/client";
 
 function formatMoney(n: number | null | undefined) {
@@ -40,6 +40,7 @@ export function DetalleCorrida({ corrida }: { corrida: SincronizacionHym }) {
   const cambios = corrida.cambiosJson as unknown as FilaCambioHym[];
   const errores = corrida.erroresJson as unknown as ErrorAplicado[];
   const erroresPorSku = new Map(errores.map((e) => [e.sku, e]));
+  const sinResolver = (corrida.sinResolverJson as unknown as FilaSinResolver[] | null) ?? [];
 
   const huboProblema = corrida.erroresCount > 0 || !corrida.excelActualizado;
 
@@ -128,6 +129,36 @@ export function DetalleCorrida({ corrida }: { corrida: SincronizacionHym }) {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {sinResolver.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium text-gray-600">
+                Sin resolver ({sinResolver.length}):
+              </p>
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 text-left uppercase text-gray-500">
+                    <tr>
+                      <th className="px-2 py-2">SKU HYM</th>
+                      <th className="px-2 py-2">Nombre HYM</th>
+                      <th className="px-2 py-2">SKU Interno</th>
+                      <th className="px-2 py-2">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {sinResolver.map((f, i) => (
+                      <tr key={`${f.skuHym}-${i}`}>
+                        <td className="px-2 py-1.5 font-mono">{f.skuHym}</td>
+                        <td className="px-2 py-1.5">{f.nombreHym}</td>
+                        <td className="px-2 py-1.5 font-mono">{f.skuInterno ?? "—"}</td>
+                        <td className="px-2 py-1.5 text-gray-500">{f.motivo}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

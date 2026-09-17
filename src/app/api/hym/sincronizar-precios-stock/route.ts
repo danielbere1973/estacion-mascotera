@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
       resumenJson: resultado.resumen,
       cambiosJson: aAplicar,
       erroresJson: errores,
+      sinResolverJson: resultado.sinResolver,
       excelActualizado: excelActualizadoBase64 !== null,
     },
   });
