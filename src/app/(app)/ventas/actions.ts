@@ -141,7 +141,12 @@ export async function crearVenta(formData: FormData) {
   });
 
   const cliente = await prisma.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
-  await sendTelegramMessage(`🧾 Venta manual cargada: #${resultado.ventaId} — ${cliente.nombre} ${cliente.apellido}`);
+  const avisoStockManual = resultado.huboPendienteHym
+    ? "\n\n⚠️ Se quedó sin stock algún producto — ya arrancó la compra automática a HYM, te aviso cuando esté confirmada."
+    : "";
+  await sendTelegramMessage(
+    `🧾 Venta cargada: #${resultado.ventaId} — ${cliente.nombre} ${cliente.apellido}${avisoStockManual}`
+  );
 
   if (resultado.huboPendienteHym) {
     ejecutarCorteCompraHym().catch((error) =>
@@ -151,7 +156,7 @@ export async function crearVenta(formData: FormData) {
 
   if (resultado.sinMapeoHym.length > 0) {
     await sendTelegramMessage(
-      `📉 Stock negativo, sin proveedor mayorista mapeado — reponer manualmente: ${resultado.sinMapeoHym.join(", ")}`
+      `⚠️ ${resultado.sinMapeoHym.join(", ")} se quedó sin stock y no tiene proveedor mayorista cargado — hay que reponerlo a mano.`
     );
   }
 

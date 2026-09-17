@@ -194,15 +194,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const avisoSkus = skusNoResueltos.length > 0 ? `\n⚠️ SKUs no vinculados: ${skusNoResueltos.join(", ")}` : "";
+  const avisoSkus =
+    skusNoResueltos.length > 0
+      ? `\n\n⚠️ Hay productos sin vincular a un SKU interno, revisalos a mano: ${skusNoResueltos.join(", ")}`
+      : "";
   const avisoStock =
     productosStockNegativo.length > 0
       ? huboPendienteHym
-        ? `\n📉 Stock negativo (compra HYM automática en curso): ${productosStockNegativo.map((p) => `${p.nombre} (${p.stockActual})`).join(", ")}`
-        : `\n📉 Stock negativo, sin proveedor mayorista mapeado — reponer manualmente: ${productosStockNegativo.map((p) => `${p.nombre} (${p.stockActual})`).join(", ")}`
-      : "";
+        ? `\n\n⚠️ ${productosStockNegativo.map((p) => p.nombre).join(", ")} se quedó sin stock — ya arrancó la compra automática a HYM, te aviso cuando esté confirmada.`
+        : `\n\n⚠️ ${productosStockNegativo.map((p) => p.nombre).join(", ")} se quedó sin stock y no tiene proveedor mayorista cargado — hay que reponerlo a mano.`
+      : "\n\n✅ Hay stock de todo, ya podés preparar el envío.";
   await sendTelegramMessage(
-    `🛒 Nuevo pedido Tiendanube #${pedido.number}\nCliente: ${nombre} ${apellido}\nItems: ${items.length}${avisoSkus}${avisoStock}`
+    `🎉 ¡Nueva venta por Tiendanube!\nCliente: ${nombre} ${apellido}\nPedido #${pedido.number} · ${items.length} producto(s)${avisoSkus}${avisoStock}`
   );
 
   return NextResponse.json({ ok: true, ventaId });
