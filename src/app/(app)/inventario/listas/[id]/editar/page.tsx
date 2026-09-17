@@ -14,6 +14,7 @@ export default async function EditarItemMayoristaPage({
 
   const item = await prisma.historialStockMayorista.findUnique({
     where: { id: Number(id) },
+    include: { producto: { select: { skuInterno: true, nombre: true } } },
   });
 
   if (!item) notFound();
@@ -35,14 +36,27 @@ export default async function EditarItemMayoristaPage({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">SKU Interno</label>
-            <input
-              name="skuInterno"
-              defaultValue={item.skuInterno ?? ""}
-              placeholder="Ej: RC-URI-1.5"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
-            />
+            {item.producto ? (
+              <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm font-mono text-green-700">
+                {item.producto.skuInterno} — ya vinculado a &quot;{item.producto.nombre}&quot;
+              </p>
+            ) : (
+              <input
+                name="skuInterno"
+                defaultValue={item.skuInterno ?? ""}
+                placeholder="Ej: RC-URI-1.5"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+              />
+            )}
           </div>
         </div>
+
+        {item.producto && (
+          <p className="text-xs text-gray-500">
+            Este item ya está vinculado automáticamente al producto de arriba. El campo de mapeo manual
+            solo se usa cuando el sistema no logra encontrar el vínculo solo.
+          </p>
+        )}
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Nombre</label>

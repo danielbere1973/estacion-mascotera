@@ -149,7 +149,6 @@ export async function actualizarItemMayorista(formData: FormData) {
 
   const proveedorId = formData.get("proveedorId")?.toString();
   const nombre = formData.get("nombre")?.toString().trim() || null;
-  const skuInterno = formData.get("skuInterno")?.toString().trim() || null;
   const precioCostoScraped = Number(formData.get("precioCostoScraped"));
   const precioConDescuentoStr = formData.get("precioConDescuento")?.toString().trim();
   const precioConDescuento = precioConDescuentoStr ? Number(precioConDescuentoStr) : null;
@@ -158,9 +157,27 @@ export async function actualizarItemMayorista(formData: FormData) {
 
   if (precioCostoScraped < 0) throw new Error("El precio no es válido.");
 
+  // El campo skuInterno (mapeo manual) solo viene en el form cuando el item
+  // todavía no está vinculado a un producto — si ya está vinculado, la
+  // pantalla no lo muestra como editable y no hay que pisarlo con null.
+  const itemActual = await prisma.historialStockMayorista.findUnique({
+    where: { id },
+    select: { productoId: true },
+  });
+  const skuInternoRaw = formData.get("skuInterno");
+  const skuInterno =
+    skuInternoRaw === null ? undefined : skuInternoRaw.toString().trim() || null;
+
   await prisma.historialStockMayorista.update({
     where: { id },
-    data: { nombre, skuInterno, precioCostoScraped, precioConDescuento, tamanios, tipoProducto },
+    data: {
+      nombre,
+      precioCostoScraped,
+      precioConDescuento,
+      tamanios,
+      tipoProducto,
+      ...(itemActual?.productoId ? {} : { skuInterno }),
+    },
   });
 
   revalidatePath("/inventario/listas");
