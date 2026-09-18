@@ -115,9 +115,10 @@ export async function crearTarjetaIngresoOrden(
 export async function registrarPendientesCompra(
   tx: Prisma.TransactionClient,
   productosStockNegativo: { productoId: number; nombre: string; faltante: number }[]
-): Promise<{ huboPendienteHym: boolean; sinMapeoHym: string[] }> {
+): Promise<{ huboPendienteHym: boolean; sinMapeoHym: string[]; conMapeoHym: string[] }> {
   let huboPendienteHym = false;
   const sinMapeoHym: string[] = [];
+  const conMapeoHym: string[] = [];
 
   for (const producto of productosStockNegativo) {
     const mapeoHym = await tx.historialStockMayorista.findFirst({
@@ -134,6 +135,7 @@ export async function registrarPendientesCompra(
     }
 
     huboPendienteHym = true;
+    conMapeoHym.push(producto.nombre);
 
     const pendienteExistente = await tx.pendienteCompraMayorista.findFirst({
       where: { productoId: producto.productoId, proveedorId: HYM_PROVEEDOR_ID, estado: "PENDIENTE" },
@@ -155,5 +157,5 @@ export async function registrarPendientesCompra(
     }
   }
 
-  return { huboPendienteHym, sinMapeoHym };
+  return { huboPendienteHym, sinMapeoHym, conMapeoHym };
 }

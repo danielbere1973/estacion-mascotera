@@ -318,6 +318,7 @@ model SincronizacionHym {
   resumenJson    Json // ResultadoCalculoHym["resumen"]
   cambiosJson    Json // FilaCambioHym[] efectivamente aplicadas (incluye no-ok con detalle)
   erroresJson    Json // { sku, status, detalle }[]
+  sinResolverJson Json? // FilaSinResolver[] — productos del CSV HYM que no se pudieron mapear
   excelActualizado Boolean @default(false)
 
   @@index([fecha])
