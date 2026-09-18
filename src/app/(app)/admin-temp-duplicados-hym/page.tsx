@@ -1,10 +1,15 @@
 import { requireAdmin } from "@/lib/permissions";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
-import { listarDuplicados, limpiarDuplicado } from "./actions";
+import { listarDuplicados, limpiarDuplicado, limpiarSimples } from "./actions";
 
 export default async function AdminTempDuplicadosHymPage() {
   await requireAdmin();
   const grupos = await listarDuplicados();
+
+  const requierenReasignacion = grupos.filter(
+    (g) => !g.mismoProducto && g.base !== null && g.duplicado.productoId !== null && g.base.productoId !== null
+  ).length;
+  const simples = grupos.length - requierenReasignacion;
 
   return (
     <div className="w-full space-y-4">
@@ -13,7 +18,28 @@ export default async function AdminTempDuplicadosHymPage() {
         (src/app/(app)/admin-temp-duplicados-hym) cuando termine la limpieza.
       </div>
 
-      <h1 className="text-xl font-semibold text-gray-900">Duplicados HYM ({grupos.length})</h1>
+      <div className="rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-600">
+        <p className="mb-1">
+          <span className="font-medium">¿Existe fila base?</span> — para cada fila con sufijo de tamaño (ej.{" "}
+          <span className="font-mono text-xs">6403-10kg</span>) busca si también existe la fila sin sufijo (ej.{" "}
+          <span className="font-mono text-xs">6403</span>) en la lista de HYM. Si dice &quot;no existe&quot;, esa
+          fila -Xkg es la única versión de ese producto: no hay con qué comparar ni reasignar, se borra directo.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Duplicados HYM ({grupos.length})</h1>
+        {simples > 0 && (
+          <form action={limpiarSimples}>
+            <ConfirmSubmitButton
+              confirmMessage={`Se van a limpiar automáticamente ${simples} fila(s) sin conflicto (mismo producto o sin producto vinculado). Las ${requierenReasignacion} que requieren reasignar quedan para revisar a mano. ¿Continuar?`}
+              className="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
+            >
+              Limpiar {simples} sin conflicto de una vez
+            </ConfirmSubmitButton>
+          </form>
+        )}
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">

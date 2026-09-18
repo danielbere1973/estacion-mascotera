@@ -90,25 +90,7 @@ export async function listarDuplicados() {
   }));
 }
 
-// Limpia un par duplicado/base:
-// - Si no hay fila base real, o ambos apuntan al mismo Producto (o ninguno tiene
-//   Producto vinculado), no hay nada que reasignar: se borra directamente la fila
-//   -Xkg de HistorialStockMayorista.
-// - Si apuntan a Productos distintos, primero se reasignan TODAS las relaciones
-//   (compras, ventas, pendientes, consignaciones, dropshipping, recurrentes,
-//   recordatorios) del Producto duplicado al Producto base, y recién después se
-//   borra la fila -Xkg y el Producto duplicado (si quedó sin ninguna otra fila
-//   de historial apuntándolo).
-export async function limpiarDuplicado(historialIdDuplicado: number) {
-  await requireAdmin();
-
-  const duplicado = await prisma.historialStockMayorista.findUnique({
-    where: { id: historialIdDuplicado },
-    select: { id: true, sku: true, proveedorId: true, productoId: true },
-  });
-  if (!duplicado || duplicado.proveedorId !== PROVEEDOR_HYM) {
-    throw new Error("Fila no encontrada o no pertenece a HYM");
-  }
+async function limpiarUnaFila(duplicado: { id: number; sku: string; proveedorId: number | null; productoId: number | null }) {
   const baseSku = codigoBase(duplicado.sku);
   if (!baseSku) throw new Error("Este SKU no tiene sufijo de tamaño reconocible");
 
@@ -183,6 +165,56 @@ export async function limpiarDuplicado(historialIdDuplicado: number) {
     // Mismo producto (o sin Producto vinculado en alguno de los dos lados):
     // no hay ventas/compras que reasignar, se borra directo la fila -Xkg.
     await prisma.historialStockMayorista.delete({ where: { id: duplicado.id } });
+  }
+
+  return { requirioReasignacion: Boolean(productoDuplicado && productoBase && productoDuplicado !== productoBase) };
+}
+
+// Limpia un par duplicado/base:
+// - Si no hay fila base real, o ambos apuntan al mismo Producto (o ninguno tiene
+//   Producto vinculado), no hay nada que reasignar: se borra directamente la fila
+//   -Xkg de HistorialStockMayorista.
+// - Si apuntan a Productos distintos, primero se reasignan TODAS las relaciones
+//   (compras, ventas, pendientes, consignaciones, dropshipping, recurrentes,
+//   recordatorios) del Producto duplicado al Producto base, y recién después se
+//   borra la fila -Xkg y el Producto duplicado (si quedó sin ninguna otra fila
+//   de historial apuntándolo).
+export async function limpiarDuplicado(historialIdDuplicado: number) {
+  await requireAdmin();
+
+  const duplicado = await prisma.historialStockMayorista.findUnique({
+    where: { id: historialIdDuplicado },
+    select: { id: true, sku: true, proveedorId: true, productoId: true },
+  });
+  if (!duplicado || duplicado.proveedorId !== PROVEEDOR_HYM) {
+    throw new Error("Fila no encontrada o no pertenece a HYM");
+  }
+
+  await limpiarUnaFila(duplicado);
+  revalidatePath(RUTA);
+}
+
+// Limpia en un solo paso todos los duplicados que NO requieren reasignación:
+// mismo producto en ambos lados, o sin Producto vinculado en alguno de los dos.
+// Los que sí requieren reasignar (productos distintos con movimientos propios)
+// se dejan afuera para que se revisen uno por uno.
+export async function limpiarSimples(): Promise<void> {
+  await requireAdmin();
+
+  const grupos = await listarDuplicados();
+  const simples = grupos.filter((g) => {
+    const requiereReasignacion =
+      !g.mismoProducto && g.base !== null && g.duplicado.productoId !== null && g.base.productoId !== null;
+    return !requiereReasignacion;
+  });
+
+  for (const g of simples) {
+    const fila = await prisma.historialStockMayorista.findUnique({
+      where: { id: g.duplicado.historialId },
+      select: { id: true, sku: true, proveedorId: true, productoId: true },
+    });
+    if (!fila || fila.proveedorId !== PROVEEDOR_HYM) continue;
+    await limpiarUnaFila(fila);
   }
 
   revalidatePath(RUTA);
