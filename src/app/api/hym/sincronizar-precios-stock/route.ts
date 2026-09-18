@@ -79,22 +79,18 @@ export async function POST(req: NextRequest) {
   }
 
   const partes = [
-    `🔄 Sync HYM automático: ${exitosos.length} cambios aplicados en Tiendanube` +
-      (errores.length > 0 ? `, ${errores.length} errores` : "") +
-      ".",
+    "🔄 Sync HYM automático - Resultados:",
+    `- ${exitosos.length} cambios aplicados en Tiendanube (actualizaciones que impactaron en la Tienda)`,
+    `- ${resultado.resumen.sinSkuInterno} sin SKU interno (estan en CSV de HyM pero no en el Excel)`,
+    `- ${resultado.resumen.sinVarianteTN} sin variantes en TiendaNube (estan en CSV y en Excel pero faltan en TiendaNube)`,
   ];
-  if (resultado.resumen.sinSkuInterno > 0 || resultado.resumen.sinVarianteTN > 0) {
-    partes.push(
-      `\nSin resolver: ${resultado.resumen.sinSkuInterno} sin SKU interno, ${resultado.resumen.sinVarianteTN} sin variante en Tiendanube.`,
-    );
-  }
   if (errores.length > 0) {
-    partes.push(`\n❌ Errores: ${errores.map((e) => `${e.sku} (${e.status})`).join(", ")}`);
+    partes.push(`- ${errores.length} errores al aplicar: ${errores.map((e) => `${e.sku} (${e.status})`).join(", ")}`);
   }
   if (!excelActualizadoBase64) {
-    partes.push(`\n⚠️ No se pudo generar el Excel de mapeo actualizado, revisar manualmente.`);
+    partes.push(`- ⚠️ No se pudo generar el Excel de mapeo actualizado, revisar manualmente.`);
   }
-  await sendTelegramMessage(partes.join(""));
+  await sendTelegramMessage(partes.join("\n"));
 
   await prisma.sincronizacionHym.create({
     data: {
