@@ -19,14 +19,11 @@ const COL_PRECIO_PROMO = 10; // columna K
 const COL_PRECIO_LISTA = 11; // columna L
 const COL_SIN_VARIANTE_TN = 12; // columna M
 
-// Códigos HYM como "06403" y "6403" son el mismo producto — HYM a veces manda
-// el CSV con cero a la izquierda y el Excel de mapeo lo tiene cargado sin él
-// (o viceversa). Sin esto, el match por string exacto los trata como distintos
-// y el producto queda mal marcado como "sin SKU interno".
-function normalizarCodigoHym(codigo: string): string {
-  return codigo.replace(/^0+(?=\d)/, "");
-}
-
+// IMPORTANTE: el código HYM se compara tal cual viene, SIN sacar ceros a la
+// izquierda. El cero es intencional: HYM puede tener "0122" y "5122" (o
+// "0122" y "122") como productos distintos, y normalizarlos los fusionaría
+// mal. El caso 06523 abajo es un ejemplo real de esto.
+//
 // Exclusiones confirmadas manualmente tras revisar contra sistema_em:
 // - 6523-0.850: el SKU está mal asignado en Tiendanube a un producto distinto,
 //   no al pouch húmedo real de HYM (que no existe en TN).
@@ -141,7 +138,7 @@ export async function calcularCambiosHym(
 
   const indiceCodigoHym = new Map<string, string>();
   for (const f of filasHym) {
-    const key = normalizarCodigoHym(String(f.Codigo ?? "").toLowerCase().trim());
+    const key = String(f.Codigo ?? "").toLowerCase().trim();
     const skuInterno = String(f.SKUInterno ?? "").trim();
     if (key && skuInterno) indiceCodigoHym.set(key, skuInterno);
   }
@@ -160,7 +157,7 @@ export async function calcularCambiosHym(
   let sinCambioReal = 0;
 
   for (const fila of filasCsv) {
-    const skuCsv = normalizarCodigoHym(String(fila.SKU ?? "").toLowerCase().trim());
+    const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
     if (!skuCsv) continue;
 
     const skuInterno = indiceCodigoHym.get(skuCsv);
@@ -469,7 +466,7 @@ export async function generarExcelActualizadoHym(
   const costoPorSkuCsv = new Map<string, number>();
   const estadoStockPorSkuCsv = new Map<string, string>();
   for (const fila of filasCsv) {
-    const skuCsv = normalizarCodigoHym(String(fila.SKU ?? "").toLowerCase().trim());
+    const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
     if (!skuCsv) continue;
     const costo = parsearPrecioArs(String(fila["Precio Lista"] ?? ""));
     if (costo !== null) costoPorSkuCsv.set(skuCsv, costo);
@@ -491,7 +488,7 @@ export async function generarExcelActualizadoHym(
 
   for (let i = 0; i < filasHym.length; i++) {
     const filaExcel = rango.s.r + 1 + i; // fila 0 es el header
-    const codigo = normalizarCodigoHym(String(filasHym[i].Codigo ?? "").toLowerCase().trim());
+    const codigo = String(filasHym[i].Codigo ?? "").toLowerCase().trim();
     const skuInterno = String(filasHym[i].SKUInterno ?? "").trim();
     if (!codigo || !skuInterno) continue;
 
@@ -523,13 +520,13 @@ export async function generarExcelActualizadoHym(
   }
 
   const codigosEnExcel = new Set(
-    filasHym.map((f) => normalizarCodigoHym(String(f.Codigo ?? "").toLowerCase().trim())).filter(Boolean),
+    filasHym.map((f) => String(f.Codigo ?? "").toLowerCase().trim()).filter(Boolean),
   );
-  const mapeoPorCodigo = new Map(mapeoDb.map((m) => [normalizarCodigoHym(m.codigoHym), m]));
+  const mapeoPorCodigo = new Map(mapeoDb.map((m) => [m.codigoHym, m]));
 
   let siguienteFilaExcel = rango.s.r + 1 + filasHym.length;
   for (const fila of filasCsv) {
-    const skuCsv = normalizarCodigoHym(String(fila.SKU ?? "").toLowerCase().trim());
+    const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
     if (!skuCsv || codigosEnExcel.has(skuCsv)) continue;
 
     const mapeo = mapeoPorCodigo.get(skuCsv);
