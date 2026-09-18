@@ -119,7 +119,7 @@ export async function crearVenta(formData: FormData) {
       tx
     );
 
-    const { huboPendienteHym, sinMapeoHym } = await registrarPendientesCompra(tx, venta.productosStockNegativo);
+    const { huboPendienteHym, sinMapeoHym, conMapeoHym } = await registrarPendientesCompra(tx, venta.productosStockNegativo);
 
     const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
     const tituloTarjeta = `Venta a ${cliente.nombre} ${cliente.apellido}`;
@@ -137,15 +137,25 @@ export async function crearVenta(formData: FormData) {
       });
     }
 
-    return { sinMapeoHym, huboPendienteHym, ventaId: venta.ventaId };
+    return { sinMapeoHym, conMapeoHym, huboPendienteHym, ventaId: venta.ventaId };
   });
 
   const cliente = await prisma.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
+
+  const productosVendidos = await prisma.producto.findMany({
+    where: { id: { in: items.map((i) => i.productoId) } },
+    select: { id: true, nombre: true },
+  });
+  const nombrePorProductoId = new Map(productosVendidos.map((p) => [p.id, p.nombre]));
+  const detalleItems = items
+    .map((i) => `${i.cantidad}x ${nombrePorProductoId.get(i.productoId) ?? "producto"}`)
+    .join(", ");
+
   const avisoStockManual = resultado.huboPendienteHym
-    ? "\n\n⚠️ Se quedó sin stock algún producto — ya arrancó la compra automática a HYM, te aviso cuando esté confirmada."
+    ? `\n\n⚠️ ${resultado.conMapeoHym.join(", ")} se quedó sin stock — ya arrancó la compra automática a HYM, te aviso cuando esté confirmada.`
     : "";
   await sendTelegramMessage(
-    `🧾 Venta cargada: #${resultado.ventaId} — ${cliente.nombre} ${cliente.apellido}${avisoStockManual}`
+    `🧾 Venta cargada: #${resultado.ventaId} — ${cliente.nombre} ${cliente.apellido}\n${detalleItems}${avisoStockManual}`
   );
 
   if (resultado.huboPendienteHym) {

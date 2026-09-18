@@ -58,7 +58,20 @@ export async function POST(req: NextRequest) {
 
   let excelActualizadoBase64: string | null = null;
   try {
-    const excelBuffer = await generarExcelActualizadoHym(config.storeId, config.accessToken, csvBuffer, hymBuffer);
+    const historialConCodigo = await prisma.historialStockMayorista.findMany({
+      where: { codigoHym: { not: null }, producto: { isNot: null } },
+      select: { codigoHym: true, nombre: true, tamanios: true, producto: { select: { skuInterno: true } } },
+    });
+    const mapeoDb = historialConCodigo
+      .filter((h) => h.producto)
+      .map((h) => ({
+        codigoHym: h.codigoHym!.toLowerCase().trim(),
+        skuInterno: h.producto!.skuInterno,
+        nombre: h.nombre,
+        tamanios: h.tamanios,
+      }));
+
+    const excelBuffer = await generarExcelActualizadoHym(config.storeId, config.accessToken, csvBuffer, hymBuffer, mapeoDb);
     excelActualizadoBase64 = excelBuffer.toString("base64");
   } catch (error) {
     const detalle = error instanceof Error ? error.message : String(error);

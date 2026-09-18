@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { forzarCorteCompraHym } from "./actions";
+import { forzarCorteCompraHym, eliminarPendienteCompraMayorista } from "./actions";
 
 interface ItemPreview {
   lineaId: number;
@@ -11,8 +11,8 @@ interface ItemPreview {
 }
 
 export function PreviewCorteHymModal({
-  conMapeo,
-  sinMapeo,
+  conMapeo: conMapeoInicial,
+  sinMapeo: sinMapeoInicial,
   onClose,
   onConfirmado,
 }: {
@@ -21,8 +21,11 @@ export function PreviewCorteHymModal({
   onClose: () => void;
   onConfirmado: (resultado: { ok: true; items: number } | { ok: false; error: string }) => void;
 }) {
+  const [conMapeo, setConMapeo] = useState(conMapeoInicial);
+  const [sinMapeo, setSinMapeo] = useState(sinMapeoInicial);
   const [excluidos, setExcluidos] = useState<Set<number>>(new Set());
   const [confirmando, setConfirmando] = useState(false);
+  const [eliminando, setEliminando] = useState<Set<number>>(new Set());
 
   function toggleExcluido(lineaId: number) {
     setExcluidos((prev) => {
@@ -31,6 +34,27 @@ export function PreviewCorteHymModal({
       else next.add(lineaId);
       return next;
     });
+  }
+
+  async function handleEliminar(lineaId: number) {
+    if (!confirm("¿Eliminar este pendiente de compra? No se va a volver a pedir en próximos cortes.")) return;
+    setEliminando((prev) => new Set(prev).add(lineaId));
+    try {
+      await eliminarPendienteCompraMayorista(lineaId);
+      setConMapeo((prev) => prev.filter((i) => i.lineaId !== lineaId));
+      setSinMapeo((prev) => prev.filter((i) => i.lineaId !== lineaId));
+      setExcluidos((prev) => {
+        const next = new Set(prev);
+        next.delete(lineaId);
+        return next;
+      });
+    } finally {
+      setEliminando((prev) => {
+        const next = new Set(prev);
+        next.delete(lineaId);
+        return next;
+      });
+    }
   }
 
   async function handleConfirmar() {
@@ -81,13 +105,26 @@ export function PreviewCorteHymModal({
                         <td className="whitespace-nowrap px-2 py-1.5 text-right text-gray-700">
                           x{item.cantidad}
                         </td>
+                        <td className="w-8 px-2 py-1.5 text-right">
+                          <button
+                            type="button"
+                            title="Eliminar definitivamente, no volver a pedir"
+                            disabled={eliminando.has(item.lineaId)}
+                            onClick={() => handleEliminar(item.lineaId)}
+                            className="text-gray-400 hover:text-red-600 disabled:opacity-50"
+                          >
+                            🗑
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-gray-400">Destildá los que no querés pedir en este corte.</p>
+            <p className="text-xs text-gray-400">
+              Destildá los que no querés pedir en este corte puntual, o eliminá 🗑 los que no querés que se pidan más.
+            </p>
           </div>
         )}
 
@@ -107,6 +144,17 @@ export function PreviewCorteHymModal({
                       </td>
                       <td className="whitespace-nowrap px-2 py-1.5 text-right text-amber-800">
                         x{item.cantidad}
+                      </td>
+                      <td className="w-8 px-2 py-1.5 text-right">
+                        <button
+                          type="button"
+                          title="Eliminar definitivamente, no volver a pedir"
+                          disabled={eliminando.has(item.lineaId)}
+                          onClick={() => handleEliminar(item.lineaId)}
+                          className="text-amber-500 hover:text-red-600 disabled:opacity-50"
+                        >
+                          🗑
+                        </button>
                       </td>
                     </tr>
                   ))}

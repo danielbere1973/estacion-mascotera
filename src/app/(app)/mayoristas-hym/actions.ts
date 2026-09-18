@@ -68,6 +68,19 @@ export async function generarExcelActualizadoAction(formData: FormData) {
   const csvBuffer = Buffer.from(await csvFile.arrayBuffer());
   const hymBuffer = Buffer.from(await hymFile.arrayBuffer());
 
-  const excelBuffer = await generarExcelActualizadoHym(config.storeId, config.accessToken, csvBuffer, hymBuffer);
+  const historialConCodigo = await prisma.historialStockMayorista.findMany({
+    where: { codigoHym: { not: null }, producto: { isNot: null } },
+    select: { codigoHym: true, nombre: true, tamanios: true, producto: { select: { skuInterno: true } } },
+  });
+  const mapeoDb = historialConCodigo
+    .filter((h) => h.producto)
+    .map((h) => ({
+      codigoHym: h.codigoHym!.toLowerCase().trim(),
+      skuInterno: h.producto!.skuInterno,
+      nombre: h.nombre,
+      tamanios: h.tamanios,
+    }));
+
+  const excelBuffer = await generarExcelActualizadoHym(config.storeId, config.accessToken, csvBuffer, hymBuffer, mapeoDb);
   return excelBuffer.toString("base64");
 }

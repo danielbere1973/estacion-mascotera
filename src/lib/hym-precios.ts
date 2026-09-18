@@ -411,17 +411,38 @@ export async function aplicarCambioHym(
   return { ok: false, status: 0, detalle: "No se pudo verificar el cambio" };
 }
 
+const COL_NOMBRE = 0; // columna A
+const COL_CODIGO = 1; // columna B
+const COL_TAMANIO = 2; // columna C
+const COL_SKU_INTERNO = 16; // columna Q
+
+// Mapeo confirmado en la base (HistorialStockMayorista.codigoHym → producto vinculado)
+// para completar filas del Excel que todavía no las tiene cargadas a mano.
+export type MapeoCodigoHym = {
+  codigoHym: string; // ya en minúscula/trim, como se usa de clave en el resto del archivo
+  skuInterno: string;
+  nombre: string | null;
+  tamanios: string | null;
+};
+
 // Actualiza en el propio Excel de mapeo HYM (hoja "productos_con_variantes"):
 // - columna I: costo HYM tomado de productos.csv (Precio Lista)
 // - columna K: precio promocional vigente en Tiendanube (o el de lista si no hay promo)
 // - columna L: precio de lista vigente en Tiendanube
 // Solo toca filas cuyo Código matchea el CSV Y cuyo SKUInterno tiene variante real
 // en Tiendanube; el resto queda intacto (son productos de HYM que no están en la tienda).
+//
+// Además, para códigos del CSV que no tienen fila en el Excel pero SÍ tienen un
+// mapeo confirmado en la base (mapeoDb, vía HistorialStockMayorista.codigoHym),
+// agrega una fila nueva con Nombre/Codigo/Tamaño/SKUInterno. El resto de las
+// columnas de control (revisión manual, etc.) queda vacío, igual que si Daniel
+// la hubiera tipeado a mano sin revisar todavía — no se pisa ni se marca nada.
 export async function generarExcelActualizadoHym(
   storeId: string,
   accessToken: string,
   csvBuffer: Buffer,
   hymXlsxBuffer: Buffer,
+  mapeoDb: MapeoCodigoHym[] = [],
 ): Promise<Buffer> {
   const productosTN = await traerProductosTiendanube(storeId, accessToken);
 
@@ -487,6 +508,35 @@ export async function generarExcelActualizadoHym(
     };
     sheetHym[XLSX.utils.encode_cell({ r: filaExcel, c: COL_PRECIO_LISTA })] = { t: "n", v: precioLista };
   }
+
+  const codigosEnExcel = new Set(filasHym.map((f) => String(f.Codigo ?? "").toLowerCase().trim()).filter(Boolean));
+  const mapeoPorCodigo = new Map(mapeoDb.map((m) => [m.codigoHym, m]));
+
+  let siguienteFilaExcel = rango.s.r + 1 + filasHym.length;
+  for (const fila of filasCsv) {
+    const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
+    if (!skuCsv || codigosEnExcel.has(skuCsv)) continue;
+
+    const mapeo = mapeoPorCodigo.get(skuCsv);
+    if (!mapeo) continue;
+
+    sheetHym[XLSX.utils.encode_cell({ r: siguienteFilaExcel, c: COL_NOMBRE })] = {
+      t: "s",
+      v: mapeo.nombre ?? fila.Nombre ?? "",
+    };
+    sheetHym[XLSX.utils.encode_cell({ r: siguienteFilaExcel, c: COL_CODIGO })] = { t: "s", v: skuCsv };
+    if (mapeo.tamanios) {
+      sheetHym[XLSX.utils.encode_cell({ r: siguienteFilaExcel, c: COL_TAMANIO })] = { t: "s", v: mapeo.tamanios };
+    }
+    sheetHym[XLSX.utils.encode_cell({ r: siguienteFilaExcel, c: COL_SKU_INTERNO })] = {
+      t: "s",
+      v: mapeo.skuInterno,
+    };
+
+    codigosEnExcel.add(skuCsv);
+    siguienteFilaExcel++;
+  }
+  rango.e.r = Math.max(rango.e.r, siguienteFilaExcel - 1);
 
   sheetHym["!ref"] = XLSX.utils.encode_range(rango);
 

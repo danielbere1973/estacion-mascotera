@@ -20,6 +20,16 @@ export async function forzarCorteCompraHym(excluirLineaIds: number[] = []) {
   return resultado;
 }
 
+// Borra definitivamente un pendiente de compra mayorista (a diferencia de
+// destildarlo en el preview, que solo lo excluye de ese corte puntual y sigue
+// apareciendo en los siguientes). Solo tiene sentido sobre pendientes que
+// todavía no se pidieron (PENDIENTE o EN_PROCESO trabado).
+export async function eliminarPendienteCompraMayorista(lineaId: number) {
+  await requireAdmin();
+  await prisma.pendienteCompraMayorista.delete({ where: { id: lineaId } });
+  revalidatePath("/tablero-control");
+}
+
 export async function crearTarjeta(formData: FormData) {
   await requireAuth();
 
