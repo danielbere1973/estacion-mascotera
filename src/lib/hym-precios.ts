@@ -14,8 +14,18 @@ type ProductoTN = { id: number; name: { es?: string }; variants: VarianteTN[] };
 type FilaHym = { Codigo: string; SKUInterno: string };
 
 const COL_COSTO_HYM = 8; // columna I
+const COL_ESTADO_STOCK = 5; // columna F
 const COL_PRECIO_PROMO = 10; // columna K
 const COL_PRECIO_LISTA = 11; // columna L
+const COL_SIN_VARIANTE_TN = 12; // columna M
+
+// Códigos HYM como "06403" y "6403" son el mismo producto — HYM a veces manda
+// el CSV con cero a la izquierda y el Excel de mapeo lo tiene cargado sin él
+// (o viceversa). Sin esto, el match por string exacto los trata como distintos
+// y el producto queda mal marcado como "sin SKU interno".
+function normalizarCodigoHym(codigo: string): string {
+  return codigo.replace(/^0+(?=\d)/, "");
+}
 
 // Exclusiones confirmadas manualmente tras revisar contra sistema_em:
 // - 6523-0.850: el SKU está mal asignado en Tiendanube a un producto distinto,
@@ -131,7 +141,7 @@ export async function calcularCambiosHym(
 
   const indiceCodigoHym = new Map<string, string>();
   for (const f of filasHym) {
-    const key = String(f.Codigo ?? "").toLowerCase().trim();
+    const key = normalizarCodigoHym(String(f.Codigo ?? "").toLowerCase().trim());
     const skuInterno = String(f.SKUInterno ?? "").trim();
     if (key && skuInterno) indiceCodigoHym.set(key, skuInterno);
   }
@@ -150,7 +160,7 @@ export async function calcularCambiosHym(
   let sinCambioReal = 0;
 
   for (const fila of filasCsv) {
-    const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
+    const skuCsv = normalizarCodigoHym(String(fila.SKU ?? "").toLowerCase().trim());
     if (!skuCsv) continue;
 
     const skuInterno = indiceCodigoHym.get(skuCsv);
@@ -457,11 +467,14 @@ export async function generarExcelActualizadoHym(
   const textoCsv = corregirEncoding(csvBuffer.toString("utf-8"));
   const filasCsv = parsearCSV(textoCsv);
   const costoPorSkuCsv = new Map<string, number>();
+  const estadoStockPorSkuCsv = new Map<string, string>();
   for (const fila of filasCsv) {
-    const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
+    const skuCsv = normalizarCodigoHym(String(fila.SKU ?? "").toLowerCase().trim());
     if (!skuCsv) continue;
     const costo = parsearPrecioArs(String(fila["Precio Lista"] ?? ""));
     if (costo !== null) costoPorSkuCsv.set(skuCsv, costo);
+    const estadoStock = String(fila["Estado de stock"] ?? "").trim();
+    if (estadoStock) estadoStockPorSkuCsv.set(skuCsv, estadoStock);
   }
 
   const wbHym = XLSX.read(hymXlsxBuffer, { type: "buffer" });
@@ -478,7 +491,7 @@ export async function generarExcelActualizadoHym(
 
   for (let i = 0; i < filasHym.length; i++) {
     const filaExcel = rango.s.r + 1 + i; // fila 0 es el header
-    const codigo = String(filasHym[i].Codigo ?? "").toLowerCase().trim();
+    const codigo = normalizarCodigoHym(String(filasHym[i].Codigo ?? "").toLowerCase().trim());
     const skuInterno = String(filasHym[i].SKUInterno ?? "").trim();
     if (!codigo || !skuInterno) continue;
 
@@ -509,12 +522,14 @@ export async function generarExcelActualizadoHym(
     sheetHym[XLSX.utils.encode_cell({ r: filaExcel, c: COL_PRECIO_LISTA })] = { t: "n", v: precioLista };
   }
 
-  const codigosEnExcel = new Set(filasHym.map((f) => String(f.Codigo ?? "").toLowerCase().trim()).filter(Boolean));
-  const mapeoPorCodigo = new Map(mapeoDb.map((m) => [m.codigoHym, m]));
+  const codigosEnExcel = new Set(
+    filasHym.map((f) => normalizarCodigoHym(String(f.Codigo ?? "").toLowerCase().trim())).filter(Boolean),
+  );
+  const mapeoPorCodigo = new Map(mapeoDb.map((m) => [normalizarCodigoHym(m.codigoHym), m]));
 
   let siguienteFilaExcel = rango.s.r + 1 + filasHym.length;
   for (const fila of filasCsv) {
-    const skuCsv = String(fila.SKU ?? "").toLowerCase().trim();
+    const skuCsv = normalizarCodigoHym(String(fila.SKU ?? "").toLowerCase().trim());
     if (!skuCsv || codigosEnExcel.has(skuCsv)) continue;
 
     const mapeo = mapeoPorCodigo.get(skuCsv);
@@ -532,6 +547,21 @@ export async function generarExcelActualizadoHym(
       t: "s",
       v: mapeo.skuInterno,
     };
+
+    const costo = costoPorSkuCsv.get(skuCsv);
+    if (costo !== undefined) {
+      sheetHym[XLSX.utils.encode_cell({ r: siguienteFilaExcel, c: COL_COSTO_HYM })] = { t: "n", v: costo };
+    }
+
+    const estadoStock = estadoStockPorSkuCsv.get(skuCsv);
+    if (estadoStock) {
+      sheetHym[XLSX.utils.encode_cell({ r: siguienteFilaExcel, c: COL_ESTADO_STOCK })] = { t: "s", v: estadoStock };
+    }
+
+    const tieneVarianteTN = indiceSku.has(mapeo.skuInterno.toUpperCase());
+    if (!tieneVarianteTN) {
+      sheetHym[XLSX.utils.encode_cell({ r: siguienteFilaExcel, c: COL_SIN_VARIANTE_TN })] = { t: "s", v: "NO" };
+    }
 
     codigosEnExcel.add(skuCsv);
     siguienteFilaExcel++;
