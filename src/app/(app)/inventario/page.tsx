@@ -10,9 +10,10 @@ const STOCK_BAJO_UMBRAL = 5;
 export default async function InventarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; proveedor?: string }>;
+  searchParams: Promise<{ q?: string; proveedor?: string; stockDistintoCero?: string }>;
 }) {
-  const { q, proveedor: proveedorFiltro } = await searchParams;
+  const { q, proveedor: proveedorFiltro, stockDistintoCero } = await searchParams;
+  const filtroStockDistintoCero = stockDistintoCero === "1";
 
   const [productos, proveedores] = await Promise.all([
     prisma.producto.findMany({
@@ -29,6 +30,7 @@ export default async function InventarioPage({
         ...(proveedorFiltro ? {
           historialStock: { some: { proveedorId: Number(proveedorFiltro), activo: true } },
         } : {}),
+        ...(filtroStockDistintoCero ? { stockActual: { not: 0 } } : {}),
       },
       include: {
         historialStock: {
@@ -135,10 +137,14 @@ export default async function InventarioPage({
             <option key={p.id} value={p.id}>{p.nombre}</option>
           ))}
         </select>
+        <label className="flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700">
+          <input type="checkbox" name="stockDistintoCero" value="1" defaultChecked={filtroStockDistintoCero} />
+          Stock distinto de 0
+        </label>
         <button type="submit" className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
           Buscar
         </button>
-        {(q || proveedorFiltro) && (
+        {(q || proveedorFiltro || filtroStockDistintoCero) && (
           <a href="/inventario" className="rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-500 hover:bg-gray-50">
             Limpiar
           </a>
@@ -155,6 +161,7 @@ export default async function InventarioPage({
               <th className="px-3 py-2">Nombre</th>
               <th className="px-3 py-2 w-32">Marca</th>
               <th className="px-3 py-2 w-40">Proveedores</th>
+              <th className="px-3 py-2 w-32">Cód. proveedor</th>
               <th className="px-3 py-2 w-16 text-right">Stock</th>
               <th className="px-3 py-2 text-right">Costo</th>
               <th className="px-3 py-2 text-right">Precio Lista</th>
@@ -182,7 +189,7 @@ export default async function InventarioPage({
             ))}
             {productos.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
                   No hay productos que coincidan con la búsqueda.
                 </td>
               </tr>

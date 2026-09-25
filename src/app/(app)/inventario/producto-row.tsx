@@ -64,6 +64,18 @@ export function ProductoRow({ p }: { p: Producto }) {
           </div>
         )}
       </td>
+      <td className="px-3 py-2">
+        {p.historialStock.length === 0 && <span className="text-xs text-gray-300">—</span>}
+        {expandido ? (
+          p.historialStock.map((h) => (
+            <div key={h.id} className="font-mono text-xs leading-5 text-gray-600">{h.sku}</div>
+          ))
+        ) : (
+          <div className="font-mono text-xs text-gray-600">
+            {p.historialStock.map((h) => h.sku).join(", ")}
+          </div>
+        )}
+      </td>
       <td className={`whitespace-nowrap px-3 py-2 text-right text-sm font-medium ${bajoStock ? "text-red-600" : sinStock ? "text-gray-400" : ""}`}>
         {p.stockActual}{bajoStock && " ⚠"}
       </td>
