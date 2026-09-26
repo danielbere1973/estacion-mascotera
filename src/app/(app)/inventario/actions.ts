@@ -2,12 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 import { crearCompraCore } from "@/lib/compras";
-import { corregirEncoding, parsearCSV, parsearPrecio } from "@/lib/csv";
+import { importarCostosMayoristaCore } from "@/lib/importar-costos-mayorista";
 import { Presentacion, UnidadMedida } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
@@ -599,49 +598,6 @@ export async function crearProductoDesdeListaMayorista(formData: FormData) {
   redirect(`/inventario/listas?proveedorId=${proveedorId}`);
 }
 
-// Normaliza un SKU: saca el primer cero si empieza con uno y convierte a minúsculas.
-// Así "06443-0.355" → "6443-0.355" y "6410-12KG" → "6410-12kg" (evita duplicados por capitalización).
-function normalizarSku(sku: string): string {
-  const s = sku.startsWith("0") ? sku.slice(1) : sku;
-  return s.toLowerCase();
-}
-
-// Parsea el campo Tamaño del CSV de HYM y retorna contenido y unidadMedida.
-// Ejemplos: "12 Kg" → {contenido: 12, unidad: KILOGRAMOS}
-//           "1.5 Kg" → {contenido: 1.5, unidad: KILOGRAMOS}
-//           "0.355"  → {contenido: 355, unidad: GRAMOS} (decimal sin unidad = kg, convertimos a g si < 1)
-//           "0.340"  → {contenido: 340, unidad: GRAMOS}
-//           "7.5 Kg" → {contenido: 7.5, unidad: KILOGRAMOS}
-function parsearTamanio(tamanio: string): { contenido: number; unidad: string } | null {
-  const t = tamanio.trim();
-  if (!t) return null;
-
-  // Formato "X.X Kg" o "X Kg"
-  const matchKg = t.match(/^([\d.]+)\s*[Kk][Gg]$/);
-  if (matchKg) {
-    return { contenido: Number(matchKg[1]), unidad: "KILOGRAMOS" };
-  }
-
-  // Formato "X.X Lt" o "X Lt"
-  const matchLt = t.match(/^([\d.]+)\s*[Ll][Tt]$/);
-  if (matchLt) {
-    return { contenido: Number(matchLt[1]), unidad: "LITROS" };
-  }
-
-  // Formato numérico puro (decimal sin unidad = kg implícito en el CSV de HYM)
-  // Si es < 1 lo convertimos a gramos
-  const matchNum = t.match(/^([\d.]+)$/);
-  if (matchNum) {
-    const val = Number(matchNum[1]);
-    if (val < 1) {
-      return { contenido: Math.round(val * 1000), unidad: "GRAMOS" };
-    }
-    return { contenido: val, unidad: "KILOGRAMOS" };
-  }
-
-  return null;
-}
-
 // Normaliza nombres para poder comparar "RC Urinary Care" con "RC URINARY CARE".
 function normalizarNombre(s: string): string {
   // Descompone acentos (NFD) y descarta los caracteres de marca diacrítica
@@ -680,211 +636,11 @@ export async function importarExcel(formData: FormData) {
   if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
 
   const buffer = Buffer.from(await file.arrayBuffer());
-
-  let filasRaw: Record<string, unknown>[];
-  if (file.name.toLowerCase().endsWith(".csv")) {
-    const texto = corregirEncoding(buffer.toString("utf8"));
-    filasRaw = parsearCSV(texto);
-  } else {
-    const workbook = XLSX.read(buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    filasRaw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
-  }
-
-  // Corregimos la codificación de claves y valores (por si vienen de un .xlsx
-  // con el mismo problema), y deduplicamos por "SKU" (cada variante de
-  // tamaño tiene su propio SKU único generado por el scraper).
-  const filasPorSku = new Map<string, Record<string, unknown>>();
-  for (const filaRaw of filasRaw) {
-    const fila: Record<string, unknown> = {};
-    for (const [clave, valor] of Object.entries(filaRaw)) {
-      const claveCorregida = corregirEncoding(clave);
-      fila[claveCorregida] = typeof valor === "string" ? corregirEncoding(valor) : valor;
-    }
-
-    const sku = normalizarSku(String(fila["SKU"] ?? fila["Codigo"] ?? "").trim());
-    if (!sku) continue;
-    if (!filasPorSku.has(sku)) filasPorSku.set(sku, fila);
-  }
-
-  const esHym = await prisma.proveedor.findUnique({
-    where: { id: Number(proveedorId) },
-    select: { nombre: true },
-  });
-  const importandoHym = esHym?.nombre?.toUpperCase() === "HYM";
-
-  // Matching por SKU de proveedor a través del historial
-  const historialItems = await prisma.historialStockMayorista.findMany({
-    where: { proveedorId: Number(proveedorId), productoId: { not: null } },
-    select: {
-      sku: true,
-      codigoHym: true,
-      productoId: true,
-      producto: { select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true } },
-    },
-  });
-  const productosPorSku = new Map(
-    historialItems
-      .filter((h) => h.producto)
-      .map((h) => [h.sku, h.producto!])
-  );
-
-  // Fallbacks para cuando el "sku" de HYM cambió (histórico inestable, ver
-  // comentario sobre codigoHym más abajo) y el match directo por sku falla:
-  // 1) por codigoHym, que es el código real y estable de HYM por variante.
-  // 2) por HistorialStockMayorista.skuInterno, un campo de texto libre que se
-  //    edita a mano desde /inventario/listas para mapear manualmente un ítem
-  //    del mayorista a un producto del catálogo cuando el matching automático
-  //    no encuentra nada (ver actualizarItemMayorista más arriba).
-  const productosPorCodigoHym = new Map(
-    historialItems
-      .filter((h) => h.producto && h.codigoHym)
-      .map((h) => [h.codigoHym!, h.producto!])
-  );
-  const historialConSkuInternoManual = await prisma.historialStockMayorista.findMany({
-    where: { proveedorId: Number(proveedorId), skuInterno: { not: null } },
-    select: { sku: true, skuInterno: true },
-  });
-  const skusInternoManualesUnicos = [...new Set(historialConSkuInternoManual.map((h) => h.skuInterno!))];
-  const productosPorSkuInterno = new Map(
-    skusInternoManualesUnicos.length > 0
-      ? (
-          await prisma.producto.findMany({
-            where: { skuInterno: { in: skusInternoManualesUnicos } },
-            select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true },
-          })
-        ).map((p) => [p.skuInterno, p])
-      : []
-  );
-  // Del sku (de proveedor) importado al producto vinculado manualmente vía
-  // HistorialStockMayorista.skuInterno para ese mismo sku.
-  const productoPorSkuViaMapeoManual = new Map(
-    historialConSkuInternoManual
-      .map((h) => [h.sku, productosPorSkuInterno.get(h.skuInterno!)] as const)
-      .filter((entrada): entrada is [string, NonNullable<(typeof entrada)[1]>] => Boolean(entrada[1]))
-  );
-
-  let actualizados = 0;
-  let nuevos = 0;
-  const ahora = new Date();
-
-  // Marcar como inactivos los items que ya no aparecen en esta importación
-  const skusImportados = new Set(filasPorSku.keys());
-  await prisma.historialStockMayorista.updateMany({
-    where: {
-      proveedorId: Number(proveedorId),
-      activo: true,
-      sku: { notIn: [...skusImportados] },
-    },
-    data: { activo: false },
-  });
-
-  // Reactivar items que vuelven a aparecer
-  await prisma.historialStockMayorista.updateMany({
-    where: {
-      proveedorId: Number(proveedorId),
-      activo: false,
-      sku: { in: [...skusImportados] },
-    },
-    data: { activo: true },
-  });
-
-  for (const [sku, fila] of filasPorSku) {
-    const nombre = String(fila["Nombre"] ?? "").trim();
-    const precioCosto = parsearPrecio(fila["Precio Lista"]);
-    const precioConDescuento = parsearPrecio(fila["Precio c/dto"]);
-    const tamanios = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim() || null;
-    const estadoStockMayorista = String(fila["Estado de stock"] ?? "").trim() || null;
-    const tipoProducto = String(fila["Tipo"] ?? fila["Categoria"] ?? "").trim() || null;
-    // Código real de HYM (texto, preserva ceros a la izquierda) — distinto del
-    // campo "sku" interno, que históricamente lleva el tamaño concatenado
-    // (ej. "106-3kg") porque HYM antes reutilizaba un código para todas las
-    // variantes. Hoy HYM asigna un código único por variante. Viene en la
-    // columna "Codigo" del CSV que exporta el scraper (main.py).
-    const codigoHym = String(fila["Codigo"] ?? "").trim() || null;
-
-    let producto = productosPorSku.get(sku) ?? null;
-    // Si no matcheó por sku (que en HYM históricamente puede haber cambiado
-    // entre importaciones), intentamos primero por codigoHym y después por
-    // el mapeo manual antes de asumir que es un producto realmente nuevo.
-    if (!producto && importandoHym && codigoHym) {
-      producto = productosPorCodigoHym.get(codigoHym) ?? null;
-    }
-    if (!producto && importandoHym) {
-      producto = productoPorSkuViaMapeoManual.get(sku) ?? null;
-    }
-
-    if (producto) {
-      // Producto ya existe — actualizar precio si es HYM (lista madre)
-      if (importandoHym) {
-        const precioVenta = precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
-        await prisma.producto.update({
-          where: { id: producto.id },
-          data: { precioCostoUnitario: precioCosto, precioVenta },
-        });
-      }
-      actualizados++;
-    } else if (importandoHym) {
-      // Producto nuevo en HYM → crear en catálogo y vincular
-      const nombreCompleto = [nombre, tamanios].filter(Boolean).join(" · ") || sku;
-      const tamanioParseado = tamanios ? parsearTamanio(tamanios) : null;
-      producto = await prisma.$transaction(async (tx) => {
-        const skuInternoAuto = await siguienteSkuInterno(tx);
-        return tx.producto.create({
-          data: {
-            skuInterno: skuInternoAuto,
-            nombre: nombreCompleto,
-            marca: tipoProducto ?? "-",
-            categoria: tipoProducto ?? "Sin categorizar",
-            presentacion: "BOLSA_CERRADA",
-            unidadMedida: (tamanioParseado?.unidad ?? "KILOGRAMOS") as "KILOGRAMOS" | "GRAMOS" | "LITROS" | "MILILITROS" | "UNIDAD",
-            contenido: tamanioParseado?.contenido ?? 1,
-            margenPorcentaje: 30,
-            precioCostoUnitario: precioCosto,
-            precioVenta: precioCosto * 1.3,
-            stockActual: 0,
-          },
-        });
-      });
-      productosPorSku.set(sku, producto);
-      nuevos++;
-    }
-    // Para otros proveedores: si no hay producto, queda sin vincular (productoId null)
-
-    await prisma.historialStockMayorista.upsert({
-      where: { proveedorId_sku: { proveedorId: Number(proveedorId), sku } },
-      update: {
-        nombre,
-        precioCostoScraped: precioCosto,
-        precioConDescuento,
-        tamanios,
-        estadoStockMayorista,
-        tipoProducto,
-        activo: true,
-        fechaImportacion: ahora,
-        ...(producto?.id ? { productoId: producto.id } : {}),
-        ...(codigoHym ? { codigoHym } : {}),
-      },
-      create: {
-        productoId: producto?.id ?? null,
-        proveedorId: Number(proveedorId),
-        sku,
-        codigoHym,
-        nombre,
-        precioCostoScraped: precioCosto,
-        precioConDescuento,
-        tamanios,
-        estadoStockMayorista,
-        tipoProducto,
-        activo: true,
-        fechaImportacion: ahora,
-      },
-    });
-  }
+  const resultado = await importarCostosMayoristaCore(buffer, file.name, Number(proveedorId));
 
   revalidatePath("/inventario");
   revalidatePath("/");
   revalidatePath("/ventas/nueva");
 
-  return { total: filasPorSku.size, actualizados, nuevos };
+  return resultado;
 }

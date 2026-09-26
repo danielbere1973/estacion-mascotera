@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verificarTokenSyncHym } from "@/lib/hym-callback";
 import { calcularCambiosHym, aplicarCambioHym, generarExcelActualizadoHym } from "@/lib/hym-precios";
+import { importarCostosMayoristaCore } from "@/lib/importar-costos-mayorista";
 import { sendTelegramMessage } from "@/lib/telegram";
+
+const PROVEEDOR_HYM = 5;
 
 export const maxDuration = 300;
 
@@ -29,6 +32,18 @@ export async function POST(req: NextRequest) {
 
   const csvBuffer = Buffer.from(body.csvBase64, "base64");
   const hymBuffer = Buffer.from(body.hymExcelBase64, "base64");
+
+  // Importa el mismo productos.csv a Inventario (costos, altas/bajas en
+  // HistorialStockMayorista) — es el mismo proceso que la carga manual de
+  // "arrastrar archivo" en /inventario, para no depender de que alguien lo
+  // suba a mano después de cada corrida del scraper.
+  let importacionCostos: { total: number; actualizados: number; nuevos: number } | null = null;
+  try {
+    importacionCostos = await importarCostosMayoristaCore(csvBuffer, "productos.csv", PROVEEDOR_HYM);
+  } catch (error) {
+    const detalle = error instanceof Error ? error.message : String(error);
+    await sendTelegramMessage(`⚠️ Sync HYM automático: falló la importación de costos a Inventario.\n${detalle}`);
+  }
 
   let resultado;
   try {
@@ -80,6 +95,9 @@ export async function POST(req: NextRequest) {
 
   const partes = [
     "🔄 Sync HYM automático - Resultados:",
+    importacionCostos
+      ? `- Inventario: ${importacionCostos.actualizados} costos actualizados, ${importacionCostos.nuevos} productos nuevos (de ${importacionCostos.total} filas del CSV)`
+      : `- ⚠️ No se pudo importar el CSV a Inventario, revisar manualmente.`,
     `- ${exitosos.length} cambios aplicados en Tiendanube (actualizaciones que impactaron en la Tienda)`,
     `- ${resultado.resumen.sinSkuInterno} sin SKU interno (estan en CSV de HyM pero no en el Excel)`,
     `- ${resultado.resumen.sinVarianteTN} sin variantes en TiendaNube (estan en CSV y en Excel pero faltan en TiendaNube)`,
