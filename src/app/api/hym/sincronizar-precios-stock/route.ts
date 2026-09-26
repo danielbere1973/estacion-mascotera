@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verificarTokenSyncHym } from "@/lib/hym-callback";
 import { calcularCambiosHym, aplicarCambioHym, generarExcelActualizadoHym } from "@/lib/hym-precios";
-import { importarCostosMayoristaCore } from "@/lib/importar-costos-mayorista";
+import { importarCostosMayoristaCore, type PosibleCodigoReasignado } from "@/lib/importar-costos-mayorista";
 import { sendTelegramMessage } from "@/lib/telegram";
 
 const PROVEEDOR_HYM = 5;
@@ -37,7 +37,12 @@ export async function POST(req: NextRequest) {
   // HistorialStockMayorista) — es el mismo proceso que la carga manual de
   // "arrastrar archivo" en /inventario, para no depender de que alguien lo
   // suba a mano después de cada corrida del scraper.
-  let importacionCostos: { total: number; actualizados: number; nuevos: number } | null = null;
+  let importacionCostos: {
+    total: number;
+    actualizados: number;
+    nuevos: number;
+    posiblesReasignaciones: PosibleCodigoReasignado[];
+  } | null = null;
   try {
     importacionCostos = await importarCostosMayoristaCore(csvBuffer, "productos.csv", PROVEEDOR_HYM);
   } catch (error) {
@@ -107,6 +112,16 @@ export async function POST(req: NextRequest) {
   }
   if (!excelActualizadoBase64) {
     partes.push(`- ⚠️ No se pudo generar el Excel de mapeo actualizado, revisar manualmente.`);
+  }
+  if (importacionCostos && importacionCostos.posiblesReasignaciones.length > 0) {
+    partes.push(
+      `- 🔎 ${importacionCostos.posiblesReasignaciones.length} posible(s) código(s) reasignado(s) por HYM (mismo nombre y peso, código nuevo sin vincular todavía):`
+    );
+    for (const r of importacionCostos.posiblesReasignaciones) {
+      partes.push(
+        `   · ${r.nombre} (${r.tamanios ?? "sin tamaño"}): código viejo ${r.codigoViejoCandidato ?? r.skuViejoCandidato} (${r.productoExistente.skuInterno}) → código nuevo ${r.codigoNuevo ?? r.sku}. Revisar en Inventario/mayoristas-hym.`
+      );
+    }
   }
   await sendTelegramMessage(partes.join("\n"));
 
