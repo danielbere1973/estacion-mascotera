@@ -9,6 +9,16 @@ type Proveedor = {
   nombre: string;
 };
 
+type PosibleCodigoReasignado = {
+  codigoNuevo: string | null;
+  sku: string;
+  nombre: string;
+  tamanios: string | null;
+  codigoViejoCandidato: string | null;
+  skuViejoCandidato: string;
+  productoExistente: { id: number; skuInterno: string; nombre: string };
+};
+
 export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -16,10 +26,12 @@ export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
   const [dragOver, setDragOver] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reasignaciones, setReasignaciones] = useState<PosibleCodigoReasignado[]>([]);
 
   function procesarArchivo(file: File) {
     setError(null);
     setResultado(null);
+    setReasignaciones([]);
 
     if (!formRef.current) return;
     const formData = new FormData(formRef.current);
@@ -39,6 +51,7 @@ export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
         ];
         if (res.nuevos > 0) partes.push(`${res.nuevos} nuevos creados en el catálogo`);
         setResultado(partes.join(" · "));
+        setReasignaciones(res.posiblesReasignaciones ?? []);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error al procesar el archivo.");
       }
@@ -91,6 +104,25 @@ export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
 
       {resultado && <p className="text-sm text-green-600">{resultado}</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {reasignaciones.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+          <p className="font-medium">
+            🔎 {reasignaciones.length} posible(s) código(s) reasignado(s) por HYM — mismo nombre y peso que un
+            producto existente, pero código nuevo. No se creó producto nuevo ni se vinculó automáticamente;
+            revisar y corregir a mano.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {reasignaciones.map((r, i) => (
+              <li key={i}>
+                {r.nombre} ({r.tamanios ?? "sin tamaño"}): código viejo{" "}
+                <strong>{r.codigoViejoCandidato ?? r.skuViejoCandidato}</strong> ({r.productoExistente.skuInterno})
+                {" → "}código nuevo <strong>{r.codigoNuevo ?? r.sku}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </form>
   );
 }

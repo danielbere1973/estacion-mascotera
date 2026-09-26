@@ -12,6 +12,39 @@ function normalizarSku(sku: string): string {
   return s.toLowerCase();
 }
 
+// Normaliza el nombre de un producto para comparar "Nutrique Medium Young Adult"
+// con "NUTRIQUE MEDIUM YOUNG ADULT " sin que difieran mayúsculas/espacios.
+function normalizarNombreComparacion(nombre: string): string {
+  return nombre.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Convierte el campo Tamaño (tal como lo manda HYM, con formatos inconsistentes:
+// "3 Kg", "3Kg", "3,6kg", "0.350" (decimal sin unidad = kg), "3,8l") a gramos,
+// para poder comparar el PESO real de dos filas y no solo el texto. HYM reutiliza
+// el mismo nombre de producto para sus distintas variantes de peso (ej. "NUTRIQUE
+// MEDIUM YOUNG ADULT" existe en 0.350, 3Kg y 12Kg con códigos distintos), así que
+// nombre igual NO alcanza para decir que dos filas son "el mismo producto" — hace
+// falta que el peso también coincida.
+function normalizarPesoAGramos(tamanioRaw: string): number | null {
+  const t = tamanioRaw.trim().toLowerCase().replace(",", ".");
+  if (!t) return null;
+
+  const matchKg = t.match(/^([\d.]+)\s*kg$/);
+  if (matchKg) return Math.round(Number(matchKg[1]) * 1000);
+
+  const matchG = t.match(/^([\d.]+)\s*g(?:r|rs|ms)?$/);
+  if (matchG) return Math.round(Number(matchG[1]));
+
+  const matchLt = t.match(/^([\d.]+)\s*l(?:t|ts)?$/);
+  if (matchLt) return Math.round(Number(matchLt[1]) * 1000); // aprox. 1kg por litro
+
+  // Decimal puro sin unidad: convención de HYM = kg (ej. "0.350" = 350g).
+  const matchNum = t.match(/^([\d.]+)$/);
+  if (matchNum) return Math.round(Number(matchNum[1]) * 1000);
+
+  return null;
+}
+
 // Parsea el campo Tamaño del CSV de HYM y retorna contenido y unidadMedida.
 // Ejemplos: "12 Kg" → {contenido: 12, unidad: KILOGRAMOS}
 //           "1.5 Kg" → {contenido: 1.5, unidad: KILOGRAMOS}
@@ -66,11 +99,21 @@ async function siguienteSkuInterno(tx: Parameters<Parameters<typeof prisma.$tran
   throw new Error("Se agotaron los SKU internos disponibles (ZZ99).");
 }
 
+export type PosibleCodigoReasignado = {
+  codigoNuevo: string | null;
+  sku: string;
+  nombre: string;
+  tamanios: string | null;
+  codigoViejoCandidato: string | null;
+  skuViejoCandidato: string;
+  productoExistente: { id: number; skuInterno: string; nombre: string };
+};
+
 export async function importarCostosMayoristaCore(
   buffer: Buffer,
   nombreArchivo: string,
   proveedorId: number
-): Promise<{ total: number; actualizados: number; nuevos: number }> {
+): Promise<{ total: number; actualizados: number; nuevos: number; posiblesReasignaciones: PosibleCodigoReasignado[] }> {
   let filasRaw: Record<string, unknown>[];
   if (nombreArchivo.toLowerCase().endsWith(".csv")) {
     const texto = corregirEncoding(buffer.toString("utf8"));
@@ -163,6 +206,36 @@ export async function importarCostosMayoristaCore(
     data: { activo: true },
   });
 
+  // Candidatos para detectar "código reasignado": filas HYM inactivas (ya no
+  // aparecen en esta importación, incluyendo las recién desactivadas arriba)
+  // con Producto vinculado. Si una fila nueva sin match tiene el mismo nombre Y
+  // el mismo peso que una de estas, es más probable que sea el mismo producto
+  // con código nuevo que un producto realmente nuevo — no lo creamos
+  // automático, lo reportamos para revisar. Se consulta DESPUÉS de los
+  // updateMany de arriba para que agarre también las bajas de esta misma
+  // corrida, no solo las de corridas anteriores.
+  const inactivosConProducto = importandoHym
+    ? await prisma.historialStockMayorista.findMany({
+        where: { proveedorId, activo: false, productoId: { not: null } },
+        select: {
+          sku: true,
+          codigoHym: true,
+          nombre: true,
+          tamanios: true,
+          producto: { select: { id: true, skuInterno: true, nombre: true } },
+        },
+      })
+    : [];
+  const inactivosPorNombrePeso = new Map<string, (typeof inactivosConProducto)[number]>();
+  for (const h of inactivosConProducto) {
+    const peso = h.tamanios ? normalizarPesoAGramos(h.tamanios) : null;
+    if (peso === null) continue;
+    const clave = `${normalizarNombreComparacion(h.nombre ?? "")}::${peso}`;
+    inactivosPorNombrePeso.set(clave, h);
+  }
+
+  const posiblesReasignaciones: PosibleCodigoReasignado[] = [];
+
   for (const [sku, fila] of filasPorSku) {
     const nombre = String(fila["Nombre"] ?? "").trim();
     const precioCosto = parsearPrecio(fila["Precio Lista"]);
@@ -180,6 +253,17 @@ export async function importarCostosMayoristaCore(
       producto = productoPorSkuViaMapeoManual.get(sku) ?? null;
     }
 
+    // Antes de tratarlo como producto nuevo: ¿hay una fila HYM inactiva con el
+    // mismo nombre Y el mismo peso? Si sí, es más probable que HYM le haya
+    // reasignado el código a un producto existente que que sea uno nuevo.
+    let posibleReasignacion: (typeof inactivosConProducto)[number] | null = null;
+    if (!producto && importandoHym && tamanios) {
+      const peso = normalizarPesoAGramos(tamanios);
+      if (peso !== null) {
+        posibleReasignacion = inactivosPorNombrePeso.get(`${normalizarNombreComparacion(nombre)}::${peso}`) ?? null;
+      }
+    }
+
     if (producto) {
       if (importandoHym) {
         const precioVenta = precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
@@ -189,6 +273,18 @@ export async function importarCostosMayoristaCore(
         });
       }
       actualizados++;
+    } else if (importandoHym && posibleReasignacion) {
+      // No lo creamos como producto nuevo automáticamente: queda sin vincular
+      // (productoId null) y se reporta para revisión manual.
+      posiblesReasignaciones.push({
+        codigoNuevo: codigoHym,
+        sku,
+        nombre,
+        tamanios,
+        codigoViejoCandidato: posibleReasignacion.codigoHym,
+        skuViejoCandidato: posibleReasignacion.sku,
+        productoExistente: posibleReasignacion.producto!,
+      });
     } else if (importandoHym) {
       const nombreCompleto = [nombre, tamanios].filter(Boolean).join(" · ") || sku;
       const tamanioParseado = tamanios ? parsearTamanio(tamanios) : null;
@@ -245,5 +341,5 @@ export async function importarCostosMayoristaCore(
     });
   }
 
-  return { total: filasPorSku.size, actualizados, nuevos };
+  return { total: filasPorSku.size, actualizados, nuevos, posiblesReasignaciones };
 }
