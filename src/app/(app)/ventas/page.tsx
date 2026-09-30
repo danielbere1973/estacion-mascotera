@@ -53,7 +53,7 @@ export default async function VentasPage({
     where.detalles = { some: { productoId: { in: productoIds } } };
   }
 
-  const [ventas, clientes, mediosPagoDistintos] = await Promise.all([
+  const [ventas, totalVentas, clientes, mediosPagoDistintos] = await Promise.all([
     prisma.venta.findMany({
       where,
       include: {
@@ -83,6 +83,7 @@ export default async function VentasPage({
       orderBy: { fechaVenta: "desc" },
       take: 100,
     }),
+    prisma.venta.count({ where }),
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
     prisma.venta.findMany({
       select: { medioPago: true },
@@ -96,7 +97,7 @@ export default async function VentasPage({
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Ventas</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Ventas: {totalVentas}</h1>
         {!esRestringido && (
           <div className="flex items-center gap-2">
             <Link
