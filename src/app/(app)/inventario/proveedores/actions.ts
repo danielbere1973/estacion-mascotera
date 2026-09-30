@@ -10,8 +10,9 @@ export async function crearProveedor(formData: FormData) {
   const nombre = formData.get("nombre")?.toString().trim();
   const contacto = formData.get("contacto")?.toString().trim() || null;
   const direccion = formData.get("direccion")?.toString().trim() || null;
+  const accountManager = formData.get("accountManager")?.toString().trim() || null;
   if (!nombre) throw new Error("El nombre es requerido.");
-  await prisma.proveedor.create({ data: { nombre, contacto, direccion } });
+  await prisma.proveedor.create({ data: { nombre, contacto, direccion, accountManager } });
   revalidatePath("/inventario/proveedores");
 }
 
@@ -21,8 +22,9 @@ export async function actualizarProveedor(formData: FormData) {
   const nombre = formData.get("nombre")?.toString().trim();
   const contacto = formData.get("contacto")?.toString().trim() || null;
   const direccion = formData.get("direccion")?.toString().trim() || null;
+  const accountManager = formData.get("accountManager")?.toString().trim() || null;
   if (!id || !nombre) throw new Error("Datos inválidos.");
-  await prisma.proveedor.update({ where: { id }, data: { nombre, contacto, direccion } });
+  await prisma.proveedor.update({ where: { id }, data: { nombre, contacto, direccion, accountManager } });
   revalidatePath("/inventario/proveedores");
   redirect("/inventario/proveedores");
 }

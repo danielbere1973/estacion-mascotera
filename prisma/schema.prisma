@@ -93,6 +93,7 @@ model Proveedor {
   nombre               String
   direccion            String?
   contacto             String?
+  accountManager       String?
   compras              Compra[]
   historialMayorista   HistorialStockMayorista[]
   sociosConsignacion   SocioConsignacion[]
