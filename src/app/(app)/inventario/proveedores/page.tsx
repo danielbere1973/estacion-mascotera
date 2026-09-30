@@ -29,11 +29,12 @@ export default async function ProveedoresPage() {
       {/* Formulario nuevo proveedor */}
       <form action={crearProveedor} className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
         <p className="text-sm font-medium text-gray-700">Nuevo proveedor</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
           <input name="nombre" required placeholder="Nombre *" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="contacto" placeholder="Teléfono" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="direccion" placeholder="Dirección" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="accountManager" placeholder="Account Manager" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="horarios" placeholder="Horarios" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
         <button type="submit" className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
           + Agregar
@@ -49,6 +50,7 @@ export default async function ProveedoresPage() {
               <th className="px-4 py-2">Teléfono</th>
               <th className="px-4 py-2">Dirección</th>
               <th className="px-4 py-2">Account Manager</th>
+              <th className="px-4 py-2">Horarios</th>
               <th className="px-4 py-2 text-right">Productos</th>
               <th className="px-4 py-2 text-right">Margen promedio</th>
               <th className="px-4 py-2"></th>
@@ -76,6 +78,7 @@ export default async function ProveedoresPage() {
                   <td className="px-4 py-3 text-gray-500">{prov.contacto ?? "—"}</td>
                   <td className="px-4 py-3 text-gray-500">{prov.direccion ?? "—"}</td>
                   <td className="px-4 py-3 text-gray-500">{prov.accountManager ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-500">{prov.horarios ?? "—"}</td>
                   <td className="px-4 py-3 text-right text-gray-700">{prov._count.historialMayorista}</td>
                   <td className="px-4 py-3 text-right">
                     {margenProm !== null
