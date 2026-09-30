@@ -30,6 +30,8 @@ export default async function ProveedorDetallePage({ params }: { params: Promise
           <Link href="/inventario/proveedores" className="text-xs text-gray-400 hover:text-gray-600">← Proveedores</Link>
           <h1 className="text-xl font-semibold text-gray-900 mt-1">{proveedor.nombre}</h1>
           {proveedor.contacto && <p className="text-sm text-gray-500">{proveedor.contacto}</p>}
+          {proveedor.direccion && <p className="text-sm text-gray-500">{proveedor.direccion}</p>}
+          {proveedor.accountManager && <p className="text-sm text-gray-500">Account Manager: {proveedor.accountManager}</p>}
         </div>
         <Link href={`/inventario/proveedores/${proveedor.id}/editar`} className="rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
           Editar
