@@ -43,7 +43,11 @@ export async function armarInfoProveedores(
     [
       `<b>Proveedor:</b> ${escaparHtml(p.nombre)}`,
       `<b>Teléfono:</b> ${escaparHtml(p.contacto ?? "-")}`,
-      `<b>Dirección:</b> ${escaparHtml(p.direccion ?? "-")}`,
+      `<b>Dirección:</b> ${
+        p.direccion
+          ? `<a href="https://waze.com/ul?q=${encodeURIComponent(p.direccion)}&navigate=yes">${escaparHtml(p.direccion)}</a>`
+          : "-"
+      }`,
       `<b>Account Manager:</b> ${escaparHtml(p.accountManager ?? "-")}`,
       `<b>Horarios:</b> ${escaparHtml(p.horarios ?? "-")}`,
     ].join("\n")
