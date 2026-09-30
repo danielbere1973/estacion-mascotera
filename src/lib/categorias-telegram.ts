@@ -19,6 +19,37 @@ export async function armarNivelRaiz(): Promise<{ texto: string; botones: BotonI
   return { texto: "🗂 Elegí una categoría:", botones };
 }
 
+function esCategoriaProveedor(nombre: string): boolean {
+  return nombre.trim().toLowerCase().startsWith("proveedor");
+}
+
+function escaparHtml(texto: string): string {
+  return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export async function armarInfoProveedores(
+  categoriaId: number
+): Promise<{ texto: string; botones: BotonInline[][] }> {
+  const proveedores = await prisma.proveedor.findMany({ orderBy: { nombre: "asc" } });
+  const botones = [[{ text: "◀️ Volver", callback_data: `cat:${categoriaId}` }]];
+
+  if (proveedores.length === 0) {
+    return { texto: "ℹ️ No hay proveedores cargados todavía.", botones };
+  }
+
+  const bloques = proveedores.map((p) =>
+    [
+      `<b>Proveedor:</b> ${escaparHtml(p.nombre)}`,
+      `<b>Teléfono:</b> ${escaparHtml(p.contacto ?? "-")}`,
+      `<b>Dirección:</b> ${escaparHtml(p.direccion ?? "-")}`,
+      `<b>Account Manager:</b> ${escaparHtml(p.accountManager ?? "-")}`,
+      `<b>Horarios:</b> ${escaparHtml(p.horarios ?? "-")}`,
+    ].join("\n")
+  );
+
+  return { texto: `ℹ️ <b>Información de proveedores</b>\n\n${bloques.join("\n---------\n")}`, botones };
+}
+
 export async function armarListaClientes(pagina: number = 1): Promise<{ texto: string; botones: BotonInline[][] }> {
   const skip = (pagina - 1) * CLIENTES_POR_PAGINA;
   const clientes = await prisma.cliente.findMany({
@@ -69,6 +100,9 @@ export async function armarNivelCategoria(
 
   if (hijas.length > 0) {
     const botones = hijas.map((c) => [{ text: c.nombre, callback_data: `cat:${c.id}` }]);
+    if (esCategoriaProveedor(categoria.nombre)) {
+      botones.push([{ text: "ℹ️ Información", callback_data: `prov_info:${categoria.id}` }]);
+    }
     botones.push(botonVolver(categoria.parentId));
     return { texto: `🗂 <b>${categoria.nombre}</b>`, botones };
   }
