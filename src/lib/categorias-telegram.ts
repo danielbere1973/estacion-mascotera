@@ -3,6 +3,8 @@ import type { BotonInline } from "@/lib/telegram";
 
 const PRODUCTOS_POR_PAGINA = 8;
 const CLIENTES_POR_PAGINA = 5;
+// Largo pensado para ocupar el ancho de un mensaje en el celular sin partirse en dos renglones.
+const SEPARADOR_PROVEEDORES = "-".repeat(40);
 
 function botonVolver(parentId: number | null): BotonInline[] {
   return [{ text: "◀️ Volver", callback_data: parentId ? `cat:${parentId}` : "cat_root" }];
@@ -47,7 +49,7 @@ export async function armarInfoProveedores(
     ].join("\n")
   );
 
-  return { texto: `ℹ️ <b>Información de proveedores</b>\n\n${bloques.join("\n---------\n")}`, botones };
+  return { texto: `ℹ️ <b>Información de proveedores</b>\n\n${bloques.join(`\n${SEPARADOR_PROVEEDORES}\n`)}`, botones };
 }
 
 export async function armarListaClientes(pagina: number = 1): Promise<{ texto: string; botones: BotonInline[][] }> {
