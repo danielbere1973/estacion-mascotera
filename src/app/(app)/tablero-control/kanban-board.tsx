@@ -170,7 +170,9 @@ export function KanbanBoard({
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-gray-900">Tablero de Control</h1>
+        <h1 className="text-xl font-semibold text-gray-900">
+          Tablero de Control: {tarjetas.reduce((max, t) => Math.max(max, t.id), 0)}
+        </h1>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Filtros:</span>
