@@ -31,7 +31,7 @@ export default async function ProveedoresPage() {
         <p className="text-sm font-medium text-gray-700">Nuevo proveedor</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
           <input name="nombre" required placeholder="Nombre *" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
-          <input name="contacto" placeholder="Contacto" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="contacto" placeholder="Teléfono" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="direccion" placeholder="Dirección" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="accountManager" placeholder="Account Manager" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
@@ -46,7 +46,7 @@ export default async function ProveedoresPage() {
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
               <th className="px-4 py-2">Proveedor</th>
-              <th className="px-4 py-2">Contacto</th>
+              <th className="px-4 py-2">Teléfono</th>
               <th className="px-4 py-2">Dirección</th>
               <th className="px-4 py-2">Account Manager</th>
               <th className="px-4 py-2 text-right">Productos</th>
