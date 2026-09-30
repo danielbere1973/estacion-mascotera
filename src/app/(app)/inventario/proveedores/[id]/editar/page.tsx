@@ -33,6 +33,10 @@ export default async function EditarProveedorPage({ params }: { params: Promise<
           <label className="text-sm font-medium text-gray-700">Account Manager</label>
           <input name="accountManager" defaultValue={proveedor.accountManager ?? ""} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Horarios</label>
+          <input name="horarios" defaultValue={proveedor.horarios ?? ""} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+        </div>
         <button type="submit" className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
           Guardar cambios
         </button>
