@@ -3,6 +3,8 @@ import type { BotonInline } from "@/lib/telegram";
 
 const PRODUCTOS_POR_PAGINA = 8;
 const CLIENTES_POR_PAGINA = 5;
+// Largo pensado para ocupar el ancho de un mensaje en el celular sin partirse en dos renglones.
+const SEPARADOR_PROVEEDORES = "-".repeat(40);
 
 function botonVolver(parentId: number | null): BotonInline[] {
   return [{ text: "◀️ Volver", callback_data: parentId ? `cat:${parentId}` : "cat_root" }];
@@ -17,6 +19,37 @@ export async function armarNivelRaiz(): Promise<{ texto: string; botones: BotonI
   const botones = raices.map((c) => [{ text: c.nombre, callback_data: `cat:${c.id}` }]);
   botones.push([{ text: "👤 Clientes", callback_data: "clientes_lista" }]);
   return { texto: "🗂 Elegí una categoría:", botones };
+}
+
+function esCategoriaProveedor(nombre: string): boolean {
+  return nombre.trim().toLowerCase().startsWith("proveedor");
+}
+
+function escaparHtml(texto: string): string {
+  return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export async function armarInfoProveedores(
+  categoriaId: number
+): Promise<{ texto: string; botones: BotonInline[][] }> {
+  const proveedores = await prisma.proveedor.findMany({ orderBy: { nombre: "asc" } });
+  const botones = [[{ text: "◀️ Volver", callback_data: `cat:${categoriaId}` }]];
+
+  if (proveedores.length === 0) {
+    return { texto: "ℹ️ No hay proveedores cargados todavía.", botones };
+  }
+
+  const bloques = proveedores.map((p) =>
+    [
+      `<b>Proveedor:</b> ${escaparHtml(p.nombre)}`,
+      `<b>Teléfono:</b> ${escaparHtml(p.contacto ?? "-")}`,
+      `<b>Dirección:</b> ${escaparHtml(p.direccion ?? "-")}`,
+      `<b>Account Manager:</b> ${escaparHtml(p.accountManager ?? "-")}`,
+      `<b>Horarios:</b> ${escaparHtml(p.horarios ?? "-")}`,
+    ].join("\n")
+  );
+
+  return { texto: `ℹ️ <b>Información de proveedores</b>\n\n${bloques.join(`\n${SEPARADOR_PROVEEDORES}\n`)}`, botones };
 }
 
 export async function armarListaClientes(pagina: number = 1): Promise<{ texto: string; botones: BotonInline[][] }> {
@@ -69,6 +102,9 @@ export async function armarNivelCategoria(
 
   if (hijas.length > 0) {
     const botones = hijas.map((c) => [{ text: c.nombre, callback_data: `cat:${c.id}` }]);
+    if (esCategoriaProveedor(categoria.nombre)) {
+      botones.push([{ text: "ℹ️ Información", callback_data: `prov_info:${categoria.id}` }]);
+    }
     botones.push(botonVolver(categoria.parentId));
     return { texto: `🗂 <b>${categoria.nombre}</b>`, botones };
   }
