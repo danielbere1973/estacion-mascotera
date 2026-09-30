@@ -15,7 +15,11 @@ const links = [
   { href: "/gastos", label: "Gastos", icon: "💸" },
   { href: "/reportes", label: "Reportes", icon: "📊" },
   { href: "/tablero-control", label: "Tablero de Control", icon: "🎛️" },
-  { href: "/marketing", label: "Marketing", icon: "📣" },
+];
+
+const marketingLinks = [
+  { href: "/marketing", label: "Campañas de mail", icon: "✉️", exact: true },
+  { href: "/marketing/reminders", label: "Reminders", icon: "⏰" },
 ];
 
 const linksRestringido = [
@@ -37,15 +41,17 @@ function NavLink({
   href,
   label,
   icon,
+  exact,
   onNavigate,
 }: {
   href: string;
   label: string;
   icon: string;
+  exact?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const active = href === "/" || exact ? pathname === href : pathname.startsWith(href);
 
   return (
     <Link
@@ -76,6 +82,7 @@ export function Sidebar({
   const [adminOpen, setAdminOpen] = useState(
     adminLinks.some((l) => pathname.startsWith(l.href))
   );
+  const [marketingOpen, setMarketingOpen] = useState(pathname.startsWith("/marketing"));
   const visibleLinks = isRestringido ? linksRestringido : links;
 
   return (
@@ -100,6 +107,35 @@ export function Sidebar({
         {visibleLinks.map((link) => (
           <NavLink key={link.href} {...link} onNavigate={onNavigate} />
         ))}
+
+        {!isRestringido && (
+          <div>
+            <button
+              onClick={() => setMarketingOpen((o) => !o)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            >
+              <span className="flex items-center gap-3">
+                <span className="text-base leading-none">📣</span>
+                Marketing
+              </span>
+              <svg
+                className={`h-3 w-3 transition-transform ${marketingOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {marketingOpen && (
+              <div className="mt-1 space-y-1 pl-4">
+                {marketingLinks.map((link) => (
+                  <NavLink key={link.href} {...link} onNavigate={onNavigate} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {isAdmin && (
           <div className="pt-3">
