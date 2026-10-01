@@ -16,24 +16,31 @@ export default async function RemindersPage() {
   await requireAdmin();
 
   // Una fila por mascota; "Última compra" es la venta más reciente del cliente.
-  const mascotas = await prisma.mascota.findMany({
-    orderBy: [{ cliente: { nombre: "asc" } }, { cliente: { apellido: "asc" } }, { nombre: "asc" }],
-    select: {
-      id: true,
-      nombre: true,
-      tipo: true,
-      raza: true,
-      setupReminderDias: true,
-      statusReminder: true,
-      cliente: {
-        select: {
-          nombre: true,
-          apellido: true,
-          ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { id: true, fechaVenta: true } },
+  const [mascotas, clientesPendientes] = await Promise.all([
+    prisma.mascota.findMany({
+      orderBy: [{ cliente: { nombre: "asc" } }, { cliente: { apellido: "asc" } }, { nombre: "asc" }],
+      select: {
+        id: true,
+        nombre: true,
+        tipo: true,
+        raza: true,
+        setupReminderDias: true,
+        statusReminder: true,
+        cliente: {
+          select: {
+            nombre: true,
+            apellido: true,
+            ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { id: true, fechaVenta: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    // Clientes que no aparecen en el listado por no tener mascotas cargadas.
+    prisma.cliente.count({ where: { mascotas: { none: {} } } }),
+  ]);
+
+  const activos = mascotas.filter((m) => m.statusReminder === "ACTIVO").length;
+  const pausados = mascotas.length - activos;
 
   const filas: FilaReminder[] = mascotas.map((m) => {
     const ultimaVenta = m.cliente.ventas[0];
@@ -52,7 +59,12 @@ export default async function RemindersPage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
+      <div>
+        <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
+        </p>
+      </div>
       <RemindersTabla filas={filas} />
     </div>
   );
