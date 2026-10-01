@@ -24,6 +24,7 @@ export default async function RemindersPage() {
       tipo: true,
       raza: true,
       setupReminderDias: true,
+      statusReminder: true,
       cliente: {
         select: {
           nombre: true,
@@ -45,6 +46,7 @@ export default async function RemindersPage() {
       ultimaVentaId: ultimaVenta?.id ?? null,
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
       setupReminderDias: m.setupReminderDias,
+      statusReminder: m.statusReminder,
     };
   });
 

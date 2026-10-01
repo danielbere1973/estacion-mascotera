@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { formatDate } from "@/lib/format";
-import { actualizarSetupReminder } from "./actions";
+import type { StatusReminder } from "@prisma/client";
+import { actualizarSetupReminder, actualizarStatusReminder } from "./actions";
 
 export type FilaReminder = {
   mascotaId: number;
@@ -14,6 +15,7 @@ export type FilaReminder = {
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
   setupReminderDias: number | null;
+  statusReminder: StatusReminder;
 };
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -31,6 +33,7 @@ function calcularProximo(ultimaVentaFecha: string | null, dias: string) {
 
 function Fila({ fila }: { fila: FilaReminder }) {
   const [dias, setDias] = useState(fila.setupReminderDias?.toString() ?? "");
+  const [status, setStatus] = useState(fila.statusReminder);
   const [pending, startTransition] = useTransition();
   const proximo = calcularProximo(fila.ultimaVentaFecha, dias);
 
@@ -68,6 +71,19 @@ function Fila({ fila }: { fila: FilaReminder }) {
           className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm"
         />
       </td>
+      <td className="px-3 py-2">
+        <select
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value as StatusReminder);
+            startTransition(() => actualizarStatusReminder(fila.mascotaId, e.target.value));
+          }}
+          className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+        >
+          <option value="ACTIVO">Activo</option>
+          <option value="PAUSADO">Pausado</option>
+        </select>
+      </td>
     </tr>
   );
 }
@@ -86,6 +102,7 @@ export function RemindersTabla({ filas }: { filas: FilaReminder[] }) {
             <th className="px-3 py-2">Fecha última compra</th>
             <th className="px-3 py-2">Próximo reminder</th>
             <th className="px-3 py-2">Setup reminder</th>
+            <th className="px-3 py-2">Status</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -94,7 +111,7 @@ export function RemindersTabla({ filas }: { filas: FilaReminder[] }) {
           ))}
           {filas.length === 0 && (
             <tr>
-              <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+              <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
                 No hay mascotas cargadas todavía.
               </td>
             </tr>
