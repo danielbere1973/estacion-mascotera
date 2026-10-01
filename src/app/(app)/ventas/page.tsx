@@ -79,6 +79,7 @@ export default async function VentasPage({
           },
         },
         costos: { select: { montoCalculado: true } },
+        pagos: { select: { monto: true } },
       },
       orderBy: { fechaVenta: "desc" },
       take: 100,
@@ -178,6 +179,7 @@ export default async function VentasPage({
                       costos: venta.costos.map((c) => ({
                         montoCalculado: c.montoCalculado.toString(),
                       })),
+                      pagos: venta.pagos.map((p) => ({ monto: p.monto.toString() })),
                     }}
                     esRestringido={esRestringido}
                   />

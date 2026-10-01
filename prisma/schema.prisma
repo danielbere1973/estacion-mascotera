@@ -27,6 +27,7 @@ model Usuario {
   ventas               Venta[]
   ventasVendidas       Venta[]        @relation("VentaVendidaPor")
   tarjetasAsignadas    TarjetaTablero[]
+  pagosVentaCobrados   PagoVenta[]    @relation("PagoVentaCobradoPor")
 }
 
 model TipoProducto {
@@ -213,6 +214,7 @@ model Venta {
   tiendanubeOrderId Int?           @unique
   costos            CostoVenta[]
   detalles          DetalleVenta[]
+  pagos             PagoVenta[]
   cliente           Cliente        @relation(fields: [clienteId], references: [id])
   cobradoPor        Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
   usuario           Usuario        @relation(fields: [usuarioId], references: [id])
@@ -221,6 +223,22 @@ model Venta {
 
   @@index([fechaVenta])
   @@index([clienteId])
+}
+
+model PagoVenta {
+  id                Int       @id @default(autoincrement())
+  ventaId           Int
+  monto             Decimal
+  comision          Decimal   @default(0)
+  medioPago         String
+  fechaPago         DateTime  @default(now())
+  fechaAcreditacion DateTime?
+  descripcion       String?
+  cobradoPorId      Int?
+  venta             Venta     @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  cobradoPor        Usuario?  @relation("PagoVentaCobradoPor", fields: [cobradoPorId], references: [id])
+
+  @@index([ventaId])
 }
 
 model CostoVenta {
