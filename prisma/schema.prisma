@@ -137,6 +137,8 @@ model Cliente {
   email                String?
   cuit                 String?
   dni                  String?
+  setupReminderDias    Int                         @default(30)
+  statusReminder       StatusReminder              @default(ACTIVO)
   mascotas             Mascota[]
   ordenesDropshipping  OrdenDropshipping[]
   productosRecurrentes ClienteProductoRecurrente[]
