@@ -4,34 +4,23 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { formatDate } from "@/lib/format";
 import type { StatusReminder } from "@prisma/client";
-import { actualizarSetupReminder, actualizarStatusReminder } from "./actions";
+import { actualizarSetupReminder, actualizarStatusReminder, type DestinoReminder } from "./actions";
 
-type FilaBase = {
+// Una fila por mascota, o por cliente si no tiene mascotas cargadas (en ese caso
+// setup y status se guardan en el Cliente).
+export type FilaReminder = {
   key: string;
+  destino: DestinoReminder;
+  id: number; // id de la Mascota o del Cliente, según `destino`
   cliente: string;
+  mascota: string | null;
+  tipo: string | null;
   raza: string | null;
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
-};
-
-type FilaMascota = FilaBase & {
-  mascotaId: number;
-  mascota: string;
-  tipo: string;
   setupReminderDias: number;
   statusReminder: StatusReminder;
 };
-
-// Cliente sin mascotas cargadas: sin datos de mascota ni setup/status.
-type FilaClienteSinMascota = FilaBase & {
-  mascotaId: null;
-  mascota: null;
-  tipo: null;
-  setupReminderDias: null;
-  statusReminder: null;
-};
-
-export type FilaReminder = FilaMascota | FilaClienteSinMascota;
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -58,43 +47,7 @@ function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | 
   return new Date(aFecha(hoy).getTime() + (n - diasTranscurridos) * DIA_MS);
 }
 
-// Última compra, Fecha última compra y Días transcurridos (comunes a ambos tipos de fila).
-function CeldasUltimaCompra({ fila, diasTranscurridos }: { fila: FilaBase; diasTranscurridos: number | null }) {
-  return (
-    <>
-      <td className="px-3 py-2 text-gray-600">
-        {fila.ultimaVentaId ? (
-          <Link href={`/ventas/${fila.ultimaVentaId}/editar`} className="text-blue-600 hover:underline">
-            #{fila.ultimaVentaId}
-          </Link>
-        ) : (
-          "-"
-        )}
-      </td>
-      <td className="px-3 py-2 text-gray-600">
-        {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
-      </td>
-      <td className="px-3 py-2 text-gray-600">{diasTranscurridos ?? "-"}</td>
-    </>
-  );
-}
-
-function FilaClienteSinMascota({ fila, hoy }: { fila: FilaClienteSinMascota; hoy: string }) {
-  return (
-    <tr className="hover:bg-gray-50">
-      <td className="px-3 py-2 font-medium">{fila.cliente}</td>
-      <td className="px-3 py-2 text-gray-400">-</td>
-      <td className="px-3 py-2 text-gray-400">-</td>
-      <td className="px-3 py-2 text-gray-400">-</td>
-      <CeldasUltimaCompra fila={fila} diasTranscurridos={calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy)} />
-      <td className="px-3 py-2 text-gray-400">-</td>
-      <td className="px-3 py-2 text-gray-400">-</td>
-      <td className="px-3 py-2 text-gray-400">-</td>
-    </tr>
-  );
-}
-
-function Fila({ fila, hoy }: { fila: FilaMascota; hoy: string }) {
+function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
   const [dias, setDias] = useState(fila.setupReminderDias.toString());
   const [status, setStatus] = useState(fila.statusReminder);
   // Si el status cambia desde el server (p. ej. el switch "Todo Activo/Pausado"), sincronizar el select.
@@ -110,10 +63,22 @@ function Fila({ fila, hoy }: { fila: FilaMascota; hoy: string }) {
   return (
     <tr className={`hover:bg-gray-50 ${pending ? "opacity-60" : ""}`}>
       <td className="px-3 py-2 font-medium">{fila.cliente}</td>
-      <td className="px-3 py-2 text-gray-600">{fila.mascota}</td>
-      <td className="px-3 py-2 text-gray-600">{fila.tipo}</td>
+      <td className="px-3 py-2 text-gray-600">{fila.mascota ?? "-"}</td>
+      <td className="px-3 py-2 text-gray-600">{fila.tipo ?? "-"}</td>
       <td className="px-3 py-2 text-gray-600">{fila.raza ?? "-"}</td>
-      <CeldasUltimaCompra fila={fila} diasTranscurridos={diasTranscurridos} />
+      <td className="px-3 py-2 text-gray-600">
+        {fila.ultimaVentaId ? (
+          <Link href={`/ventas/${fila.ultimaVentaId}/editar`} className="text-blue-600 hover:underline">
+            #{fila.ultimaVentaId}
+          </Link>
+        ) : (
+          "-"
+        )}
+      </td>
+      <td className="px-3 py-2 text-gray-600">
+        {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
+      </td>
+      <td className="px-3 py-2 text-gray-600">{diasTranscurridos ?? "-"}</td>
       <td className="px-3 py-2">
         <input
           type="number"
@@ -131,7 +96,7 @@ function Fila({ fila, hoy }: { fila: FilaMascota; hoy: string }) {
             }
             if (n.toString() !== guardado) {
               setDias(n.toString());
-              startTransition(() => actualizarSetupReminder(fila.mascotaId, n.toString()));
+              startTransition(() => actualizarSetupReminder(fila.destino, fila.id, n.toString()));
             }
           }}
           placeholder="días"
@@ -144,7 +109,7 @@ function Fila({ fila, hoy }: { fila: FilaMascota; hoy: string }) {
           value={status}
           onChange={(e) => {
             setStatus(e.target.value as StatusReminder);
-            startTransition(() => actualizarStatusReminder(fila.mascotaId, e.target.value));
+            startTransition(() => actualizarStatusReminder(fila.destino, fila.id, e.target.value));
           }}
           className="rounded-md border border-gray-300 px-2 py-1 text-sm"
         >
@@ -177,11 +142,7 @@ export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: str
         </thead>
         <tbody className="divide-y divide-gray-100">
           {filas.map((f) => (
-            f.mascotaId === null ? (
-              <FilaClienteSinMascota key={f.key} fila={f} hoy={hoy} />
-            ) : (
-              <Fila key={f.key} fila={f} hoy={hoy} />
-            )
+            <Fila key={f.key} fila={f} hoy={hoy} />
           ))}
           {filas.length === 0 && (
             <tr>

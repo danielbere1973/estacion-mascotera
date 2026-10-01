@@ -42,19 +42,25 @@ export default async function RemindersPage() {
     }),
     prisma.cliente.findMany({
       where: { mascotas: { none: {} } },
-      select: { id: true, nombre: true, apellido: true, ...ultimaVentaSelect },
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        setupReminderDias: true,
+        statusReminder: true,
+        ...ultimaVentaSelect,
+      },
     }),
   ]);
 
-  const activos = mascotas.filter((m) => m.statusReminder === "ACTIVO").length;
-  const pausados = mascotas.length - activos;
   const clientesPendientes = clientesSinMascota.length;
 
   const filasMascotas: FilaReminder[] = mascotas.map((m) => {
     const ultimaVenta = m.cliente.ventas[0];
     return {
       key: `m-${m.id}`,
-      mascotaId: m.id,
+      destino: "mascota",
+      id: m.id,
       cliente: `${m.cliente.nombre} ${m.cliente.apellido}`,
       mascota: m.nombre,
       tipo: TIPO_LABEL[m.tipo],
@@ -66,26 +72,31 @@ export default async function RemindersPage() {
     };
   });
 
-  // Clientes sin mascota: sin datos de mascota ni setup/status (se configuran por mascota).
+  // Clientes sin mascota: setup y status se guardan en el Cliente.
   const filasClientes: FilaReminder[] = clientesSinMascota.map((c) => {
     const ultimaVenta = c.ventas[0];
     return {
       key: `c-${c.id}`,
-      mascotaId: null,
+      destino: "cliente",
+      id: c.id,
       cliente: `${c.nombre} ${c.apellido}`,
       mascota: null,
       tipo: null,
       raza: null,
       ultimaVentaId: ultimaVenta?.id ?? null,
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
-      setupReminderDias: null,
-      statusReminder: null,
+      setupReminderDias: c.setupReminderDias,
+      statusReminder: c.statusReminder,
     };
   });
 
   const filas = [...filasMascotas, ...filasClientes].sort(
     (a, b) => a.cliente.localeCompare(b.cliente, "es") || (a.mascota ?? "").localeCompare(b.mascota ?? "", "es"),
   );
+
+  // Totales sobre todas las filas (mascotas y clientes sin mascota).
+  const activos = filas.filter((f) => f.statusReminder === "ACTIVO").length;
+  const pausados = filas.length - activos;
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -95,7 +106,7 @@ export default async function RemindersPage() {
           <p className="text-sm text-gray-500">
             Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
           </p>
-          <SwitchStatusTodos todosActivos={mascotas.length > 0 && pausados === 0} />
+          <SwitchStatusTodos todosActivos={filas.length > 0 && pausados === 0} />
         </div>
       </div>
       <RemindersTabla filas={filas} hoy={diaArgentina.format(new Date())} />
