@@ -154,6 +154,7 @@ model Mascota {
   raza                  String?
   condicionesEspeciales String?
   setupReminderDias     Int?
+  statusReminder        StatusReminder @default(ACTIVO)
   creadoAt              DateTime       @default(now())
   cliente               Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
@@ -601,4 +602,9 @@ model TarjetaTablero {
   @@index([usuarioAsignadoId])
   @@index([ventaId])
   @@index([clienteId])
+}
+
+enum StatusReminder {
+  ACTIVO
+  PAUSADO
 }
