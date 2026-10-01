@@ -76,13 +76,19 @@ export default async function EventLogPage({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {eventos.map((e) => (
-              <tr key={e.id} className="hover:bg-gray-50">
+              // El resumen de cada envío de reminders va en negrita para distinguirlo de los envíos individuales.
+              <tr
+                key={e.id}
+                className={`hover:bg-gray-50 ${e.accion === "Envío de reminders" ? "font-bold text-gray-900" : ""}`}
+              >
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">{formatoFecha.format(e.fecha)}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">{formatoHora.format(e.fecha)}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {e.usuario.nombre} {e.usuario.apellido}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 font-medium">{e.accion}</td>
+                <td className={`whitespace-nowrap px-3 py-2 ${e.accion === "Envío de reminders" ? "" : "font-medium"}`}>
+                  {e.accion}
+                </td>
                 <td className="px-3 py-2 text-gray-600">{e.detalle ?? "-"}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   <span
