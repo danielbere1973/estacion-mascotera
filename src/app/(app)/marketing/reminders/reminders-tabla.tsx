@@ -31,11 +31,18 @@ function calcularProximo(ultimaVentaFecha: string | null, dias: string) {
   return new Date(aFecha(ultimaVentaFecha).getTime() + n * DIA_MS);
 }
 
-function Fila({ fila }: { fila: FilaReminder }) {
+// Días transcurridos = hoy - fecha de la última compra.
+function calcularDiasTranscurridos(ultimaVentaFecha: string | null, hoy: string) {
+  if (!ultimaVentaFecha) return null;
+  return Math.round((aFecha(hoy).getTime() - aFecha(ultimaVentaFecha).getTime()) / DIA_MS);
+}
+
+function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
   const [dias, setDias] = useState(fila.setupReminderDias?.toString() ?? "");
   const [status, setStatus] = useState(fila.statusReminder);
   const [pending, startTransition] = useTransition();
   const proximo = calcularProximo(fila.ultimaVentaFecha, dias);
+  const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
 
   return (
     <tr className={`hover:bg-gray-50 ${pending ? "opacity-60" : ""}`}>
@@ -55,6 +62,7 @@ function Fila({ fila }: { fila: FilaReminder }) {
       <td className="px-3 py-2 text-gray-600">
         {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
       </td>
+      <td className="px-3 py-2 text-gray-600">{diasTranscurridos ?? "-"}</td>
       <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
       <td className="px-3 py-2">
         <input
@@ -88,7 +96,8 @@ function Fila({ fila }: { fila: FilaReminder }) {
   );
 }
 
-export function RemindersTabla({ filas }: { filas: FilaReminder[] }) {
+// `hoy` (YYYY-MM-DD, hora Argentina) viene del server para que coincida con el render del cliente.
+export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: string }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
       <table className="w-full text-sm">
@@ -100,6 +109,7 @@ export function RemindersTabla({ filas }: { filas: FilaReminder[] }) {
             <th className="px-3 py-2">Raza</th>
             <th className="px-3 py-2">Última compra</th>
             <th className="px-3 py-2">Fecha última compra</th>
+            <th className="px-3 py-2">Días transcurridos</th>
             <th className="px-3 py-2">Próximo reminder</th>
             <th className="px-3 py-2">Setup reminder</th>
             <th className="px-3 py-2">Status</th>
@@ -107,11 +117,11 @@ export function RemindersTabla({ filas }: { filas: FilaReminder[] }) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {filas.map((f) => (
-            <Fila key={f.mascotaId} fila={f} />
+            <Fila key={f.mascotaId} fila={f} hoy={hoy} />
           ))}
           {filas.length === 0 && (
             <tr>
-              <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
+              <td colSpan={10} className="px-3 py-6 text-center text-gray-400">
                 No hay mascotas cargadas todavía.
               </td>
             </tr>
