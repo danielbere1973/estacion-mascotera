@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { formatDate } from "@/lib/format";
 import { actualizarSetupReminder, actualizarUltimoReminder } from "./actions";
@@ -39,7 +40,15 @@ function Fila({ fila }: { fila: FilaReminder }) {
       <td className="px-3 py-2 text-gray-600">{fila.mascota}</td>
       <td className="px-3 py-2 text-gray-600">{fila.tipo}</td>
       <td className="px-3 py-2 text-gray-600">{fila.raza ?? "-"}</td>
-      <td className="px-3 py-2 text-gray-600">{fila.ultimaVentaId ? `#${fila.ultimaVentaId}` : "-"}</td>
+      <td className="px-3 py-2 text-gray-600">
+        {fila.ultimaVentaId ? (
+          <Link href={`/ventas/${fila.ultimaVentaId}/editar`} className="text-blue-600 hover:underline">
+            #{fila.ultimaVentaId}
+          </Link>
+        ) : (
+          "-"
+        )}
+      </td>
       <td className="px-3 py-2">
         <input
           type="date"
