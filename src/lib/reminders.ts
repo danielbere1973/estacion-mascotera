@@ -53,11 +53,16 @@ export function asuntoReminder(nombre: string) {
   return `${nombre}, ¿cómo está tu compañero? 🐾`;
 }
 
+// Banner del encabezado (public/mail/reminder-banner.png). Va con URL absoluta porque
+// los clientes de mail no resuelven rutas relativas; .png queda fuera del middleware de login.
+const BANNER_URL = "https://estacionmascotera.vercel.app/mail/reminder-banner.png";
+
 export function htmlReminder(nombre: string) {
   const n = escaparHtml(nombre);
   const link = (href: string, texto: string) =>
     `<a href="${href}" style="color: #2563eb; text-decoration: underline;">${texto}</a>`;
   return `<div style="font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #222; max-width: 600px;">
+<img src="${BANNER_URL}" width="600" alt="¡Te extrañamos! Estación Mascotera" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; margin: 0 0 16px;">
 <p>Hola ${n},</p>
 <p>¡Te extrañamos en Estación Mascotera! Esperamos que vos y tu mascota estén muy bien.</p>
 <p>Pasó un tiempito desde tu último pedido y quisimos escribirte para saber cómo andan. ¿Todavía le queda alimento? Si se le está por terminar, avisanos y te lo reponemos, así no tenés que preocuparte por nada.</p>
