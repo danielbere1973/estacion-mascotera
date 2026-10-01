@@ -153,6 +153,8 @@ model Mascota {
   tamanio               TamanioMascota
   raza                  String?
   condicionesEspeciales String?
+  ultimoReminder        DateTime?
+  setupReminderDias     Int?
   creadoAt              DateTime       @default(now())
   cliente               Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
