@@ -66,7 +66,7 @@ export default async function RemindersPage() {
           <p className="text-sm text-gray-500">
             Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
           </p>
-          <SwitchStatusTodos />
+          <SwitchStatusTodos todosActivos={mascotas.length > 0 && pausados === 0} />
         </div>
       </div>
       <RemindersTabla filas={filas} hoy={diaArgentina.format(new Date())} />
