@@ -2,6 +2,7 @@ import { TipoMascota } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { RemindersTabla, type FilaReminder } from "./reminders-tabla";
+import { SwitchStatusTodos } from "./switch-status-todos";
 
 const TIPO_LABEL: Record<TipoMascota, string> = {
   PERRO: "Perro",
@@ -61,9 +62,12 @@ export default async function RemindersPage() {
     <div className="flex h-full flex-col gap-4">
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
-        </p>
+        <div className="mt-1 flex items-center justify-between gap-4">
+          <p className="text-sm text-gray-500">
+            Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
+          </p>
+          <SwitchStatusTodos />
+        </div>
       </div>
       <RemindersTabla filas={filas} hoy={diaArgentina.format(new Date())} />
     </div>
