@@ -489,6 +489,13 @@ model PendienteCompraMayorista {
   @@index([jobId])
 }
 
+// Configuración general de Marketing → Reminders (una sola fila, id = 1).
+model ConfigReminders {
+  id           Int             @id @default(1)
+  switchStatus StatusReminder? // último clic del botón Switch (null = nunca se usó)
+  updatedAt    DateTime        @updatedAt
+}
+
 model TiendanubeConfig {
   id          Int      @id @default(autoincrement())
   storeId     String   @unique

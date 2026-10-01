@@ -36,6 +36,12 @@ export async function actualizarStatusReminderTodos(status: string) {
   await requireAdmin();
   if (!Object.values(StatusReminder).includes(status as StatusReminder)) return;
   const data = { statusReminder: status as StatusReminder };
-  await prisma.$transaction([prisma.mascota.updateMany({ data }), prisma.cliente.updateMany({ data })]);
+  // Se guarda el último clic para que el botón no cambie con los cambios manuales de Status.
+  const switchStatus = status as StatusReminder;
+  await prisma.$transaction([
+    prisma.mascota.updateMany({ data }),
+    prisma.cliente.updateMany({ data }),
+    prisma.configReminders.upsert({ where: { id: 1 }, create: { id: 1, switchStatus }, update: { switchStatus } }),
+  ]);
   revalidatePath("/marketing/reminders");
 }

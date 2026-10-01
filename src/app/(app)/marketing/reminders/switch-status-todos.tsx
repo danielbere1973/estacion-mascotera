@@ -1,13 +1,14 @@
 "use client";
 
 import { useTransition } from "react";
+import type { StatusReminder } from "@prisma/client";
 import { actualizarStatusReminderTodos } from "./actions";
 
-// Switch que pone el Status de todas las mascotas en Activo o Pausado.
-// Si ya están todas activas ofrece "Switch to Pausado"; si hay alguna pausada, "Switch to Activo".
-export function SwitchStatusTodos({ todosActivos }: { todosActivos: boolean }) {
+// Switch que pone el Status de todas las filas en Activo o Pausado.
+// Muestra la acción opuesta al último clic (no cambia con los cambios manuales de Status).
+export function SwitchStatusTodos({ ultimoClic }: { ultimoClic: StatusReminder }) {
   const [pending, startTransition] = useTransition();
-  const activar = !todosActivos;
+  const activar = ultimoClic === "PAUSADO";
 
   return (
     <button
