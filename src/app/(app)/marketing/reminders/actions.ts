@@ -23,3 +23,10 @@ export async function actualizarStatusReminder(mascotaId: number, status: string
   });
   revalidatePath("/marketing/reminders");
 }
+
+export async function actualizarStatusReminderTodos(status: string) {
+  await requireAdmin();
+  if (!Object.values(StatusReminder).includes(status as StatusReminder)) return;
+  await prisma.mascota.updateMany({ data: { statusReminder: status as StatusReminder } });
+  revalidatePath("/marketing/reminders");
+}

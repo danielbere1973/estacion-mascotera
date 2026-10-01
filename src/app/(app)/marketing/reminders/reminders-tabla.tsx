@@ -46,6 +46,12 @@ function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | 
 function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
   const [dias, setDias] = useState(fila.setupReminderDias.toString());
   const [status, setStatus] = useState(fila.statusReminder);
+  // Si el status cambia desde el server (p. ej. el switch "Todo Activo/Pausado"), sincronizar el select.
+  const [statusServer, setStatusServer] = useState(fila.statusReminder);
+  if (fila.statusReminder !== statusServer) {
+    setStatusServer(fila.statusReminder);
+    setStatus(fila.statusReminder);
+  }
   const [pending, startTransition] = useTransition();
   const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
   const proximo = calcularProximo(hoy, dias, diasTranscurridos);
