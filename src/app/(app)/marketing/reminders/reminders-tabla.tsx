@@ -31,9 +31,15 @@ function calcularDiasTranscurridos(ultimaVentaFecha: string | null, hoy: string)
 }
 
 // Próximo reminder = hoy + (setup reminder - días transcurridos).
+// Si pasaron más de 30 días desde la última compra, el 1° del mes siguiente a hoy.
 function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | null) {
+  if (diasTranscurridos === null) return null;
+  if (diasTranscurridos > 30) {
+    const [anio, mes] = hoy.split("-").map(Number);
+    return new Date(Date.UTC(anio, mes, 1, 12)); // `mes` es 1-based, como índice 0-based es el mes siguiente
+  }
   const n = Number.parseInt(dias, 10);
-  if (diasTranscurridos === null || !Number.isFinite(n)) return null;
+  if (!Number.isFinite(n)) return null;
   return new Date(aFecha(hoy).getTime() + (n - diasTranscurridos) * DIA_MS);
 }
 
@@ -66,12 +72,21 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
       <td className="px-3 py-2">
         <input
           type="number"
-          min={0}
+          min={1}
+          required
           value={dias}
           onChange={(e) => setDias(e.target.value)}
           onBlur={() => {
-            if (dias !== (fila.setupReminderDias?.toString() ?? "")) {
-              startTransition(() => actualizarSetupReminder(fila.mascotaId, dias));
+            const guardado = fila.setupReminderDias?.toString() ?? "";
+            const n = Number.parseInt(dias, 10);
+            // No se permite vacío ni menor a 1: vuelve al último valor guardado.
+            if (!Number.isFinite(n) || n < 1) {
+              setDias(guardado);
+              return;
+            }
+            if (n.toString() !== guardado) {
+              setDias(n.toString());
+              startTransition(() => actualizarSetupReminder(fila.mascotaId, n.toString()));
             }
           }}
           placeholder="días"
