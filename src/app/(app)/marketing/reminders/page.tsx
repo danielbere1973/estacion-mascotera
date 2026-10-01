@@ -1,4 +1,5 @@
-import { TipoMascota } from "@prisma/client";
+import { cookies } from "next/headers";
+import { StatusReminder, TipoMascota } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { RemindersTabla, type FilaReminder } from "./reminders-tabla";
@@ -98,6 +99,14 @@ export default async function RemindersPage() {
   const activos = filas.filter((f) => f.statusReminder === "ACTIVO").length;
   const pausados = filas.length - activos;
 
+  // Estado del switch según su último clic (cookie); si nunca se usó, según los datos.
+  const cookieSwitch = (await cookies()).get("reminders-switch-status")?.value;
+  const ultimoClic: StatusReminder = Object.values(StatusReminder).includes(cookieSwitch as StatusReminder)
+    ? (cookieSwitch as StatusReminder)
+    : filas.length > 0 && pausados === 0
+      ? "ACTIVO"
+      : "PAUSADO";
+
   return (
     <div className="flex h-full flex-col gap-4">
       <div>
@@ -106,7 +115,7 @@ export default async function RemindersPage() {
           <p className="text-sm text-gray-500">
             Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
           </p>
-          <SwitchStatusTodos todosActivos={filas.length > 0 && pausados === 0} />
+          <SwitchStatusTodos ultimoClic={ultimoClic} />
         </div>
       </div>
       <RemindersTabla filas={filas} hoy={diaArgentina.format(new Date())} />
