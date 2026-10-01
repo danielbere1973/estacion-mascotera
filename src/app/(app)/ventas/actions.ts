@@ -214,7 +214,9 @@ export async function actualizarVenta(formData: FormData) {
 
   const costos = parseCostos(formData);
 
-  await prisma.$transaction(async (tx) => {
+  const productosStockNegativo: { productoId: number; nombre: string; stockActual: number; faltante: number }[] = [];
+
+  const resultado = await prisma.$transaction(async (tx) => {
     const detallesActuales = await tx.detalleVenta.findMany({
       where: { ventaId: id },
       include: { ventaConsignacion: true },
@@ -284,14 +286,20 @@ export async function actualizarVenta(formData: FormData) {
         }
 
         if (deltaCantidad !== 0) {
-          const producto = await tx.producto.findUniqueOrThrow({ where: { id: actual.productoId } });
-          if (deltaCantidad > producto.stockActual) {
-            throw new Error(`No hay suficiente stock de "${producto.nombre}" (disponible: ${producto.stockActual}).`);
-          }
-          await tx.producto.update({
+          const productoAntes = await tx.producto.findUniqueOrThrow({ where: { id: actual.productoId } });
+          const productoActualizado = await tx.producto.update({
             where: { id: actual.productoId },
             data: { stockActual: { decrement: deltaCantidad } },
           });
+          if (productoActualizado.stockActual < 0 && productoAntes.stockActual >= 0) {
+            const faltante = Math.min(deltaCantidad, Math.abs(productoActualizado.stockActual));
+            productosStockNegativo.push({
+              productoId: productoActualizado.id,
+              nombre: productoActualizado.nombre,
+              stockActual: productoActualizado.stockActual,
+              faltante,
+            });
+          }
         }
 
         await tx.detalleVenta.update({
@@ -306,9 +314,6 @@ export async function actualizarVenta(formData: FormData) {
         if (!productoId) continue;
 
         const producto = await tx.producto.findUniqueOrThrow({ where: { id: productoId } });
-        if (cantidad > producto.stockActual) {
-          throw new Error(`No hay suficiente stock de "${producto.nombre}" (disponible: ${producto.stockActual}).`);
-        }
 
         const detalleConsignacionId = detalleConsignacionIdsRaw[i] ? Number(detalleConsignacionIdsRaw[i]) : null;
         if (detalleConsignacionId) {
@@ -323,10 +328,19 @@ export async function actualizarVenta(formData: FormData) {
           data: { ventaId: id, productoId, cantidad, precioVentaUnitario: precio, descuentoPorcentaje: descuento, precioCostoUnitario: producto.precioCostoUnitario },
         });
 
-        await tx.producto.update({
+        const productoActualizado = await tx.producto.update({
           where: { id: productoId },
           data: { stockActual: { decrement: cantidad } },
         });
+        if (productoActualizado.stockActual < 0 && producto.stockActual >= 0) {
+          const faltante = Math.min(cantidad, Math.abs(productoActualizado.stockActual));
+          productosStockNegativo.push({
+            productoId: productoActualizado.id,
+            nombre: productoActualizado.nombre,
+            stockActual: productoActualizado.stockActual,
+            faltante,
+          });
+        }
 
         if (detalleConsignacionId) {
           await tx.ventaConsignacion.create({
@@ -383,11 +397,40 @@ export async function actualizarVenta(formData: FormData) {
       entidad: "VENTA",
       entidadId: id,
     });
+
+    const { huboPendienteHym, sinMapeoHym, conMapeoHym } = await registrarPendientesCompra(tx, productosStockNegativo);
+
+    if (huboPendienteHym) {
+      const venta = await tx.venta.findUniqueOrThrow({ where: { id }, include: { cliente: true } });
+      await moverOCrearTarjetaCompraMayorista(tx, {
+        ventaId: id,
+        clienteId: venta.clienteId,
+        titulo: `Venta a ${venta.cliente.nombre} ${venta.cliente.apellido}`,
+      });
+    }
+
+    return { huboPendienteHym, sinMapeoHym, conMapeoHym };
   });
+
+  const avisoStockManual = resultado.huboPendienteHym
+    ? `\n\n⚠️ ${resultado.conMapeoHym.join(", ")} se quedó sin stock — ya arrancó la compra automática a HYM, te aviso cuando esté confirmada.`
+    : "";
+  if (resultado.huboPendienteHym) {
+    await sendTelegramMessage(`🧾 Venta #${id} editada${avisoStockManual}`);
+    ejecutarCorteCompraHym().catch((error) =>
+      console.error("actualizarVenta: error disparando corte de compras HYM inmediato", error)
+    );
+  }
+  if (resultado.sinMapeoHym.length > 0) {
+    await sendTelegramMessage(
+      `⚠️ ${resultado.sinMapeoHym.join(", ")} se quedó sin stock y no tiene proveedor mayorista cargado — hay que reponerlo a mano.`
+    );
+  }
 
   revalidatePath("/ventas");
   revalidatePath("/inventario");
   revalidatePath("/");
+  revalidatePath("/tablero-control");
   redirect("/ventas");
 }
 
