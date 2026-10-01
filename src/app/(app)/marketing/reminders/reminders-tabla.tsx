@@ -63,7 +63,6 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
         {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
       </td>
       <td className="px-3 py-2 text-gray-600">{diasTranscurridos ?? "-"}</td>
-      <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
       <td className="px-3 py-2">
         <input
           type="number"
@@ -79,6 +78,7 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
           className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm"
         />
       </td>
+      <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
       <td className="px-3 py-2">
         <select
           value={status}
@@ -110,8 +110,8 @@ export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: str
             <th className="px-3 py-2">Última compra</th>
             <th className="px-3 py-2">Fecha última compra</th>
             <th className="px-3 py-2">Días transcurridos</th>
-            <th className="px-3 py-2">Próximo reminder</th>
             <th className="px-3 py-2">Setup reminder</th>
+            <th className="px-3 py-2">Próximo reminder</th>
             <th className="px-3 py-2">Status</th>
           </tr>
         </thead>
