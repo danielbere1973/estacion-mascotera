@@ -195,11 +195,7 @@ export function EditarVentaItems({
         const esNuevo = !row.detalleId;
         const producto = productos.find((p) => String(p.id) === row.productoId);
         const consignado = producto?.consignados.find((c) => String(c.detalleConsignacionId) === row.detalleConsignacionId);
-        const maxCantidad = esNuevo
-          ? consignado
-            ? Math.min(consignado.disponible, producto!.stockActual)
-            : (producto?.stockActual ?? Infinity)
-          : Infinity; // ítems existentes: no limitar en el browser, el servidor valida el delta
+        const maxCantidad = consignado ? consignado.disponible : Infinity; // stock de productos normales no limita; el servidor valida
 
         return (
           <div key={row.key} className="flex flex-wrap items-center gap-2">
