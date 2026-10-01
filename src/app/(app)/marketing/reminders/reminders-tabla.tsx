@@ -72,12 +72,21 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
       <td className="px-3 py-2">
         <input
           type="number"
-          min={0}
+          min={1}
+          required
           value={dias}
           onChange={(e) => setDias(e.target.value)}
           onBlur={() => {
-            if (dias !== (fila.setupReminderDias?.toString() ?? "")) {
-              startTransition(() => actualizarSetupReminder(fila.mascotaId, dias));
+            const guardado = fila.setupReminderDias?.toString() ?? "";
+            const n = Number.parseInt(dias, 10);
+            // No se permite vacío ni menor a 1: vuelve al último valor guardado.
+            if (!Number.isFinite(n) || n < 1) {
+              setDias(guardado);
+              return;
+            }
+            if (n.toString() !== guardado) {
+              setDias(n.toString());
+              startTransition(() => actualizarSetupReminder(fila.mascotaId, n.toString()));
             }
           }}
           placeholder="días"

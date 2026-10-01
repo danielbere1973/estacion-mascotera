@@ -7,8 +7,9 @@ import { requireAdmin } from "@/lib/permissions";
 
 export async function actualizarSetupReminder(mascotaId: number, dias: string) {
   await requireAdmin();
-  const n = dias.trim() === "" ? null : Number.parseInt(dias, 10);
-  if (n !== null && (!Number.isFinite(n) || n < 0)) return;
+  // Obligatorio y mínimo 1 día.
+  const n = Number.parseInt(dias, 10);
+  if (!Number.isFinite(n) || n < 1) return;
   await prisma.mascota.update({ where: { id: mascotaId }, data: { setupReminderDias: n } });
   revalidatePath("/marketing/reminders");
 }
