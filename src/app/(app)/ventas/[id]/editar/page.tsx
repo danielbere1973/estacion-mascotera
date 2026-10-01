@@ -152,13 +152,19 @@ export default async function EditarVentaPage({
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Medio de pago</label>
-            <input
+            <select
               name="medioPago"
               required
               defaultValue={venta.medioPago}
-              placeholder="Transferencia, Efectivo, Mercado Pago..."
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+            >
+              {!mediosPago.some((m) => m.nombre === venta.medioPago) && (
+                <option value={venta.medioPago}>{venta.medioPago}</option>
+              )}
+              {mediosPago.map((m) => (
+                <option key={m.id} value={m.nombre}>{m.nombre}</option>
+              ))}
+            </select>
           </div>
         </div>
 
