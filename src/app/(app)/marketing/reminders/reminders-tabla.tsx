@@ -14,7 +14,7 @@ export type FilaReminder = {
   raza: string | null;
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
-  setupReminderDias: number | null;
+  setupReminderDias: number;
   statusReminder: StatusReminder;
 };
 
@@ -44,7 +44,7 @@ function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | 
 }
 
 function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
-  const [dias, setDias] = useState(fila.setupReminderDias?.toString() ?? "");
+  const [dias, setDias] = useState(fila.setupReminderDias.toString());
   const [status, setStatus] = useState(fila.statusReminder);
   const [pending, startTransition] = useTransition();
   const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
@@ -77,7 +77,7 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
           value={dias}
           onChange={(e) => setDias(e.target.value)}
           onBlur={() => {
-            const guardado = fila.setupReminderDias?.toString() ?? "";
+            const guardado = fila.setupReminderDias.toString();
             const n = Number.parseInt(dias, 10);
             // No se permite vacío ni menor a 1: vuelve al último valor guardado.
             if (!Number.isFinite(n) || n < 1) {
