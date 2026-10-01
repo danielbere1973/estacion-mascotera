@@ -68,7 +68,12 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
       <td className="px-3 py-2 text-gray-600">{fila.raza ?? "-"}</td>
       <td className="px-3 py-2 text-gray-600">
         {fila.ultimaVentaId ? (
-          <Link href={`/ventas/${fila.ultimaVentaId}/editar`} className="text-blue-600 hover:underline">
+          <Link
+            href={`/ventas/${fila.ultimaVentaId}/editar`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline"
+          >
             #{fila.ultimaVentaId}
           </Link>
         ) : (
