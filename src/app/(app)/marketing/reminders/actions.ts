@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { StatusReminder } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
+import { enviarMailsIndividuales } from "@/lib/mail";
+import { ASUNTO_REMINDER, clientesParaReminder, htmlReminder } from "@/lib/reminders";
 
 // Los reminders se configuran por mascota, o por cliente cuando no tiene mascotas.
 export type DestinoReminder = "mascota" | "cliente";
@@ -125,4 +127,41 @@ export async function actualizarStatusReminderTodos(status: string) {
     throw e;
   }
   revalidatePath("/marketing/reminders");
+}
+
+// Envía el mail de reminder, uno por cliente, a los que cumplen las condiciones
+// (Status Activo y más de 30 días desde la última compra). Cada envío queda en el Event log.
+export async function enviarReminders(): Promise<{ enviados: number; errores: number; sinEmail: number }> {
+  const session = await requireAdmin();
+  const usuarioId = Number(session.user.id);
+  const { elegibles, sinEmail } = await clientesParaReminder();
+
+  const resultados = await enviarMailsIndividuales(
+    elegibles.map((c) => ({ to: c.email, subject: ASUNTO_REMINDER, html: htmlReminder(c.nombre) })),
+  );
+
+  const eventos = [
+    ...elegibles.map((c, i) => ({
+      detalle: `${c.nombre} ${c.apellido} <${c.email}> (${c.dias} días desde la última compra)`,
+      resultado: resultados[i] ? `Error: ${resultados[i]}` : "OK",
+    })),
+    ...sinEmail.map((c) => ({ detalle: `${c.nombre} ${c.apellido}`, resultado: "Error: el cliente no tiene email" })),
+  ];
+  try {
+    await prisma.logMarketing.createMany({
+      data: eventos.map((e) => ({ usuarioId, accion: "Envío de reminder", ...e })),
+    });
+  } catch (e) {
+    console.error("No se pudieron registrar los envíos de reminders", e);
+  }
+
+  const enviados = resultados.filter((r) => r === null).length;
+  const errores = elegibles.length - enviados;
+  await registrarEvento(
+    usuarioId,
+    "Envío de reminders",
+    `${enviados} enviados, ${errores} con error, ${sinEmail.length} sin email`,
+    errores === 0 ? "OK" : `Error: ${errores} envíos fallaron`,
+  );
+  return { enviados, errores, sinEmail: sinEmail.length };
 }

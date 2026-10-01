@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { RemindersTabla, type FilaReminder } from "./reminders-tabla";
 import { SwitchStatusTodos } from "./switch-status-todos";
+import { EnviarReminders } from "./enviar-reminders";
+import { clientesParaReminder } from "@/lib/reminders";
 
 const TIPO_LABEL: Record<TipoMascota, string> = {
   PERRO: "Perro",
@@ -21,7 +23,7 @@ export default async function RemindersPage() {
   const ultimaVentaSelect = {
     ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { id: true, fechaVenta: true } },
   } as const;
-  const [mascotas, clientesSinMascota, config] = await Promise.all([
+  const [mascotas, clientesSinMascota, config, paraReminder] = await Promise.all([
     prisma.mascota.findMany({
       orderBy: [{ cliente: { nombre: "asc" } }, { cliente: { apellido: "asc" } }, { nombre: "asc" }],
       select: {
@@ -52,6 +54,7 @@ export default async function RemindersPage() {
       },
     }),
     prisma.configReminders.findUnique({ where: { id: 1 } }),
+    clientesParaReminder(),
   ]);
 
   const clientesPendientes = clientesSinMascota.length;
@@ -111,7 +114,8 @@ export default async function RemindersPage() {
           <p className="text-sm text-gray-500">
             Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
+            <EnviarReminders cantidad={paraReminder.elegibles.length} sinEmail={paraReminder.sinEmail.length} />
             <a
               href="/marketing/reminders/event-log"
               target="_blank"
