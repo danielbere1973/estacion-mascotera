@@ -13,7 +13,7 @@ export default async function EditarVentaPage({
 }) {
   const { id } = await params;
 
-  const [venta, productos, itemsConsignados, usuarios] = await Promise.all([
+  const [venta, productos, itemsConsignados, usuarios, mediosPago] = await Promise.all([
     prisma.venta.findUnique({
       where: { id: Number(id) },
       include: {
@@ -39,6 +39,7 @@ export default async function EditarVentaPage({
       orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
       select: { id: true, nombre: true, apellido: true },
     }),
+    prisma.medioPago.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
   ]);
 
   if (!venta) notFound();
@@ -126,13 +127,19 @@ export default async function EditarVentaPage({
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Medio de pago</label>
-            <input
+            <select
               name="medioPago"
               required
               defaultValue={venta.medioPago}
-              placeholder="Transferencia, Efectivo, Mercado Pago..."
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+            >
+              {!mediosPago.some((m) => m.nombre === venta.medioPago) && (
+                <option value={venta.medioPago}>{venta.medioPago}</option>
+              )}
+              {mediosPago.map((m) => (
+                <option key={m.id} value={m.nombre}>{m.nombre}</option>
+              ))}
+            </select>
           </div>
         </div>
 

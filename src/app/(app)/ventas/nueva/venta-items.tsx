@@ -196,7 +196,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 type="number"
                 name="cantidad"
                 min={1}
-                max={maxCantidad}
+                max={Number.isFinite(maxCantidad) ? maxCantidad : undefined}
                 required
                 value={row.cantidad}
                 onChange={(e) => onCantidadChange(row.key, e.target.value, row, maxCantidad)}
