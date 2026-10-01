@@ -65,7 +65,7 @@ export default async function RemindersPage() {
           Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
         </p>
       </div>
-      <RemindersTabla filas={filas} />
+      <RemindersTabla filas={filas} hoy={diaArgentina.format(new Date())} />
     </div>
   );
 }
