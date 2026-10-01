@@ -62,7 +62,7 @@ export default async function RemindersPage() {
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes Pendientes: {clientesPendientes}
+          Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
         </p>
       </div>
       <RemindersTabla filas={filas} />
