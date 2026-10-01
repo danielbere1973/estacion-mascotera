@@ -16,8 +16,12 @@ const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argen
 export default async function RemindersPage() {
   await requireAdmin();
 
-  // Una fila por mascota; "Última compra" es la venta más reciente del cliente.
-  const [mascotas, clientesPendientes] = await Promise.all([
+  // Una fila por mascota, más una por cada cliente sin mascotas cargadas.
+  // "Última compra" es la venta más reciente del cliente.
+  const ultimaVentaSelect = {
+    ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { id: true, fechaVenta: true } },
+  } as const;
+  const [mascotas, clientesSinMascota] = await Promise.all([
     prisma.mascota.findMany({
       orderBy: [{ cliente: { nombre: "asc" } }, { cliente: { apellido: "asc" } }, { nombre: "asc" }],
       select: {
@@ -31,21 +35,25 @@ export default async function RemindersPage() {
           select: {
             nombre: true,
             apellido: true,
-            ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { id: true, fechaVenta: true } },
+            ...ultimaVentaSelect,
           },
         },
       },
     }),
-    // Clientes que no aparecen en el listado por no tener mascotas cargadas.
-    prisma.cliente.count({ where: { mascotas: { none: {} } } }),
+    prisma.cliente.findMany({
+      where: { mascotas: { none: {} } },
+      select: { id: true, nombre: true, apellido: true, ...ultimaVentaSelect },
+    }),
   ]);
 
   const activos = mascotas.filter((m) => m.statusReminder === "ACTIVO").length;
   const pausados = mascotas.length - activos;
+  const clientesPendientes = clientesSinMascota.length;
 
-  const filas: FilaReminder[] = mascotas.map((m) => {
+  const filasMascotas: FilaReminder[] = mascotas.map((m) => {
     const ultimaVenta = m.cliente.ventas[0];
     return {
+      key: `m-${m.id}`,
       mascotaId: m.id,
       cliente: `${m.cliente.nombre} ${m.cliente.apellido}`,
       mascota: m.nombre,
@@ -57,6 +65,27 @@ export default async function RemindersPage() {
       statusReminder: m.statusReminder,
     };
   });
+
+  // Clientes sin mascota: sin datos de mascota ni setup/status (se configuran por mascota).
+  const filasClientes: FilaReminder[] = clientesSinMascota.map((c) => {
+    const ultimaVenta = c.ventas[0];
+    return {
+      key: `c-${c.id}`,
+      mascotaId: null,
+      cliente: `${c.nombre} ${c.apellido}`,
+      mascota: null,
+      tipo: null,
+      raza: null,
+      ultimaVentaId: ultimaVenta?.id ?? null,
+      ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
+      setupReminderDias: null,
+      statusReminder: null,
+    };
+  });
+
+  const filas = [...filasMascotas, ...filasClientes].sort(
+    (a, b) => a.cliente.localeCompare(b.cliente, "es") || (a.mascota ?? "").localeCompare(b.mascota ?? "", "es"),
+  );
 
   return (
     <div className="flex h-full flex-col gap-4">

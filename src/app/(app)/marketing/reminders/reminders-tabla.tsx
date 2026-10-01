@@ -6,17 +6,32 @@ import { formatDate } from "@/lib/format";
 import type { StatusReminder } from "@prisma/client";
 import { actualizarSetupReminder, actualizarStatusReminder } from "./actions";
 
-export type FilaReminder = {
-  mascotaId: number;
+type FilaBase = {
+  key: string;
   cliente: string;
-  mascota: string;
-  tipo: string;
   raza: string | null;
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
+};
+
+type FilaMascota = FilaBase & {
+  mascotaId: number;
+  mascota: string;
+  tipo: string;
   setupReminderDias: number;
   statusReminder: StatusReminder;
 };
+
+// Cliente sin mascotas cargadas: sin datos de mascota ni setup/status.
+type FilaClienteSinMascota = FilaBase & {
+  mascotaId: null;
+  mascota: null;
+  tipo: null;
+  setupReminderDias: null;
+  statusReminder: null;
+};
+
+export type FilaReminder = FilaMascota | FilaClienteSinMascota;
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -43,7 +58,43 @@ function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | 
   return new Date(aFecha(hoy).getTime() + (n - diasTranscurridos) * DIA_MS);
 }
 
-function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
+// Última compra, Fecha última compra y Días transcurridos (comunes a ambos tipos de fila).
+function CeldasUltimaCompra({ fila, diasTranscurridos }: { fila: FilaBase; diasTranscurridos: number | null }) {
+  return (
+    <>
+      <td className="px-3 py-2 text-gray-600">
+        {fila.ultimaVentaId ? (
+          <Link href={`/ventas/${fila.ultimaVentaId}/editar`} className="text-blue-600 hover:underline">
+            #{fila.ultimaVentaId}
+          </Link>
+        ) : (
+          "-"
+        )}
+      </td>
+      <td className="px-3 py-2 text-gray-600">
+        {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
+      </td>
+      <td className="px-3 py-2 text-gray-600">{diasTranscurridos ?? "-"}</td>
+    </>
+  );
+}
+
+function FilaClienteSinMascota({ fila, hoy }: { fila: FilaClienteSinMascota; hoy: string }) {
+  return (
+    <tr className="hover:bg-gray-50">
+      <td className="px-3 py-2 font-medium">{fila.cliente}</td>
+      <td className="px-3 py-2 text-gray-400">-</td>
+      <td className="px-3 py-2 text-gray-400">-</td>
+      <td className="px-3 py-2 text-gray-400">-</td>
+      <CeldasUltimaCompra fila={fila} diasTranscurridos={calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy)} />
+      <td className="px-3 py-2 text-gray-400">-</td>
+      <td className="px-3 py-2 text-gray-400">-</td>
+      <td className="px-3 py-2 text-gray-400">-</td>
+    </tr>
+  );
+}
+
+function Fila({ fila, hoy }: { fila: FilaMascota; hoy: string }) {
   const [dias, setDias] = useState(fila.setupReminderDias.toString());
   const [status, setStatus] = useState(fila.statusReminder);
   // Si el status cambia desde el server (p. ej. el switch "Todo Activo/Pausado"), sincronizar el select.
@@ -62,19 +113,7 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
       <td className="px-3 py-2 text-gray-600">{fila.mascota}</td>
       <td className="px-3 py-2 text-gray-600">{fila.tipo}</td>
       <td className="px-3 py-2 text-gray-600">{fila.raza ?? "-"}</td>
-      <td className="px-3 py-2 text-gray-600">
-        {fila.ultimaVentaId ? (
-          <Link href={`/ventas/${fila.ultimaVentaId}/editar`} className="text-blue-600 hover:underline">
-            #{fila.ultimaVentaId}
-          </Link>
-        ) : (
-          "-"
-        )}
-      </td>
-      <td className="px-3 py-2 text-gray-600">
-        {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
-      </td>
-      <td className="px-3 py-2 text-gray-600">{diasTranscurridos ?? "-"}</td>
+      <CeldasUltimaCompra fila={fila} diasTranscurridos={diasTranscurridos} />
       <td className="px-3 py-2">
         <input
           type="number"
@@ -138,12 +177,16 @@ export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: str
         </thead>
         <tbody className="divide-y divide-gray-100">
           {filas.map((f) => (
-            <Fila key={f.mascotaId} fila={f} hoy={hoy} />
+            f.mascotaId === null ? (
+              <FilaClienteSinMascota key={f.key} fila={f} hoy={hoy} />
+            ) : (
+              <Fila key={f.key} fila={f} hoy={hoy} />
+            )
           ))}
           {filas.length === 0 && (
             <tr>
               <td colSpan={10} className="px-3 py-6 text-center text-gray-400">
-                No hay mascotas cargadas todavía.
+                No hay clientes cargados todavía.
               </td>
             </tr>
           )}
