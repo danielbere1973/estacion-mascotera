@@ -5,7 +5,7 @@ import { StatusReminder } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { enviarMailsIndividuales } from "@/lib/mail";
-import { ASUNTO_REMINDER, clientesParaReminder, htmlReminder } from "@/lib/reminders";
+import { asuntoReminder, clientesParaReminder, htmlReminder } from "@/lib/reminders";
 
 // Los reminders se configuran por mascota, o por cliente cuando no tiene mascotas.
 export type DestinoReminder = "mascota" | "cliente";
@@ -137,7 +137,7 @@ export async function enviarReminders(): Promise<{ enviados: number; errores: nu
   const { elegibles, sinEmail } = await clientesParaReminder();
 
   const resultados = await enviarMailsIndividuales(
-    elegibles.map((c) => ({ to: c.email, subject: ASUNTO_REMINDER, html: htmlReminder(c.nombre) })),
+    elegibles.map((c) => ({ to: c.email, subject: asuntoReminder(c.nombre), html: htmlReminder(c.nombre) })),
   );
 
   const eventos = [

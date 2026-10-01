@@ -49,12 +49,30 @@ export async function clientesParaReminder() {
   return { elegibles, sinEmail };
 }
 
-export const ASUNTO_REMINDER = "Tu mascota necesita alimento ?";
+export function asuntoReminder(nombre: string) {
+  return `${nombre}, ¿cómo está tu compañero? 🐾`;
+}
+
+// Banner del encabezado (public/mail/reminder-banner.png). Va con URL absoluta porque
+// los clientes de mail no resuelven rutas relativas; .png queda fuera del middleware de login.
+const BANNER_URL = "https://estacionmascotera.vercel.app/mail/reminder-banner.png";
 
 export function htmlReminder(nombre: string) {
-  return `<div style="font-family: Arial, sans-serif; font-size: 15px; line-height: 1.5; color: #222;">
-<p>Hola ${escaparHtml(nombre)}, esperamos que vos y tu mascota se encuentren muy bien. Desde Estación Mascotera vemos que hace tiempo realizaste tu último pedido por lo que queríamos saber si tu mascota cuenta con alimento, precisas que te repongamos el mismo, algún otro producto o simplemente cualquier asesoramiento que precises, sepas que contas con nosotros.</p>
-<p>&nbsp;</p>
-<p>Podes realizar tu pedido desde nuestro portal <a href="https://www.estacionmascotera.com.ar">www.estacionmascotera.com.ar</a> o bien contactanos por WhatsApp: <a href="https://wa.me/5491173711835">+54 911 7371 1835</a>. También nos podes ubicar en nuestras redes: IG: <a href="https://www.instagram.com/estacion_mascotera_petshop">@estacion_mascotera_petshop</a> y Facebook: Estacion Mascotera</p>
+  const n = escaparHtml(nombre);
+  const link = (href: string, texto: string) =>
+    `<a href="${href}" style="color: #2563eb; text-decoration: underline;">${texto}</a>`;
+  return `<div style="font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #222; max-width: 600px;">
+<img src="${BANNER_URL}" width="600" alt="¡Te extrañamos! Estación Mascotera" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; margin: 0 0 16px;">
+<p>Hola ${n},</p>
+<p>¡Te extrañamos en Estación Mascotera! Esperamos que vos y tu mascota estén muy bien.</p>
+<p>Pasó un tiempito desde tu último pedido y quisimos escribirte para saber cómo andan. ¿Todavía le queda alimento? Si se le está por terminar, avisanos y te lo reponemos, así no tenés que preocuparte por nada.</p>
+<p>Si necesitás otra cosa, como snacks, piedras sanitarias, un juguete nuevo o simplemente un consejo sobre su alimentación o su cuidado, también estamos para ayudarte. Cada mascota es única y nos encanta acompañarte a cuidarla.</p>
+<p>Podés hacer tu pedido como te quede más cómodo:<br>
+🛒 En nuestra web: ${link("https://www.estacionmascotera.com.ar", "www.estacionmascotera.com.ar")}<br>
+💬 Por WhatsApp: ${link("https://wa.me/5491173711835", "+54 911 7371 1835")}</p>
+<p>Y para enterarte de promos y novedades, seguinos en Instagram (${link("https://www.instagram.com/estacion_mascotera_petshop", "@estacion_mascotera_petshop")}) y en Facebook (${link("https://www.facebook.com/share/1D7n34Hxtp/?mibextid=wwXIfr", "Estación Mascotera")}).</p>
+<p>¡Mandale un mimo a tu mascota de nuestra parte!</p>
+<p>Un abrazo,<br>
+El equipo de Estación Mascotera 🐶🐱</p>
 </div>`;
 }
