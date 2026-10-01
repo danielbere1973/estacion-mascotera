@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { depurarLogs } from "./actions";
 
-// Borra los eventos de los últimos NN días, previa confirmación.
+// Borra los eventos con más de NN días de antigüedad, previa confirmación.
 export function DepurarLogs() {
   const [dias, setDias] = useState("");
   const [mensaje, setMensaje] = useState<string | null>(null);
@@ -15,7 +15,7 @@ export function DepurarLogs() {
       setMensaje("Ingresá la cantidad de días (mínimo 1).");
       return;
     }
-    if (!window.confirm(`¿Está seguro de borrar los eventos de los últimos ${n} días?`)) return;
+    if (!window.confirm(`¿Está seguro de borrar los eventos con más de ${n} días de antigüedad?`)) return;
     startTransition(async () => {
       const res = await depurarLogs(n);
       setMensaje(res.error ?? `Se borraron ${res.borrados} eventos.`);
@@ -26,7 +26,7 @@ export function DepurarLogs() {
   return (
     <div className="space-y-1">
       <label htmlFor="dias-depurar" className="text-sm font-medium text-gray-700">
-        Últimos días
+        Más de NN días
       </label>
       <div className="flex items-center gap-2">
         <input
