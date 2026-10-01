@@ -31,9 +31,15 @@ function calcularDiasTranscurridos(ultimaVentaFecha: string | null, hoy: string)
 }
 
 // Próximo reminder = hoy + (setup reminder - días transcurridos).
+// Si pasaron más de 30 días desde la última compra, el 1° del mes siguiente a hoy.
 function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | null) {
+  if (diasTranscurridos === null) return null;
+  if (diasTranscurridos > 30) {
+    const [anio, mes] = hoy.split("-").map(Number);
+    return new Date(Date.UTC(anio, mes, 1, 12)); // `mes` es 1-based, como índice 0-based es el mes siguiente
+  }
   const n = Number.parseInt(dias, 10);
-  if (diasTranscurridos === null || !Number.isFinite(n)) return null;
+  if (!Number.isFinite(n)) return null;
   return new Date(aFecha(hoy).getTime() + (n - diasTranscurridos) * DIA_MS);
 }
 
