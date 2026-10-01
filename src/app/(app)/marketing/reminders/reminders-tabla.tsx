@@ -22,7 +22,7 @@ function aFecha(dia: string) {
   return new Date(`${dia}T12:00:00Z`);
 }
 
-// El último reminder es la fecha de la última venta; próximo = esa fecha + días.
+// Próximo reminder = fecha de la última compra + días.
 function calcularProximo(ultimaVentaFecha: string | null, dias: string) {
   const n = Number.parseInt(dias, 10);
   if (!ultimaVentaFecha || !Number.isFinite(n)) return null;
@@ -83,7 +83,7 @@ export function RemindersTabla({ filas }: { filas: FilaReminder[] }) {
             <th className="px-3 py-2">Tipo</th>
             <th className="px-3 py-2">Raza</th>
             <th className="px-3 py-2">Última compra</th>
-            <th className="px-3 py-2">Último reminder</th>
+            <th className="px-3 py-2">Fecha última compra</th>
             <th className="px-3 py-2">Próximo reminder</th>
             <th className="px-3 py-2">Setup reminder</th>
           </tr>
