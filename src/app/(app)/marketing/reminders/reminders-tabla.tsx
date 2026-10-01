@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { formatDate } from "@/lib/format";
-import { actualizarSetupReminder, actualizarUltimoReminder } from "./actions";
+import { actualizarSetupReminder } from "./actions";
 
 export type FilaReminder = {
   mascotaId: number;
@@ -13,26 +13,26 @@ export type FilaReminder = {
   raza: string | null;
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
-  ultimoReminder: string | null; // YYYY-MM-DD
   setupReminderDias: number | null;
 };
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
-// Próximo = último reminder + días; si todavía no hubo reminder, parte de la
-// fecha de la última compra.
-function calcularProximo(ultimoReminder: string, ultimaVentaFecha: string | null, dias: string) {
-  const base = ultimoReminder || ultimaVentaFecha;
+function aFecha(dia: string) {
+  return new Date(`${dia}T12:00:00Z`);
+}
+
+// El último reminder es la fecha de la última venta; próximo = esa fecha + días.
+function calcularProximo(ultimaVentaFecha: string | null, dias: string) {
   const n = Number.parseInt(dias, 10);
-  if (!base || !Number.isFinite(n)) return null;
-  return new Date(new Date(`${base}T12:00:00Z`).getTime() + n * DIA_MS);
+  if (!ultimaVentaFecha || !Number.isFinite(n)) return null;
+  return new Date(aFecha(ultimaVentaFecha).getTime() + n * DIA_MS);
 }
 
 function Fila({ fila }: { fila: FilaReminder }) {
-  const [ultimo, setUltimo] = useState(fila.ultimoReminder ?? "");
   const [dias, setDias] = useState(fila.setupReminderDias?.toString() ?? "");
   const [pending, startTransition] = useTransition();
-  const proximo = calcularProximo(ultimo, fila.ultimaVentaFecha, dias);
+  const proximo = calcularProximo(fila.ultimaVentaFecha, dias);
 
   return (
     <tr className={`hover:bg-gray-50 ${pending ? "opacity-60" : ""}`}>
@@ -49,16 +49,8 @@ function Fila({ fila }: { fila: FilaReminder }) {
           "-"
         )}
       </td>
-      <td className="px-3 py-2">
-        <input
-          type="date"
-          value={ultimo}
-          onChange={(e) => {
-            setUltimo(e.target.value);
-            startTransition(() => actualizarUltimoReminder(fila.mascotaId, e.target.value));
-          }}
-          className="rounded-md border border-gray-300 px-2 py-1 text-sm"
-        />
+      <td className="px-3 py-2 text-gray-600">
+        {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
       </td>
       <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
       <td className="px-3 py-2">

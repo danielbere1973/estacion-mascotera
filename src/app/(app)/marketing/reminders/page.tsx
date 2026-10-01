@@ -23,7 +23,6 @@ export default async function RemindersPage() {
       nombre: true,
       tipo: true,
       raza: true,
-      ultimoReminder: true,
       setupReminderDias: true,
       cliente: {
         select: {
@@ -45,7 +44,6 @@ export default async function RemindersPage() {
       raza: m.raza,
       ultimaVentaId: ultimaVenta?.id ?? null,
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
-      ultimoReminder: m.ultimoReminder ? m.ultimoReminder.toISOString().slice(0, 10) : null,
       setupReminderDias: m.setupReminderDias,
     };
   });
