@@ -30,11 +30,19 @@ function calcularDiasTranscurridos(ultimaVentaFecha: string | null, hoy: string)
   return Math.round((aFecha(hoy).getTime() - aFecha(ultimaVentaFecha).getTime()) / DIA_MS);
 }
 
+// Próximo reminder = hoy + (setup reminder - días transcurridos).
+function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | null) {
+  const n = Number.parseInt(dias, 10);
+  if (diasTranscurridos === null || !Number.isFinite(n)) return null;
+  return new Date(aFecha(hoy).getTime() + (n - diasTranscurridos) * DIA_MS);
+}
+
 function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
   const [dias, setDias] = useState(fila.setupReminderDias?.toString() ?? "");
   const [status, setStatus] = useState(fila.statusReminder);
   const [pending, startTransition] = useTransition();
   const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
+  const proximo = calcularProximo(hoy, dias, diasTranscurridos);
 
   return (
     <tr className={`hover:bg-gray-50 ${pending ? "opacity-60" : ""}`}>
@@ -70,8 +78,7 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
           className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm"
         />
       </td>
-      {/* Próximo reminder: sin valor por ahora (fórmula a definir). */}
-      <td className="px-3 py-2 text-gray-600">-</td>
+      <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
       <td className="px-3 py-2">
         <select
           value={status}
