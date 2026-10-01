@@ -1,5 +1,4 @@
-import { cookies } from "next/headers";
-import { StatusReminder, TipoMascota } from "@prisma/client";
+import { type StatusReminder, TipoMascota } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { RemindersTabla, type FilaReminder } from "./reminders-tabla";
@@ -22,7 +21,7 @@ export default async function RemindersPage() {
   const ultimaVentaSelect = {
     ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { id: true, fechaVenta: true } },
   } as const;
-  const [mascotas, clientesSinMascota] = await Promise.all([
+  const [mascotas, clientesSinMascota, config] = await Promise.all([
     prisma.mascota.findMany({
       orderBy: [{ cliente: { nombre: "asc" } }, { cliente: { apellido: "asc" } }, { nombre: "asc" }],
       select: {
@@ -52,6 +51,7 @@ export default async function RemindersPage() {
         ...ultimaVentaSelect,
       },
     }),
+    prisma.configReminders.findUnique({ where: { id: 1 } }),
   ]);
 
   const clientesPendientes = clientesSinMascota.length;
@@ -99,13 +99,9 @@ export default async function RemindersPage() {
   const activos = filas.filter((f) => f.statusReminder === "ACTIVO").length;
   const pausados = filas.length - activos;
 
-  // Estado del switch según su último clic (cookie); si nunca se usó, según los datos.
-  const cookieSwitch = (await cookies()).get("reminders-switch-status")?.value;
-  const ultimoClic: StatusReminder = Object.values(StatusReminder).includes(cookieSwitch as StatusReminder)
-    ? (cookieSwitch as StatusReminder)
-    : filas.length > 0 && pausados === 0
-      ? "ACTIVO"
-      : "PAUSADO";
+  // Estado del switch según su último clic (guardado en la base); si nunca se usó, según los datos.
+  const ultimoClic: StatusReminder =
+    config?.switchStatus ?? (filas.length > 0 && pausados === 0 ? "ACTIVO" : "PAUSADO");
 
   return (
     <div className="flex h-full flex-col gap-4">
