@@ -111,7 +111,17 @@ export default async function RemindersPage() {
           <p className="text-sm text-gray-500">
             Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
           </p>
-          <SwitchStatusTodos ultimoClic={ultimoClic} />
+          <div className="flex items-center gap-2">
+            <a
+              href="/marketing/reminders/event-log"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-100"
+            >
+              Event log
+            </a>
+            <SwitchStatusTodos ultimoClic={ultimoClic} />
+          </div>
         </div>
       </div>
       <RemindersTabla filas={filas} hoy={diaArgentina.format(new Date())} />

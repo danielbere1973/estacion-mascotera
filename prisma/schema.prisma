@@ -22,6 +22,7 @@ model Usuario {
   gastosPagados        Gasto[]        @relation("GastoPagadoPor")
   gastos               Gasto[]
   logsActividad        LogActividad[]
+  logsMarketing        LogMarketing[]
   proveedorRestricto   Proveedor?     @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
   ventasCobradas       Venta[]        @relation("VentaCobradaPor")
   ventas               Venta[]
@@ -487,6 +488,19 @@ model PendienteCompraMayorista {
 
   @@index([estado])
   @@index([jobId])
+}
+
+// Event log de Marketing → Reminders: qué hizo cada usuario y con qué resultado.
+model LogMarketing {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @default(now())
+  usuarioId Int
+  accion    String
+  detalle   String?
+  resultado String // "OK" o "Error: <mensaje>"
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@index([fecha])
 }
 
 // Configuración general de Marketing → Reminders (una sola fila, id = 1).
