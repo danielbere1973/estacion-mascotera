@@ -46,7 +46,6 @@ type VentaRow = {
   costoEnvio: string;
   facturado: boolean;
   numeroFactura: string | null;
-  cobrado: boolean;
   cliente: {
     nombre: string;
     apellido: string;
@@ -55,6 +54,7 @@ type VentaRow = {
   };
   detalles: DetalleVenta[];
   costos: { montoCalculado: string }[];
+  pagos: { monto: string }[];
 };
 
 export function VentaExpandibleRow({
@@ -90,6 +90,16 @@ export function VentaExpandibleRow({
   const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
   const pctGanancia = totalAbonado > 0 ? (ganancia / totalAbonado) * 100 : null;
   const pctSobreCosto = costoMercaderia > 0 ? (ganancia / costoMercaderia) * 100 : null;
+
+  const totalPagado = venta.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+  const estadoPago =
+    totalPagado <= 0 ? "Pendiente de pago" : totalPagado >= totalAbonado - 0.01 ? "Cobrado" : "Parcialmente pagado";
+  const estadoPagoClase =
+    estadoPago === "Cobrado"
+      ? "bg-green-100 text-green-700"
+      : estadoPago === "Parcialmente pagado"
+        ? "bg-blue-100 text-blue-700"
+        : "bg-amber-100 text-amber-700";
 
   const docLabel = venta.cliente.cuit ? "CUIT" : venta.cliente.dni ? "DNI" : null;
   const docValue = venta.cliente.cuit ?? venta.cliente.dni ?? null;
@@ -144,15 +154,9 @@ export function VentaExpandibleRow({
           ) : (
             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">No</span>
           )}
-          {venta.cobrado ? (
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-              Cobrado
-            </span>
-          ) : (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-              Pendiente de pago
-            </span>
-          )}
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${estadoPagoClase}`}>
+            {estadoPago}
+          </span>
         </td>
       </tr>
 

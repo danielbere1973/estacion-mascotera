@@ -234,3 +234,125 @@ export async function eliminarVentaCore(ventaId: number, usuarioId: number, tx?:
   if (tx) return ejecutarEliminarVenta(tx, ventaId, usuarioId);
   return prisma.$transaction((t) => ejecutarEliminarVenta(t, ventaId, usuarioId));
 }
+
+export function calcularTotalACobrar(detalles: { cantidad: number; precioVentaUnitario: number; descuentoPorcentaje: number }[], costoEnvio: number) {
+  const totalProductos = detalles.reduce(
+    (acc, d) => acc + d.cantidad * d.precioVentaUnitario * (1 - d.descuentoPorcentaje / 100),
+    0
+  );
+  return totalProductos + costoEnvio;
+}
+
+export type PagoVentaInput = {
+  monto: number;
+  comision?: number;
+  medioPago: string;
+  fechaPago?: Date;
+  fechaAcreditacion?: Date | null;
+  descripcion?: string | null;
+  cobradoPorId?: number | null;
+};
+
+export async function agregarPagoVentaCore(
+  ventaId: number,
+  input: PagoVentaInput,
+  usuarioId: number,
+  tx?: Prisma.TransactionClient
+) {
+  const run = async (t: Prisma.TransactionClient) => {
+    const venta = await t.venta.findUniqueOrThrow({
+      where: { id: ventaId },
+      include: { detalles: true, pagos: true },
+    });
+
+    const totalACobrar = calcularTotalACobrar(
+      venta.detalles.map((d) => ({
+        cantidad: d.cantidad,
+        precioVentaUnitario: Number(d.precioVentaUnitario),
+        descuentoPorcentaje: Number(d.descuentoPorcentaje),
+      })),
+      Number(venta.costoEnvio)
+    );
+    const totalPagado = venta.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+
+    if (input.monto <= 0) throw new Error("El monto del pago debe ser mayor a cero.");
+    if (totalPagado + input.monto > totalACobrar + 0.01) {
+      throw new Error(
+        `El pago excede el total a cobrar. Ya se registraron ${totalPagado.toFixed(2)} de ${totalACobrar.toFixed(2)}.`
+      );
+    }
+
+    const pago = await t.pagoVenta.create({
+      data: {
+        ventaId,
+        monto: input.monto,
+        comision: input.comision ?? 0,
+        medioPago: input.medioPago,
+        fechaPago: input.fechaPago ?? new Date(),
+        fechaAcreditacion: input.fechaAcreditacion ?? null,
+        descripcion: input.descripcion ?? null,
+        cobradoPorId: input.cobradoPorId ?? null,
+      },
+    });
+
+    const nuevoTotalPagado = totalPagado + input.monto;
+    await t.venta.update({
+      where: { id: ventaId },
+      data: {
+        cobrado: nuevoTotalPagado >= totalACobrar - 0.01,
+        cobradoPorId: input.cobradoPorId ?? venta.cobradoPorId,
+        fechaAcreditacion: input.fechaAcreditacion ?? venta.fechaAcreditacion,
+      },
+    });
+
+    await registrarLog(t, {
+      usuarioId,
+      accion: "ACTUALIZAR",
+      entidad: "VENTA",
+      entidadId: ventaId,
+      detalle: `Pago registrado: ${input.monto}`,
+    });
+
+    return pago;
+  };
+
+  if (tx) return run(tx);
+  return prisma.$transaction(run);
+}
+
+export async function eliminarPagoVentaCore(pagoId: number, usuarioId: number, tx?: Prisma.TransactionClient) {
+  const run = async (t: Prisma.TransactionClient) => {
+    const pago = await t.pagoVenta.findUniqueOrThrow({ where: { id: pagoId } });
+    await t.pagoVenta.delete({ where: { id: pagoId } });
+
+    const venta = await t.venta.findUniqueOrThrow({
+      where: { id: pago.ventaId },
+      include: { detalles: true, pagos: true },
+    });
+    const totalACobrar = calcularTotalACobrar(
+      venta.detalles.map((d) => ({
+        cantidad: d.cantidad,
+        precioVentaUnitario: Number(d.precioVentaUnitario),
+        descuentoPorcentaje: Number(d.descuentoPorcentaje),
+      })),
+      Number(venta.costoEnvio)
+    );
+    const totalPagado = venta.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+
+    await t.venta.update({
+      where: { id: pago.ventaId },
+      data: { cobrado: totalPagado >= totalACobrar - 0.01 && totalACobrar > 0 },
+    });
+
+    await registrarLog(t, {
+      usuarioId,
+      accion: "ACTUALIZAR",
+      entidad: "VENTA",
+      entidadId: pago.ventaId,
+      detalle: `Pago eliminado: ${pago.monto}`,
+    });
+  };
+
+  if (tx) return run(tx);
+  return prisma.$transaction(run);
+}

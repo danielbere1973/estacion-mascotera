@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
-import { crearVentaCore, eliminarVentaCore, calcularMontoCosto } from "@/lib/ventas";
+import { crearVentaCore, eliminarVentaCore, calcularMontoCosto, calcularTotalACobrar, agregarPagoVentaCore, eliminarPagoVentaCore } from "@/lib/ventas";
 import {
   registrarPendientesCompra,
   moverOCrearTarjetaCompraMayorista,
@@ -119,6 +119,16 @@ export async function crearVenta(formData: FormData) {
       tx
     );
 
+    if (cobrado) {
+      const totalACobrar = calcularTotalACobrar(items, costoEnvio);
+      await agregarPagoVentaCore(
+        venta.ventaId,
+        { monto: totalACobrar, medioPago, fechaAcreditacion, cobradoPorId },
+        Number(session.user.id),
+        tx
+      );
+    }
+
     const { huboPendienteHym, sinMapeoHym, conMapeoHym } = await registrarPendientesCompra(tx, venta.productosStockNegativo);
 
     const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
@@ -192,10 +202,6 @@ export async function actualizarVenta(formData: FormData) {
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const fechaVentaStr = formData.get("fechaVenta")?.toString().trim();
   const fechaVenta = fechaVentaStr ? new Date(fechaVentaStr) : undefined;
-  const fechaAcreditacionRaw = formData.get("fechaAcreditacion")?.toString().trim() || null;
-  const fechaAcreditacion = fechaAcreditacionRaw ? new Date(fechaAcreditacionRaw) : null;
-  const cobrado = formData.get("cobrado") === "on";
-  const cobradoPorId = cobrado && formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
 
   if (!canalVenta || !medioPago) throw new Error("Faltan datos de la venta.");
 
@@ -368,7 +374,7 @@ export async function actualizarVenta(formData: FormData) {
 
     await tx.venta.update({
       where: { id },
-      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, descripcion, numeroFactura, fechaVenta, fechaAcreditacion, cobrado, cobradoPorId },
+      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, descripcion, numeroFactura, fechaVenta },
     });
 
     await registrarLog(tx, {
@@ -396,4 +402,46 @@ export async function eliminarVenta(formData: FormData) {
   revalidatePath("/ventas");
   revalidatePath("/inventario");
   revalidatePath("/");
+}
+
+export async function agregarPagoVenta(formData: FormData) {
+  const session = await requireAdmin();
+
+  const ventaId = Number(formData.get("ventaId"));
+  if (!ventaId) throw new Error("Venta inválida.");
+
+  const monto = Number(formData.get("monto"));
+  const comision = Number(formData.get("comision") || 0);
+  const medioPago = formData.get("medioPago")?.toString().trim();
+  const fechaPagoRaw = formData.get("fechaPago")?.toString().trim();
+  const fechaPago = fechaPagoRaw ? new Date(fechaPagoRaw) : new Date();
+  const fechaAcreditacionRaw = formData.get("fechaAcreditacion")?.toString().trim() || null;
+  const fechaAcreditacion = fechaAcreditacionRaw ? new Date(fechaAcreditacionRaw) : null;
+  const descripcion = formData.get("descripcion")?.toString().trim() || null;
+  const cobradoPorId = formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
+
+  if (!monto || monto <= 0) throw new Error("Falta el monto del pago.");
+  if (!medioPago) throw new Error("Falta el medio de pago.");
+
+  await agregarPagoVentaCore(
+    ventaId,
+    { monto, comision, medioPago, fechaPago, fechaAcreditacion, descripcion, cobradoPorId },
+    Number(session.user.id)
+  );
+
+  revalidatePath("/ventas");
+  revalidatePath(`/ventas/${ventaId}/editar`);
+}
+
+export async function eliminarPagoVenta(formData: FormData) {
+  const session = await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  const ventaId = Number(formData.get("ventaId"));
+  if (!id) throw new Error("Pago inválido.");
+
+  await eliminarPagoVentaCore(id, Number(session.user.id));
+
+  revalidatePath("/ventas");
+  if (ventaId) revalidatePath(`/ventas/${ventaId}/editar`);
 }
