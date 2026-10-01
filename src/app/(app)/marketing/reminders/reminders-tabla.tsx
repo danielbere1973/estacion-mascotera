@@ -24,13 +24,6 @@ function aFecha(dia: string) {
   return new Date(`${dia}T12:00:00Z`);
 }
 
-// Próximo reminder = fecha de la última compra + días.
-function calcularProximo(ultimaVentaFecha: string | null, dias: string) {
-  const n = Number.parseInt(dias, 10);
-  if (!ultimaVentaFecha || !Number.isFinite(n)) return null;
-  return new Date(aFecha(ultimaVentaFecha).getTime() + n * DIA_MS);
-}
-
 // Días transcurridos = hoy - fecha de la última compra.
 function calcularDiasTranscurridos(ultimaVentaFecha: string | null, hoy: string) {
   if (!ultimaVentaFecha) return null;
@@ -41,7 +34,6 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
   const [dias, setDias] = useState(fila.setupReminderDias?.toString() ?? "");
   const [status, setStatus] = useState(fila.statusReminder);
   const [pending, startTransition] = useTransition();
-  const proximo = calcularProximo(fila.ultimaVentaFecha, dias);
   const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
 
   return (
@@ -78,7 +70,8 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
           className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm"
         />
       </td>
-      <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
+      {/* Próximo reminder: sin valor por ahora (fórmula a definir). */}
+      <td className="px-3 py-2 text-gray-600">-</td>
       <td className="px-3 py-2">
         <select
           value={status}
