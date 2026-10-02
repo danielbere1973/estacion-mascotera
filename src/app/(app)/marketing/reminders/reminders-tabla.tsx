@@ -58,6 +58,15 @@ function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | 
 
 // Texto editable inline (Mascota y Raza): guarda al salir del campo o con Enter.
 // `obligatorio`: si queda vacío vuelve al último valor guardado.
+// Fondo de "Días transcurridos" según el Setup reminder:
+// verde hasta 1/3 del setup, amarillo hasta el setup, rojo si lo supera.
+function colorDiasTranscurridos(diasTranscurridos: number | null, setup: number) {
+  if (diasTranscurridos === null) return "";
+  if (diasTranscurridos * 3 <= setup) return "bg-green-200 text-green-900";
+  if (diasTranscurridos <= setup) return "bg-yellow-200 text-yellow-900";
+  return "bg-red-200 text-red-900";
+}
+
 function TextoEditable({
   guardado,
   obligatorio,
@@ -113,6 +122,9 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
   const [pending, startTransition] = useTransition();
   const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
   const proximo = calcularProximo(hoy, dias, diasTranscurridos);
+  // Usa el setup que se está editando; si no es válido, el último guardado.
+  const setupNum = Number.parseInt(dias, 10);
+  const setup = Number.isFinite(setupNum) && setupNum >= 1 ? setupNum : fila.setupReminderDias;
   const [tipo, setTipo] = useState(fila.tipo);
   const [tipoServer, setTipoServer] = useState(fila.tipo);
   if (fila.tipo !== tipoServer) {
@@ -179,7 +191,15 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
       <td className="px-3 py-2 text-gray-600">
         {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
       </td>
-      <td className="px-3 py-2 text-gray-600">{diasTranscurridos ?? "-"}</td>
+      <td className="px-3 py-2">
+        <span
+          className={`inline-block min-w-10 rounded-md px-2 py-1 text-center ${
+            colorDiasTranscurridos(diasTranscurridos, setup) || "text-gray-600"
+          }`}
+        >
+          {diasTranscurridos ?? "-"}
+        </span>
+      </td>
       <td className="px-3 py-2">
         <input
           type="number"
