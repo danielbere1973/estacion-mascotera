@@ -19,6 +19,7 @@ export type FilaReminder = {
   key: string;
   destino: DestinoReminder;
   id: number; // id de la Mascota o del Cliente, según `destino`
+  clienteId: number;
   cliente: string;
   mascota: string | null;
   tipo: TipoMascota | null;
@@ -29,6 +30,7 @@ export type FilaReminder = {
   ultimaVentaFecha: string | null; // YYYY-MM-DD
   setupReminderDias: number;
   statusReminder: StatusReminder;
+  statusCliente: StatusReminder; // Activo si alguna mascota del cliente lo está (o el cliente sin mascota)
 };
 
 const TIPO_LABEL: Record<TipoMascota, string> = { PERRO: "Perro", GATO: "Gato" };
@@ -120,14 +122,15 @@ function TextoEditable({
   );
 }
 
-function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
+// `mostrarStatus`: el combo de Status va solo en la primera fila de cada cliente y se aplica a todas sus mascotas.
+function Fila({ fila, hoy, mostrarStatus }: { fila: FilaReminder; hoy: string; mostrarStatus: boolean }) {
   const [dias, setDias] = useState(fila.setupReminderDias.toString());
-  const [status, setStatus] = useState(fila.statusReminder);
+  const [status, setStatus] = useState(fila.statusCliente);
   // Si el status cambia desde el server (p. ej. el switch "Todo Activo/Pausado"), sincronizar el select.
-  const [statusServer, setStatusServer] = useState(fila.statusReminder);
-  if (fila.statusReminder !== statusServer) {
-    setStatusServer(fila.statusReminder);
-    setStatus(fila.statusReminder);
+  const [statusServer, setStatusServer] = useState(fila.statusCliente);
+  if (fila.statusCliente !== statusServer) {
+    setStatusServer(fila.statusCliente);
+    setStatus(fila.statusCliente);
   }
   const [pending, startTransition] = useTransition();
   const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
@@ -272,17 +275,19 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
         )}
       </td>
       <td className="px-3 py-2">
-        <select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value as StatusReminder);
-            startTransition(() => actualizarStatusReminder(fila.destino, fila.id, e.target.value));
-          }}
-          className="rounded-md border border-gray-300 px-2 py-1 text-sm"
-        >
-          <option value="ACTIVO">Activo</option>
-          <option value="PAUSADO">Pausado</option>
-        </select>
+        {mostrarStatus && (
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value as StatusReminder);
+              startTransition(() => actualizarStatusReminder(fila.destino, fila.id, e.target.value));
+            }}
+            className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+          >
+            <option value="ACTIVO">Activo</option>
+            <option value="PAUSADO">Pausado</option>
+          </select>
+        )}
       </td>
     </tr>
   );
@@ -318,8 +323,9 @@ export function RemindersTabla({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {filas.map((f) => (
-            <Fila key={f.key} fila={f} hoy={hoy} />
+          {filas.map((f, i) => (
+            // Primera fila visible del cliente (las filas vienen ordenadas por cliente).
+            <Fila key={f.key} fila={f} hoy={hoy} mostrarStatus={filas.findIndex((g) => g.clienteId === f.clienteId) === i} />
           ))}
           {filas.length === 0 && (
             <tr>

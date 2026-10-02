@@ -24,6 +24,7 @@ export default async function RemindersPage() {
       orderBy: [{ cliente: { nombre: "asc" } }, { cliente: { apellido: "asc" } }, { nombre: "asc" }],
       select: {
         id: true,
+        clienteId: true,
         nombre: true,
         tipo: true,
         raza: true,
@@ -62,12 +63,17 @@ export default async function RemindersPage() {
   // Mismo criterio que la columna Mail: email vacío o solo espacios cuenta como sin mail.
   const clientesSinMail = emailsClientes.filter((c) => !c.email?.trim()).length;
 
+  // Status por cliente (un solo combo por cliente): Activo si alguna de sus mascotas lo está,
+  // igual que el criterio de envío.
+  const clientesActivos = new Set(mascotas.filter((m) => m.statusReminder === "ACTIVO").map((m) => m.clienteId));
+
   const filasMascotas: FilaReminder[] = mascotas.map((m) => {
     const ultimaVenta = m.cliente.ventas[0];
     return {
       key: `m-${m.id}`,
       destino: "mascota",
       id: m.id,
+      clienteId: m.clienteId,
       cliente: `${m.cliente.nombre} ${m.cliente.apellido}`,
       mascota: m.nombre,
       tipo: m.tipo,
@@ -78,6 +84,7 @@ export default async function RemindersPage() {
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
       setupReminderDias: m.setupReminderDias,
       statusReminder: m.statusReminder,
+      statusCliente: clientesActivos.has(m.clienteId) ? "ACTIVO" : "PAUSADO",
     };
   });
 
@@ -88,6 +95,7 @@ export default async function RemindersPage() {
       key: `c-${c.id}`,
       destino: "cliente",
       id: c.id,
+      clienteId: c.id,
       cliente: `${c.nombre} ${c.apellido}`,
       mascota: null,
       tipo: null,
@@ -98,6 +106,7 @@ export default async function RemindersPage() {
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
       setupReminderDias: c.setupReminderDias,
       statusReminder: c.statusReminder,
+      statusCliente: c.statusReminder,
     };
   });
 
