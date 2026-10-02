@@ -51,6 +51,15 @@ async function actualizarReminder(
   id: number,
   data: { setupReminderDias?: number; statusReminder?: StatusReminder },
 ) {
+  // El Status es por cliente: se aplica a todas las mascotas del cliente.
+  if (destino === "mascota" && data.statusReminder) {
+    const m = await prisma.mascota.findUnique({ where: { id }, select: { clienteId: true } });
+    if (m) {
+      await prisma.mascota.updateMany({ where: { clienteId: m.clienteId }, data: { statusReminder: data.statusReminder } });
+      revalidatePath("/marketing/reminders");
+      return;
+    }
+  }
   if (destino === "mascota") await prisma.mascota.update({ where: { id }, data });
   else if (destino === "cliente") await prisma.cliente.update({ where: { id }, data });
   revalidatePath("/marketing/reminders");
@@ -89,7 +98,9 @@ export async function actualizarStatusReminder(destino: DestinoReminder, id: num
     return;
   }
   const anterior = actual ? STATUS_LABEL[actual.statusReminder] : "-";
-  const detalle = `${nombre}: ${anterior} → ${STATUS_LABEL[status as StatusReminder]}`;
+  const detalle =
+    `${nombre}: ${anterior} → ${STATUS_LABEL[status as StatusReminder]}` +
+    (destino === "mascota" ? " (todas las mascotas del cliente)" : "");
   try {
     await actualizarReminder(destino, id, { statusReminder: status as StatusReminder });
     await registrarEvento(usuarioId, accion, detalle, "OK");
