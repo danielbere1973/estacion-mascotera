@@ -114,9 +114,10 @@ export default async function RemindersPage() {
     (a, b) => a.cliente.localeCompare(b.cliente, "es") || (a.mascota ?? "").localeCompare(b.mascota ?? "", "es"),
   );
 
-  // Totales sobre todas las filas (mascotas y clientes sin mascota).
-  const activos = filas.filter((f) => f.statusReminder === "ACTIVO").length;
-  const pausados = filas.length - activos;
+  // Por cliente (un cliente con varias mascotas cuenta una vez), según el Status del combo.
+  const statusPorCliente = new Map(filas.map((f) => [f.clienteId, f.statusCliente]));
+  const activos = [...statusPorCliente.values()].filter((s) => s === "ACTIVO").length;
+  const pausados = statusPorCliente.size - activos;
 
   // Estado del switch según su último clic (guardado en la base); si nunca se usó, según los datos.
   const ultimoClic: StatusReminder =
