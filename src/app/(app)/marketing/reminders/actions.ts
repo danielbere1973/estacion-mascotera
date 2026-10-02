@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { StatusReminder } from "@prisma/client";
+import { StatusReminder, TipoMascota } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { enviarMailsIndividuales } from "@/lib/mail";
@@ -97,6 +97,72 @@ export async function actualizarStatusReminder(destino: DestinoReminder, id: num
     await registrarEvento(usuarioId, accion, detalle, mensajeError(e));
     throw e;
   }
+}
+
+// Datos de la mascota editables desde Reminders; se guardan en la tabla Mascota
+// (los mismos que se ven en la ficha del cliente).
+export type CampoMascota = "nombre" | "tipo" | "raza";
+
+const CAMPO_LABEL: Record<CampoMascota, string> = { nombre: "Mascota", tipo: "Tipo", raza: "Raza" };
+const TIPO_LABEL: Record<TipoMascota, string> = { PERRO: "Perro", GATO: "Gato" };
+
+export async function actualizarDatoMascota(id: number, campo: CampoMascota, valor: string) {
+  const session = await requireAdmin();
+  const usuarioId = Number(session.user.id);
+  const accion = `Cambio de ${CAMPO_LABEL[campo]}`;
+  const actual = await prisma.mascota.findUnique({
+    where: { id },
+    select: {
+      clienteId: true,
+      nombre: true,
+      tipo: true,
+      raza: true,
+      cliente: { select: { nombre: true, apellido: true } },
+    },
+  });
+  if (!actual) {
+    await registrarEvento(usuarioId, accion, `mascota #${id}`, "Error: la mascota no existe");
+    return;
+  }
+  const nombre = `${actual.nombre} (${actual.cliente.nombre} ${actual.cliente.apellido})`;
+  const texto = valor.trim();
+
+  let data: { nombre?: string; tipo?: TipoMascota; raza?: string | null };
+  let anterior: string;
+  let nuevo: string;
+  if (campo === "nombre") {
+    if (!texto) {
+      await registrarEvento(usuarioId, accion, `${nombre}: vacío`, "Error: el nombre es obligatorio");
+      return;
+    }
+    data = { nombre: texto };
+    anterior = actual.nombre;
+    nuevo = texto;
+  } else if (campo === "tipo") {
+    if (!Object.values(TipoMascota).includes(texto as TipoMascota)) {
+      await registrarEvento(usuarioId, accion, `${nombre}: "${texto}"`, "Error: tipo inválido");
+      return;
+    }
+    data = { tipo: texto as TipoMascota };
+    anterior = TIPO_LABEL[actual.tipo];
+    nuevo = TIPO_LABEL[texto as TipoMascota];
+  } else {
+    // Raza es opcional: vacío la borra.
+    data = { raza: texto || null };
+    anterior = actual.raza ?? "-";
+    nuevo = texto || "-";
+  }
+
+  const detalle = `${nombre}: ${anterior} → ${nuevo}`;
+  try {
+    await prisma.mascota.update({ where: { id }, data });
+    await registrarEvento(usuarioId, accion, detalle, "OK");
+  } catch (e) {
+    await registrarEvento(usuarioId, accion, detalle, mensajeError(e));
+    throw e;
+  }
+  revalidatePath("/marketing/reminders");
+  revalidatePath(`/clientes/${actual.clienteId}/editar`);
 }
 
 export async function actualizarStatusReminderTodos(status: string) {
