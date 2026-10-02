@@ -11,12 +11,11 @@ function diasEntre(desde: Date, hasta: Date) {
   return Math.round((b - a) / DIA_MS);
 }
 
-export const DIAS_MINIMOS_REMINDER = 30;
-
 export type ClienteReminder = { id: number; nombre: string; apellido: string; email: string; dias: number };
 
 // Clientes a los que corresponde enviar el reminder: Status Activo (en alguna de sus
-// mascotas, o en el cliente si no tiene mascotas) y más de 30 días desde la última compra.
+// mascotas, o en el cliente si no tiene mascotas) y más días desde la última compra que su
+// Setup reminder (si tiene varias mascotas activas, el menor de sus Setup).
 // `sinEmail` son los que cumplen las condiciones pero no tienen email cargado.
 export async function clientesParaReminder() {
   const clientes = await prisma.cliente.findMany({
@@ -27,7 +26,8 @@ export async function clientesParaReminder() {
       apellido: true,
       email: true,
       statusReminder: true,
-      mascotas: { select: { statusReminder: true } },
+      setupReminderDias: true,
+      mascotas: { select: { statusReminder: true, setupReminderDias: true } },
       ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { fechaVenta: true } },
     },
   });
@@ -36,12 +36,17 @@ export async function clientesParaReminder() {
   const elegibles: ClienteReminder[] = [];
   const sinEmail: { id: number; nombre: string; apellido: string }[] = [];
   for (const c of clientes) {
-    const activo =
-      c.mascotas.length > 0 ? c.mascotas.some((m) => m.statusReminder === "ACTIVO") : c.statusReminder === "ACTIVO";
+    // Setup de lo que está activo: las mascotas activas, o el cliente si no tiene mascotas.
+    const setups =
+      c.mascotas.length > 0
+        ? c.mascotas.filter((m) => m.statusReminder === "ACTIVO").map((m) => m.setupReminderDias)
+        : c.statusReminder === "ACTIVO"
+          ? [c.setupReminderDias]
+          : [];
     const ultimaVenta = c.ventas[0];
-    if (!activo || !ultimaVenta) continue;
+    if (setups.length === 0 || !ultimaVenta) continue;
     const dias = diasEntre(ultimaVenta.fechaVenta, hoy);
-    if (dias <= DIAS_MINIMOS_REMINDER) continue;
+    if (dias <= Math.min(...setups)) continue;
     const email = c.email?.trim();
     if (email) elegibles.push({ id: c.id, nombre: c.nombre, apellido: c.apellido, email, dias });
     else sinEmail.push({ id: c.id, nombre: c.nombre, apellido: c.apellido });
