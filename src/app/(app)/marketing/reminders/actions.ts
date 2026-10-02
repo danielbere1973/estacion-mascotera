@@ -165,6 +165,48 @@ export async function actualizarDatoMascota(id: number, campo: CampoMascota, val
   revalidatePath(`/clientes/${actual.clienteId}/editar`);
 }
 
+// Clientes sin mascota: al completar Mascota y Tipo en Reminders se crea la mascota
+// (Edad y Tamaño quedan vacíos). Hereda el Setup y Status que tenía el cliente.
+export async function crearMascotaDesdeReminders(clienteId: number, nombre: string, tipo: string, raza: string) {
+  const session = await requireAdmin();
+  const usuarioId = Number(session.user.id);
+  const accion = "Alta de mascota";
+  const cliente = await prisma.cliente.findUnique({
+    where: { id: clienteId },
+    select: { nombre: true, apellido: true, setupReminderDias: true, statusReminder: true },
+  });
+  const nombreMascota = nombre.trim();
+  const razaMascota = raza.trim() || null;
+  const detalle = `${nombreMascota || "-"} (${cliente ? `${cliente.nombre} ${cliente.apellido}` : `cliente #${clienteId}`})`;
+  if (!cliente) {
+    await registrarEvento(usuarioId, accion, detalle, "Error: el cliente no existe");
+    return;
+  }
+  if (!nombreMascota || !Object.values(TipoMascota).includes(tipo as TipoMascota)) {
+    await registrarEvento(usuarioId, accion, detalle, "Error: faltan Mascota o Tipo");
+    return;
+  }
+  const detalleCompleto = `${detalle}: ${TIPO_LABEL[tipo as TipoMascota]}${razaMascota ? `, ${razaMascota}` : ""}`;
+  try {
+    await prisma.mascota.create({
+      data: {
+        clienteId,
+        nombre: nombreMascota,
+        tipo: tipo as TipoMascota,
+        raza: razaMascota,
+        setupReminderDias: cliente.setupReminderDias,
+        statusReminder: cliente.statusReminder,
+      },
+    });
+    await registrarEvento(usuarioId, accion, detalleCompleto, "OK");
+  } catch (e) {
+    await registrarEvento(usuarioId, accion, detalleCompleto, mensajeError(e));
+    throw e;
+  }
+  revalidatePath("/marketing/reminders");
+  revalidatePath(`/clientes/${clienteId}/editar`);
+}
+
 export async function actualizarStatusReminderTodos(status: string) {
   const session = await requireAdmin();
   const usuarioId = Number(session.user.id);
