@@ -221,6 +221,17 @@ export async function enviarReminders(): Promise<{ enviados: number; errores: nu
     console.error("No se pudieron registrar los envíos de reminders", e);
   }
 
+  // Fecha del último reminder enviado OK, para la columna "Reminder enviado".
+  try {
+    await prisma.cliente.updateMany({
+      where: { id: { in: elegibles.filter((_, i) => resultados[i] === null).map((c) => c.id) } },
+      data: { fechaUltimoReminder: new Date() },
+    });
+  } catch (e) {
+    console.error("No se pudo guardar la fecha del último reminder", e);
+  }
+  revalidatePath("/marketing/reminders");
+
   const enviados = resultados.filter((r) => r === null).length;
   const errores = elegibles.length - enviados;
   await registrarEvento(

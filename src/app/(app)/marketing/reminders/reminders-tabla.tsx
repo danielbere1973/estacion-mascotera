@@ -23,6 +23,7 @@ export type FilaReminder = {
   tipo: TipoMascota | null;
   raza: string | null;
   tieneEmail: boolean; // el cliente tiene email cargado
+  ultimoReminderFecha: string | null; // YYYY-MM-DD, último reminder enviado OK al cliente
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
   setupReminderDias: number;
@@ -65,6 +66,15 @@ function colorDiasTranscurridos(diasTranscurridos: number | null, setup: number)
   if (diasTranscurridos * 3 <= setup) return "bg-green-200 text-green-900";
   if (diasTranscurridos <= setup) return "bg-yellow-200 text-yellow-900";
   return "bg-red-200 text-red-900";
+}
+
+// Reminder enviado: el último mail al cliente se envió entre la última compra y el
+// próximo reminder (inclusive). Si no, cruz (vencido o todavía no enviado).
+function reminderEnviado(fila: FilaReminder, proximo: Date | null) {
+  if (!fila.ultimaVentaFecha || !proximo) return null;
+  const envio = fila.ultimoReminderFecha;
+  const hasta = proximo.toISOString().slice(0, 10);
+  return !!envio && envio >= fila.ultimaVentaFecha && envio <= hasta;
 }
 
 function TextoEditable({
@@ -122,6 +132,7 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
   const [pending, startTransition] = useTransition();
   const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
   const proximo = calcularProximo(hoy, dias, diasTranscurridos);
+  const enviado = reminderEnviado(fila, proximo);
   // Usa el setup que se está editando; si no es válido, el último guardado.
   const setupNum = Number.parseInt(dias, 10);
   const setup = Number.isFinite(setupNum) && setupNum >= 1 ? setupNum : fila.setupReminderDias;
@@ -225,6 +236,19 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
         />
       </td>
       <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
+      <td className="px-3 py-2 text-center">
+        {enviado === null ? (
+          <span className="text-gray-600">-</span>
+        ) : enviado ? (
+          <span className="text-lg font-bold text-green-600" title={`Enviado el ${formatDate(aFecha(fila.ultimoReminderFecha!))}`}>
+            ✓
+          </span>
+        ) : (
+          <span className="text-lg font-bold text-red-600" title="Sin reminder enviado">
+            ✗
+          </span>
+        )}
+      </td>
       <td className="px-3 py-2">
         <select
           value={status}
@@ -259,6 +283,7 @@ export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: str
             <th className="px-3 py-2">Días transcurridos</th>
             <th className="px-3 py-2">Setup reminder</th>
             <th className="px-3 py-2">Próximo reminder</th>
+            <th className="px-3 py-2">Reminder enviado</th>
             <th className="px-3 py-2">Status</th>
           </tr>
         </thead>
@@ -268,7 +293,7 @@ export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: str
           ))}
           {filas.length === 0 && (
             <tr>
-              <td colSpan={11} className="px-3 py-6 text-center text-gray-400">
+              <td colSpan={12} className="px-3 py-6 text-center text-gray-400">
                 No hay clientes cargados todavía.
               </td>
             </tr>
