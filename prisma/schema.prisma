@@ -140,6 +140,7 @@ model Cliente {
   dni                  String?
   setupReminderDias    Int                         @default(30)
   statusReminder       StatusReminder              @default(ACTIVO)
+  fechaUltimoReminder  DateTime? // último mail de reminder enviado OK
   mascotas             Mascota[]
   ordenesDropshipping  OrdenDropshipping[]
   productosRecurrentes ClienteProductoRecurrente[]
