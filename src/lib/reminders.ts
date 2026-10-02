@@ -15,7 +15,8 @@ export type ClienteReminder = { id: number; nombre: string; apellido: string; em
 
 // Clientes a los que corresponde enviar el reminder: Status Activo (en alguna de sus
 // mascotas, o en el cliente si no tiene mascotas) y más días desde la última compra que su
-// Setup reminder (si tiene varias mascotas activas, el menor de sus Setup).
+// Setup reminder (si tiene varias mascotas activas, el menor de sus Setup), sin reminder
+// enviado desde esa última compra.
 // `sinEmail` son los que cumplen las condiciones pero no tienen email cargado.
 export async function clientesParaReminder() {
   const clientes = await prisma.cliente.findMany({
@@ -27,6 +28,7 @@ export async function clientesParaReminder() {
       email: true,
       statusReminder: true,
       setupReminderDias: true,
+      fechaUltimoReminder: true,
       mascotas: { select: { statusReminder: true, setupReminderDias: true } },
       ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { fechaVenta: true } },
     },
@@ -47,6 +49,9 @@ export async function clientesParaReminder() {
     if (setups.length === 0 || !ultimaVenta) continue;
     const dias = diasEntre(ultimaVenta.fechaVenta, hoy);
     if (dias <= Math.min(...setups)) continue;
+    // No se reenvía: si ya recibió un reminder desde su última compra, queda afuera hasta que vuelva a comprar.
+    if (c.fechaUltimoReminder && diaArgentina.format(c.fechaUltimoReminder) >= diaArgentina.format(ultimaVenta.fechaVenta))
+      continue;
     const email = c.email?.trim();
     if (email) elegibles.push({ id: c.id, nombre: c.nombre, apellido: c.apellido, email, dias });
     else sinEmail.push({ id: c.id, nombre: c.nombre, apellido: c.apellido });

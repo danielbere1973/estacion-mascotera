@@ -69,11 +69,13 @@ function colorDiasTranscurridos(diasTranscurridos: number | null, setup: number)
   return "bg-red-200 text-red-900";
 }
 
-// Reminder enviado: al cliente se le envió un reminder hasta el próximo reminder
-// (inclusive); sin próximo reminder, alcanza con que se le haya enviado. Si no, cruz.
+// Reminder enviado: al cliente se le envió un reminder desde su última compra (mismo criterio
+// que usa "Enviar reminders" para no reenviar) y hasta el próximo reminder, inclusive.
+// Sin compras, alcanza con que se le haya enviado. Si no, cruz.
 function reminderEnviado(fila: FilaReminder, proximo: Date | null) {
   const envio = fila.ultimoReminderFecha;
   if (!envio) return false;
+  if (fila.ultimaVentaFecha && envio < fila.ultimaVentaFecha) return false;
   return !proximo || envio <= proximo.toISOString().slice(0, 10);
 }
 
