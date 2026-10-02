@@ -1,15 +1,10 @@
-import { type StatusReminder, TipoMascota } from "@prisma/client";
+import type { StatusReminder } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { RemindersTabla, type FilaReminder } from "./reminders-tabla";
 import { SwitchStatusTodos } from "./switch-status-todos";
 import { EnviarReminders } from "./enviar-reminders";
 import { clientesParaReminder } from "@/lib/reminders";
-
-const TIPO_LABEL: Record<TipoMascota, string> = {
-  PERRO: "Perro",
-  GATO: "Gato",
-};
 
 // Día calendario en Argentina (YYYY-MM-DD), para que una venta de noche no
 // caiga en el día siguiente por estar guardada en UTC.
@@ -67,7 +62,7 @@ export default async function RemindersPage() {
       id: m.id,
       cliente: `${m.cliente.nombre} ${m.cliente.apellido}`,
       mascota: m.nombre,
-      tipo: TIPO_LABEL[m.tipo],
+      tipo: m.tipo,
       raza: m.raza,
       ultimaVentaId: ultimaVenta?.id ?? null,
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
