@@ -248,6 +248,43 @@ export async function actualizarStatusReminderTodos(status: string) {
   revalidatePath("/marketing/reminders");
 }
 
+// Force Mail: envía el reminder a un cliente sin aplicar ninguna regla (Status, Setup ni
+// envíos previos). Queda en el Event log y cuenta como reminder enviado.
+export async function enviarReminderForzado(clienteId: number): Promise<{ error?: string }> {
+  const session = await requireAdmin();
+  const usuarioId = Number(session.user.id);
+  const accion = "Envío de reminder (Force Mail)";
+  const c = await prisma.cliente.findUnique({
+    where: { id: clienteId },
+    select: { nombre: true, apellido: true, email: true },
+  });
+  if (!c) {
+    await registrarEvento(usuarioId, accion, `cliente #${clienteId}`, "Error: el cliente no existe");
+    return { error: "El cliente no existe." };
+  }
+  const email = c.email?.trim();
+  if (!email) {
+    await registrarEvento(usuarioId, accion, `${c.nombre} ${c.apellido}`, "Error: el cliente no tiene email");
+    return { error: "El cliente no tiene email." };
+  }
+  const detalle = `${c.nombre} ${c.apellido} <${email}>`;
+  const [error] = await enviarMailsIndividuales([
+    { to: email, subject: asuntoReminder(c.nombre), html: htmlReminder(c.nombre) },
+  ]);
+  if (error) {
+    await registrarEvento(usuarioId, accion, detalle, `Error: ${error}`);
+    return { error };
+  }
+  try {
+    await prisma.cliente.update({ where: { id: clienteId }, data: { fechaUltimoReminder: new Date() } });
+  } catch (e) {
+    console.error("No se pudo guardar la fecha del último reminder", e);
+  }
+  await registrarEvento(usuarioId, accion, detalle, "OK");
+  revalidatePath("/marketing/reminders");
+  return {};
+}
+
 // Envía el mail de reminder, uno por cliente, a los que cumplen las condiciones
 // (Status Activo y más días desde la última compra que su Setup reminder). Cada envío queda en el Event log.
 export async function enviarReminders(): Promise<{ enviados: number; errores: number; sinEmail: number }> {
