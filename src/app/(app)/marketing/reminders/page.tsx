@@ -18,7 +18,7 @@ export default async function RemindersPage() {
   const ultimaVentaSelect = {
     ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { id: true, fechaVenta: true } },
   } as const;
-  const [mascotas, clientesSinMascota, config, paraReminder] = await Promise.all([
+  const [mascotas, clientesSinMascota, config, paraReminder, emailsClientes] = await Promise.all([
     prisma.mascota.findMany({
       orderBy: [{ cliente: { nombre: "asc" } }, { cliente: { apellido: "asc" } }, { nombre: "asc" }],
       select: {
@@ -52,9 +52,12 @@ export default async function RemindersPage() {
     }),
     prisma.configReminders.findUnique({ where: { id: 1 } }),
     clientesParaReminder(),
+    prisma.cliente.findMany({ select: { email: true } }),
   ]);
 
   const clientesPendientes = clientesSinMascota.length;
+  // Mismo criterio que la columna Mail: email vacío o solo espacios cuenta como sin mail.
+  const clientesSinMail = emailsClientes.filter((c) => !c.email?.trim()).length;
 
   const filasMascotas: FilaReminder[] = mascotas.map((m) => {
     const ultimaVenta = m.cliente.ventas[0];
@@ -111,7 +114,8 @@ export default async function RemindersPage() {
         <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
         <div className="mt-1 flex items-center justify-between gap-4">
           <p className="text-sm text-gray-500">
-            Total Reminders: Activos {activos} / Pausados: {pausados} / Clientes/Mascotas pendientes: {clientesPendientes}
+            Total Reminders: Activos {activos} -- Pausados: {pausados} -- Clientes/Mascotas pendientes:{" "}
+            {clientesPendientes} -- Clientes sin mail: {clientesSinMail}
           </p>
           <div className="flex items-start gap-2">
             <EnviarReminders cantidad={paraReminder.elegibles.length} sinEmail={paraReminder.sinEmail.length} />
