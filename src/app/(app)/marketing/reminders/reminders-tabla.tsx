@@ -9,6 +9,7 @@ import {
   actualizarSetupReminder,
   actualizarStatusReminder,
   crearMascotaDesdeReminders,
+  enviarReminderForzado,
   type CampoMascota,
   type DestinoReminder,
 } from "./actions";
@@ -289,7 +290,40 @@ function Fila({ fila, hoy, mostrarStatus }: { fila: FilaReminder; hoy: string; m
           </select>
         )}
       </td>
+      <td className="px-3 py-2 text-center">
+        {mostrarStatus && <ForceMail fila={fila} />}
+      </td>
     </tr>
+  );
+}
+
+// Force Mail: envía el reminder al cliente ignorando todas las reglas (previa confirmación).
+function ForceMail({ fila }: { fila: FilaReminder }) {
+  const [pending, startTransition] = useTransition();
+  const enviar = () => {
+    if (!window.confirm(`¿Enviar el mail de reminder a ${fila.cliente} ahora, sin aplicar ninguna regla?`)) return;
+    startTransition(async () => {
+      const r = await enviarReminderForzado(fila.clienteId);
+      window.alert(r.error ? `No se pudo enviar: ${r.error}` : `Reminder enviado a ${fila.cliente}.`);
+    });
+  };
+  return (
+    <button
+      type="button"
+      onClick={enviar}
+      disabled={pending || !fila.tieneEmail}
+      title={fila.tieneEmail ? "Enviar reminder ahora (Force Mail)" : "El cliente no tiene email"}
+      aria-label="Force Mail"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-600 text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+    >
+      {pending ? (
+        <span className="text-xs">…</span>
+      ) : (
+        <svg viewBox="0 0 24 24" className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+          <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z" />
+        </svg>
+      )}
+    </button>
   );
 }
 
@@ -320,6 +354,7 @@ export function RemindersTabla({
             <th className="px-3 py-2">Próximo reminder</th>
             <th className="px-3 py-2">Reminder enviado</th>
             <th className="px-3 py-2">Status</th>
+            <th className="px-3 py-2">Force Mail</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -329,7 +364,7 @@ export function RemindersTabla({
           ))}
           {filas.length === 0 && (
             <tr>
-              <td colSpan={12} className="px-3 py-6 text-center text-gray-400">
+              <td colSpan={13} className="px-3 py-6 text-center text-gray-400">
                 {mensajeVacio}
               </td>
             </tr>
