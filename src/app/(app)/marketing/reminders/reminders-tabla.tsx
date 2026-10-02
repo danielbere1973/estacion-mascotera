@@ -68,13 +68,12 @@ function colorDiasTranscurridos(diasTranscurridos: number | null, setup: number)
   return "bg-red-200 text-red-900";
 }
 
-// Reminder enviado: el último mail al cliente se envió entre la última compra y el
-// próximo reminder (inclusive). Si no, cruz (vencido o todavía no enviado).
+// Reminder enviado: al cliente se le envió un reminder hasta el próximo reminder
+// (inclusive); sin próximo reminder, alcanza con que se le haya enviado. Si no, cruz.
 function reminderEnviado(fila: FilaReminder, proximo: Date | null) {
-  if (!fila.ultimaVentaFecha || !proximo) return null;
   const envio = fila.ultimoReminderFecha;
-  const hasta = proximo.toISOString().slice(0, 10);
-  return !!envio && envio >= fila.ultimaVentaFecha && envio <= hasta;
+  if (!envio) return false;
+  return !proximo || envio <= proximo.toISOString().slice(0, 10);
 }
 
 function TextoEditable({
@@ -237,9 +236,7 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
       </td>
       <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
       <td className="px-3 py-2 text-center">
-        {enviado === null ? (
-          <span className="text-gray-600">-</span>
-        ) : enviado ? (
+        {enviado ? (
           <span className="text-lg font-bold text-green-600" title={`Enviado el ${formatDate(aFecha(fila.ultimoReminderFecha!))}`}>
             ✓
           </span>
