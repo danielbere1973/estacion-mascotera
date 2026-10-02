@@ -3,14 +3,14 @@
 import { useState, useTransition } from "react";
 import { enviarReminders } from "./actions";
 
-// Envía el mail de reminder a los clientes con Status Activo y más de 30 días desde la última compra.
+// Envía el mail de reminder a los clientes con Status Activo y más días desde la última compra que su Setup reminder.
 export function EnviarReminders({ cantidad, sinEmail }: { cantidad: number; sinEmail: number }) {
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const enviar = () => {
     if (cantidad === 0) {
-      setMensaje("No hay clientes que cumplan las condiciones (Activo y más de 30 días).");
+      setMensaje("No hay clientes que cumplan las condiciones (Activo y días transcurridos mayores al Setup reminder).");
       return;
     }
     const aviso = sinEmail > 0 ? `\n(${sinEmail} clientes más cumplen las condiciones pero no tienen email.)` : "";
@@ -32,7 +32,7 @@ export function EnviarReminders({ cantidad, sinEmail }: { cantidad: number; sinE
         type="button"
         onClick={enviar}
         disabled={pending}
-        title="Status Activo y más de 30 días desde la última compra"
+        title="Status Activo y días transcurridos mayores al Setup reminder"
         className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
       >
         {pending ? "Enviando…" : `Enviar reminders (${cantidad})`}

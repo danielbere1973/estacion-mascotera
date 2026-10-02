@@ -249,7 +249,7 @@ export async function actualizarStatusReminderTodos(status: string) {
 }
 
 // Envía el mail de reminder, uno por cliente, a los que cumplen las condiciones
-// (Status Activo y más de 30 días desde la última compra). Cada envío queda en el Event log.
+// (Status Activo y más días desde la última compra que su Setup reminder). Cada envío queda en el Event log.
 export async function enviarReminders(): Promise<{ enviados: number; errores: number; sinEmail: number }> {
   const session = await requireAdmin();
   const usuarioId = Number(session.user.id);
