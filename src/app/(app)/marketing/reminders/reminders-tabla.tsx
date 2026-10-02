@@ -22,6 +22,7 @@ export type FilaReminder = {
   mascota: string | null;
   tipo: TipoMascota | null;
   raza: string | null;
+  tieneEmail: boolean; // el cliente tiene email cargado
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
   setupReminderDias: number;
@@ -160,6 +161,7 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
           "-"
         )}
       </td>
+      <td className="px-3 py-2 text-gray-600">{fila.tieneEmail ? "SI" : "NO"}</td>
       <td className="px-3 py-2 text-gray-600">
         {fila.ultimaVentaId ? (
           <Link
@@ -231,6 +233,7 @@ export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: str
             <th className="px-3 py-2">Mascota</th>
             <th className="px-3 py-2">Tipo</th>
             <th className="px-3 py-2">Raza</th>
+            <th className="px-3 py-2">Mail</th>
             <th className="px-3 py-2">Última compra</th>
             <th className="px-3 py-2">Fecha última compra</th>
             <th className="px-3 py-2">Días transcurridos</th>
@@ -245,7 +248,7 @@ export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: str
           ))}
           {filas.length === 0 && (
             <tr>
-              <td colSpan={10} className="px-3 py-6 text-center text-gray-400">
+              <td colSpan={11} className="px-3 py-6 text-center text-gray-400">
                 No hay clientes cargados todavía.
               </td>
             </tr>
