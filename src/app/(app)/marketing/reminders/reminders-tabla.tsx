@@ -48,16 +48,14 @@ function calcularDiasTranscurridos(ultimaVentaFecha: string | null, hoy: string)
 }
 
 // Próximo reminder = hoy + (setup reminder - días transcurridos).
-// Si pasaron más de 30 días desde la última compra, el 1° del mes siguiente a hoy.
-function calcularProximo(hoy: string, dias: string, diasTranscurridos: number | null) {
+// Si los días transcurridos superan el Setup reminder, el 1° del mes siguiente a hoy.
+function calcularProximo(hoy: string, setup: number, diasTranscurridos: number | null) {
   if (diasTranscurridos === null) return null;
-  if (diasTranscurridos > 30) {
+  if (diasTranscurridos > setup) {
     const [anio, mes] = hoy.split("-").map(Number);
     return new Date(Date.UTC(anio, mes, 1, 12)); // `mes` es 1-based, como índice 0-based es el mes siguiente
   }
-  const n = Number.parseInt(dias, 10);
-  if (!Number.isFinite(n)) return null;
-  return new Date(aFecha(hoy).getTime() + (n - diasTranscurridos) * DIA_MS);
+  return new Date(aFecha(hoy).getTime() + (setup - diasTranscurridos) * DIA_MS);
 }
 
 // Texto editable inline (Mascota y Raza): guarda al salir del campo o con Enter.
@@ -134,11 +132,11 @@ function Fila({ fila, hoy, mostrarStatus }: { fila: FilaReminder; hoy: string; m
   }
   const [pending, startTransition] = useTransition();
   const diasTranscurridos = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
-  const proximo = calcularProximo(hoy, dias, diasTranscurridos);
-  const enviado = reminderEnviado(fila, proximo);
   // Usa el setup que se está editando; si no es válido, el último guardado.
   const setupNum = Number.parseInt(dias, 10);
   const setup = Number.isFinite(setupNum) && setupNum >= 1 ? setupNum : fila.setupReminderDias;
+  const proximo = calcularProximo(hoy, setup, diasTranscurridos);
+  const enviado = reminderEnviado(fila, proximo);
   const [tipo, setTipo] = useState(fila.tipo);
   const [tipoServer, setTipoServer] = useState(fila.tipo);
   if (fila.tipo !== tipoServer) {
