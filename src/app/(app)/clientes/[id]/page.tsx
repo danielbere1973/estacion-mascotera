@@ -86,8 +86,8 @@ export default async function ClienteHistorialPage({
                   {m.tipo === "PERRO" ? "Perro" : "Gato"}
                   {m.raza ? ` · ${m.raza}` : ""}
                   {" · "}
-                  {m.edad === "<1" ? "<1 año" : `${m.edad} ${m.edad === "1" ? "año" : "años"}`}
-                  {" · "}{TAMANIO_LABELS[m.tamanio]}
+                  {!m.edad ? "Edad -" : m.edad === "<1" ? "<1 año" : `${m.edad} ${m.edad === "1" ? "año" : "años"}`}
+                  {" · "}{m.tamanio ? TAMANIO_LABELS[m.tamanio] : "Tamaño -"}
                 </span>
                 {m.condicionesEspeciales && (
                   <div className="text-xs text-orange-600 mt-0.5">{m.condicionesEspeciales}</div>

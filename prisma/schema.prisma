@@ -154,8 +154,8 @@ model Mascota {
   clienteId             Int
   tipo                  TipoMascota
   nombre                String
-  edad                  String
-  tamanio               TamanioMascota
+  edad                  String? // opcional: las mascotas creadas desde Reminders no lo tienen
+  tamanio               TamanioMascota?
   raza                  String?
   condicionesEspeciales String?
   setupReminderDias     Int            @default(30)

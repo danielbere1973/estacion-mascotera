@@ -8,6 +8,7 @@ import {
   actualizarDatoMascota,
   actualizarSetupReminder,
   actualizarStatusReminder,
+  crearMascotaDesdeReminders,
   type CampoMascota,
   type DestinoReminder,
 } from "./actions";
@@ -145,6 +146,18 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
   const editarMascota = (campo: CampoMascota, valor: string) =>
     startTransition(() => actualizarDatoMascota(fila.id, campo, valor));
   const esMascota = fila.destino === "mascota";
+  // Cliente sin mascota: lo cargado queda en borrador hasta tener Mascota y Tipo; ahí se crea la mascota.
+  const [borrador, setBorrador] = useState<{ nombre: string; tipo: TipoMascota | ""; raza: string }>({
+    nombre: "",
+    tipo: "",
+    raza: "",
+  });
+  const editarBorrador = (cambio: Partial<typeof borrador>) => {
+    const b = { ...borrador, ...cambio };
+    setBorrador(b);
+    if (b.nombre && b.tipo) startTransition(() => crearMascotaDesdeReminders(fila.id, b.nombre, b.tipo, b.raza));
+  };
+  const ayudaBorrador = "Completá Mascota y Tipo para crear la mascota";
 
   return (
     <tr className={`hover:bg-gray-50 ${pending ? "opacity-60" : ""}`}>
@@ -153,7 +166,7 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
         {esMascota ? (
           <TextoEditable guardado={fila.mascota ?? ""} obligatorio onGuardar={(v) => editarMascota("nombre", v)} />
         ) : (
-          "-"
+          <TextoEditable guardado={borrador.nombre} onGuardar={(v) => editarBorrador({ nombre: v })} />
         )}
       </td>
       <td className="px-3 py-2 text-gray-600">
@@ -173,14 +186,26 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
             ))}
           </select>
         ) : (
-          "-"
+          <select
+            value={borrador.tipo}
+            onChange={(e) => editarBorrador({ tipo: e.target.value as TipoMascota | "" })}
+            title={ayudaBorrador}
+            className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+          >
+            <option value="">-</option>
+            {Object.entries(TIPO_LABEL).map(([valor, label]) => (
+              <option key={valor} value={valor}>
+                {label}
+              </option>
+            ))}
+          </select>
         )}
       </td>
       <td className="px-3 py-2 text-gray-600">
         {esMascota ? (
           <TextoEditable guardado={fila.raza ?? ""} onGuardar={(v) => editarMascota("raza", v)} />
         ) : (
-          "-"
+          <TextoEditable guardado={borrador.raza} onGuardar={(v) => editarBorrador({ raza: v })} />
         )}
       </td>
       <td className="px-3 py-2 text-gray-600">{fila.tieneEmail ? "SI" : "NO"}</td>
