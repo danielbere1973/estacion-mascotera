@@ -1,7 +1,8 @@
 import type { StatusReminder } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
-import { RemindersTabla, type FilaReminder } from "./reminders-tabla";
+import type { FilaReminder } from "./reminders-tabla";
+import { RemindersVista } from "./reminders-vista";
 import { SwitchStatusTodos } from "./switch-status-todos";
 import { EnviarReminders } from "./enviar-reminders";
 import { clientesParaReminder } from "@/lib/reminders";
@@ -114,14 +115,16 @@ export default async function RemindersPage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
-        <div className="mt-1 flex items-center justify-between gap-4">
+      <RemindersVista
+        titulo={<h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>}
+        subtitulo={
           <p className="text-sm text-gray-500">
             Total Reminders: Activos {activos} -- Pausados: {pausados} -- Clientes/Mascotas pendientes:{" "}
             {clientesPendientes} -- Clientes sin mail: {clientesSinMail}
           </p>
-          <div className="flex items-start gap-2">
+        }
+        acciones={
+          <>
             <EnviarReminders cantidad={paraReminder.elegibles.length} sinEmail={paraReminder.sinEmail.length} />
             <a
               href="/marketing/reminders/event-log"
@@ -132,10 +135,11 @@ export default async function RemindersPage() {
               Event log
             </a>
             <SwitchStatusTodos ultimoClic={ultimoClic} />
-          </div>
-        </div>
-      </div>
-      <RemindersTabla filas={filas} hoy={diaArgentina.format(new Date())} />
+          </>
+        }
+        filas={filas}
+        hoy={diaArgentina.format(new Date())}
+      />
     </div>
   );
 }

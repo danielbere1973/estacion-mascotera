@@ -264,7 +264,15 @@ function Fila({ fila, hoy }: { fila: FilaReminder; hoy: string }) {
 }
 
 // `hoy` (YYYY-MM-DD, hora Argentina) viene del server para que coincida con el render del cliente.
-export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: string }) {
+export function RemindersTabla({
+  filas,
+  hoy,
+  mensajeVacio = "No hay clientes cargados todavía.",
+}: {
+  filas: FilaReminder[];
+  hoy: string;
+  mensajeVacio?: string;
+}) {
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
       <table className="w-full text-sm">
@@ -291,7 +299,7 @@ export function RemindersTabla({ filas, hoy }: { filas: FilaReminder[]; hoy: str
           {filas.length === 0 && (
             <tr>
               <td colSpan={12} className="px-3 py-6 text-center text-gray-400">
-                No hay clientes cargados todavía.
+                {mensajeVacio}
               </td>
             </tr>
           )}
