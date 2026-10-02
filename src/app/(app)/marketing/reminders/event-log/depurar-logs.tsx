@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { depurarLogs } from "./actions";
 
+const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+
 // Borra los eventos con más de NN días de antigüedad, previa confirmación.
 export function DepurarLogs() {
   const [dias, setDias] = useState("");
@@ -15,7 +17,17 @@ export function DepurarLogs() {
       setMensaje("Ingresá la cantidad de días (mínimo 1).");
       return;
     }
-    if (!window.confirm(`¿Está seguro de borrar los eventos con más de ${n} días de antigüedad?`)) return;
+    // Se conservan los últimos `n` días contando hoy: se borra todo lo anterior a `desde`.
+    const [anio, mes, dia] = diaArgentina.format(new Date()).split("-").map(Number);
+    const desde = new Date(Date.UTC(anio, mes - 1, dia - (n - 1), 12));
+    const fechaDesde = desde.toLocaleDateString("es-AR", { timeZone: "UTC" });
+    const aviso =
+      `Se van a BORRAR todos los eventos anteriores al ${fechaDesde}.\n` +
+      `Solo se conservan los de los últimos ${n} ${n === 1 ? "día (solo hoy)" : "días, contando hoy"}.\n\n` +
+      "IMPORTANTE: los eventos borrados solo se pueden recuperar dentro de las 6 horas posteriores al " +
+      "borrado (restaurando la base en Neon). Pasado ese plazo se pierden definitivamente.\n\n" +
+      "¿Confirmás el borrado?";
+    if (!window.confirm(aviso)) return;
     startTransition(async () => {
       const res = await depurarLogs(n);
       setMensaje(res.error ?? `Se borraron ${res.borrados} eventos.`);
