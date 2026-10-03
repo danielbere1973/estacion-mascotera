@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { parsearCSV, corregirEncoding } from "@/lib/csv";
+import { prisma } from "@/lib/prisma";
 
 type VarianteTN = {
   id: number;
@@ -143,6 +144,9 @@ export async function calcularCambiosHym(
     if (key && skuInterno) indiceCodigoHym.set(key, skuInterno);
   }
 
+  const productosDb = await prisma.producto.findMany({ select: { skuInterno: true, margenPorcentaje: true } });
+  const margenPorSkuInterno = new Map(productosDb.map((p) => [p.skuInterno.toUpperCase(), Number(p.margenPorcentaje)]));
+
   const cambios: FilaCambioHym[] = [];
   const excluidos: FilaCambioHym[] = [];
   const sinResolver: FilaSinResolver[] = [];
@@ -209,12 +213,16 @@ export async function calcularCambiosHym(
       accion = "SIN PRECIO VÁLIDO EN CSV - revisar";
       esCasoInvalido = true;
     } else {
+      const margen = margenPorSkuInterno.get(skuInterno.toUpperCase()) ?? 30;
+      const coefPromo = 1 + margen / 100;
+      const coefLista = coefPromo / 0.9;
+
       if (teniaPromo) {
-        nuevoPrice = redondearArriba(precioHym * 1.4444);
-        nuevoPromo = redondearArriba(precioHym * 1.3);
+        nuevoPrice = redondearArriba(precioHym * coefLista);
+        nuevoPromo = redondearArriba(precioHym * coefPromo);
         precioYPromo++;
       } else {
-        nuevoPrice = redondearArriba(precioHym * 1.3);
+        nuevoPrice = redondearArriba(precioHym * coefPromo);
         soloPrecios++;
       }
 
