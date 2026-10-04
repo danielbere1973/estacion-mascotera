@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { corregirEncoding, parsearCSV, parsearPrecio } from "@/lib/csv";
-import { calcularMargenPorPeso } from "@/lib/margen-productos";
+import { calcularMargenPorPeso, calificaParaMargenPorPeso } from "@/lib/margen-productos";
 
 // Lógica compartida para importar una lista de precios de mayorista (CSV o
 // .xlsx) y actualizar HistorialStockMayorista + costos de Producto (cuando el
@@ -151,7 +151,7 @@ export async function importarCostosMayoristaCore(
       sku: true,
       codigoHym: true,
       productoId: true,
-      producto: { select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true } },
+      producto: { select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true, unidadMedida: true, contenido: true } },
     },
   });
   const productosPorSku = new Map(
@@ -173,7 +173,7 @@ export async function importarCostosMayoristaCore(
       ? (
           await prisma.producto.findMany({
             where: { skuInterno: { in: skusInternoManualesUnicos } },
-            select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true },
+            select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true, unidadMedida: true, contenido: true },
           })
         ).map((p) => [p.skuInterno, p])
       : []
@@ -267,10 +267,18 @@ export async function importarCostosMayoristaCore(
 
     if (producto) {
       if (importandoHym) {
-        const precioVenta = precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
+        const califica = calificaParaMargenPorPeso({
+          nombre: producto.nombre,
+          unidadMedida: producto.unidadMedida,
+          contenido: Number(producto.contenido),
+        });
+        const margenActualizado = califica
+          ? calcularMargenPorPeso({ nombre: producto.nombre, unidadMedida: producto.unidadMedida, contenido: Number(producto.contenido), costo: precioCosto })
+          : Number(producto.margenPorcentaje);
+        const precioVenta = precioCosto * (1 + margenActualizado / 100);
         await prisma.producto.update({
           where: { id: producto.id },
-          data: { precioCostoUnitario: precioCosto, precioVenta },
+          data: { precioCostoUnitario: precioCosto, margenPorcentaje: margenActualizado, precioVenta },
         });
       }
       actualizados++;
@@ -291,7 +299,7 @@ export async function importarCostosMayoristaCore(
       const tamanioParseado = tamanios ? parsearTamanio(tamanios) : null;
       const unidadMedidaNueva = (tamanioParseado?.unidad ?? "KILOGRAMOS") as "KILOGRAMOS" | "GRAMOS" | "LITROS" | "MILILITROS" | "UNIDAD";
       const contenidoNuevo = tamanioParseado?.contenido ?? 1;
-      const margenNuevo = calcularMargenPorPeso({ nombre: nombreCompleto, unidadMedida: unidadMedidaNueva, contenido: contenidoNuevo });
+      const margenNuevo = calcularMargenPorPeso({ nombre: nombreCompleto, unidadMedida: unidadMedidaNueva, contenido: contenidoNuevo, costo: precioCosto });
       producto = await prisma.$transaction(async (tx) => {
         const skuInternoAuto = await siguienteSkuInterno(tx);
         return tx.producto.create({
