@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { formatDate } from "@/lib/format";
 import type { StatusReminder, TipoMascota } from "@prisma/client";
 import {
@@ -327,6 +327,92 @@ function ForceMail({ fila }: { fila: FilaReminder }) {
   );
 }
 
+type Columna =
+  | "cliente"
+  | "mascota"
+  | "tipo"
+  | "raza"
+  | "mail"
+  | "ultimaCompra"
+  | "fechaUltimaCompra"
+  | "diasTranscurridos"
+  | "setup"
+  | "proximo"
+  | "enviado"
+  | "status";
+
+const COLUMNAS: { label: string; columna?: Columna }[] = [
+  { label: "Cliente", columna: "cliente" },
+  { label: "Mascota", columna: "mascota" },
+  { label: "Tipo", columna: "tipo" },
+  { label: "Raza", columna: "raza" },
+  { label: "Mail", columna: "mail" },
+  { label: "Última compra", columna: "ultimaCompra" },
+  { label: "Fecha última compra", columna: "fechaUltimaCompra" },
+  { label: "Días transcurridos", columna: "diasTranscurridos" },
+  { label: "Setup reminder", columna: "setup" },
+  { label: "Próximo reminder", columna: "proximo" },
+  { label: "Reminder enviado", columna: "enviado" },
+  { label: "Status", columna: "status" },
+  { label: "Force Mail" },
+];
+
+// Valor por el que se ordena cada columna (null = sin dato, siempre al final).
+// Las columnas calculadas usan el Setup reminder guardado.
+function valorOrden(fila: FilaReminder, columna: Columna, hoy: string): string | number | null {
+  switch (columna) {
+    case "cliente":
+      return fila.cliente;
+    case "mascota":
+      return fila.mascota || null;
+    case "tipo":
+      return fila.tipo ? TIPO_LABEL[fila.tipo] : null;
+    case "raza":
+      return fila.raza || null;
+    case "mail":
+      return fila.tieneEmail ? "SI" : "NO";
+    case "ultimaCompra":
+      return fila.ultimaVentaId;
+    case "fechaUltimaCompra":
+      return fila.ultimaVentaFecha;
+    case "diasTranscurridos":
+      return calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
+    case "setup":
+      return fila.setupReminderDias;
+    case "proximo": {
+      const dias = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
+      return calcularProximo(hoy, fila.setupReminderDias, dias)?.getTime() ?? null;
+    }
+    case "enviado": {
+      const dias = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
+      return reminderEnviado(fila, calcularProximo(hoy, fila.setupReminderDias, dias)) ? "SI" : "NO";
+    }
+    case "status":
+      return fila.statusCliente === "ACTIVO" ? "Activo" : "Pausado";
+  }
+}
+
+function comparar(a: string | number | null, b: string | number | null, asc: boolean) {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  const r =
+    typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a).localeCompare(String(b), "es", { sensitivity: "base", numeric: true });
+  return asc ? r : -r;
+}
+
+// Triángulo del encabezado: ▲ A→Z, ▼ Z→A; los dos tenues si la columna no está ordenada.
+function IndicadorOrden({ estado }: { estado: "asc" | "desc" | null }) {
+  return (
+    <span className="ml-1 inline-flex flex-col text-[8px] leading-[8px]" aria-hidden="true">
+      <span className={estado === "asc" ? "text-gray-900" : "text-gray-300"}>▲</span>
+      <span className={estado === "desc" ? "text-gray-900" : "text-gray-300"}>▼</span>
+    </span>
+  );
+}
+
 // `hoy` (YYYY-MM-DD, hora Argentina) viene del server para que coincida con el render del cliente.
 export function RemindersTabla({
   filas,
@@ -337,34 +423,67 @@ export function RemindersTabla({
   hoy: string;
   mensajeVacio?: string;
 }) {
+  // Sin orden elegido, las filas quedan como vienen del server (por cliente).
+  const [orden, setOrden] = useState<{ columna: Columna; asc: boolean } | null>(null);
+  const ordenar = (columna: Columna) =>
+    setOrden((o) => (o?.columna === columna ? { columna, asc: !o.asc } : { columna, asc: true }));
+
+  const ordenadas = useMemo(() => {
+    if (!orden) return filas;
+    return [...filas].sort((a, b) =>
+      comparar(valorOrden(a, orden.columna, hoy), valorOrden(b, orden.columna, hoy), orden.asc),
+    );
+  }, [filas, orden, hoy]);
+
+  // Primera fila visible de cada cliente: ahí van el combo de Status y Force Mail.
+  const primeras = useMemo(() => {
+    const vistos = new Set<number>();
+    const keys = new Set<string>();
+    for (const f of ordenadas) {
+      if (vistos.has(f.clienteId)) continue;
+      vistos.add(f.clienteId);
+      keys.add(f.key);
+    }
+    return keys;
+  }, [ordenadas]);
+
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
           <tr>
-            <th className="px-3 py-2">Cliente</th>
-            <th className="px-3 py-2">Mascota</th>
-            <th className="px-3 py-2">Tipo</th>
-            <th className="px-3 py-2">Raza</th>
-            <th className="px-3 py-2">Mail</th>
-            <th className="px-3 py-2">Última compra</th>
-            <th className="px-3 py-2">Fecha última compra</th>
-            <th className="px-3 py-2">Días transcurridos</th>
-            <th className="px-3 py-2">Setup reminder</th>
-            <th className="px-3 py-2">Próximo reminder</th>
-            <th className="px-3 py-2">Reminder enviado</th>
-            <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2">Force Mail</th>
+            {COLUMNAS.map(({ label, columna }) => (
+              <th
+                key={label}
+                className="px-3 py-2"
+                aria-sort={
+                  columna && orden?.columna === columna ? (orden.asc ? "ascending" : "descending") : undefined
+                }
+              >
+                {columna ? (
+                  <button
+                    type="button"
+                    onClick={() => ordenar(columna)}
+                    title="Ordenar A→Z / Z→A"
+                    className="inline-flex items-center uppercase hover:text-gray-900"
+                  >
+                    {label}
+                    <IndicadorOrden estado={orden?.columna === columna ? (orden.asc ? "asc" : "desc") : null} />
+                  </button>
+                ) : (
+                  label
+                )}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {filas.map((f, i) => (
-            // Primera fila visible del cliente (las filas vienen ordenadas por cliente).
-            <Fila key={f.key} fila={f} hoy={hoy} mostrarStatus={filas.findIndex((g) => g.clienteId === f.clienteId) === i} />
+          {ordenadas.map((f) => (
+            <Fila key={f.key} fila={f} hoy={hoy} mostrarStatus={primeras.has(f.key)} />
           ))}
           {filas.length === 0 && (
             <tr>
-              <td colSpan={13} className="px-3 py-6 text-center text-gray-400">
+              <td colSpan={COLUMNAS.length} className="px-3 py-6 text-center text-gray-400">
                 {mensajeVacio}
               </td>
             </tr>
