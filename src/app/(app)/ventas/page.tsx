@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { FiltrosVentas } from "./filtros-ventas";
-import { VentaExpandibleRow } from "./venta-row";
+import { VentasTabla } from "./ventas-tabla";
 
 export default async function VentasPage({
   searchParams,
@@ -139,60 +139,35 @@ export default async function VentasPage({
                 <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{titulo}</span>
               </div>
             )}
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                <tr>
-                  <th className="w-8 px-3 py-2"></th>
-                  <th className="px-3 py-2">Fecha</th>
-                  <th className="px-3 py-2">Cliente</th>
-                  <th className="px-3 py-2 text-right">Total</th>
-                  <th className="px-3 py-2 text-right">Total abonado</th>
-                  {!esRestringido && <th className="px-3 py-2 text-right">Ganancia</th>}
-                  <th className="px-3 py-2">Facturado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {lista.map((venta) => (
-                  <VentaExpandibleRow
-                    key={venta.id}
-                    venta={{
-                      ...venta,
-                      costoEnvio: venta.costoEnvio.toString(),
-                      detalles: venta.detalles.map((d) => ({
-                        ...d,
-                        precioVentaUnitario: d.precioVentaUnitario.toString(),
-                        descuentoPorcentaje: d.descuentoPorcentaje.toString(),
-                        precioCostoUnitario: d.precioCostoUnitario?.toString() ?? null,
-                        producto: {
-                          ...d.producto,
-                          precioCostoUnitario: d.producto.precioCostoUnitario.toString(),
+            <VentasTabla
+              esRestringido={esRestringido}
+              ventas={lista.map((venta) => ({
+                ...venta,
+                costoEnvio: venta.costoEnvio.toString(),
+                detalles: venta.detalles.map((d) => ({
+                  ...d,
+                  precioVentaUnitario: d.precioVentaUnitario.toString(),
+                  descuentoPorcentaje: d.descuentoPorcentaje.toString(),
+                  precioCostoUnitario: d.precioCostoUnitario?.toString() ?? null,
+                  producto: {
+                    ...d.producto,
+                    precioCostoUnitario: d.producto.precioCostoUnitario.toString(),
+                  },
+                  ventaConsignacion: d.ventaConsignacion
+                    ? {
+                        detalle: {
+                          precioCosto: d.ventaConsignacion.detalle.precioCosto.toString(),
+                          precioPiso: d.ventaConsignacion.detalle.precioPiso.toString(),
                         },
-                        ventaConsignacion: d.ventaConsignacion
-                          ? {
-                              detalle: {
-                                precioCosto: d.ventaConsignacion.detalle.precioCosto.toString(),
-                                precioPiso: d.ventaConsignacion.detalle.precioPiso.toString(),
-                              },
-                            }
-                          : null,
-                      })),
-                      costos: venta.costos.map((c) => ({
-                        montoCalculado: c.montoCalculado.toString(),
-                      })),
-                      pagos: venta.pagos.map((p) => ({ monto: p.monto.toString() })),
-                    }}
-                    esRestringido={esRestringido}
-                  />
-                ))}
-                {lista.length === 0 && (
-                  <tr>
-                    <td colSpan={esRestringido ? 6 : 7} className="px-3 py-8 text-center text-gray-400">
-                      No hay ventas registradas para este filtro.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      }
+                    : null,
+                })),
+                costos: venta.costos.map((c) => ({
+                  montoCalculado: c.montoCalculado.toString(),
+                })),
+                pagos: venta.pagos.map((p) => ({ monto: p.monto.toString() })),
+              }))}
+            />
           </div>
         );
 

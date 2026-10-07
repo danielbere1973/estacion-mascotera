@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
 import { AltaClienteModal } from "./alta-cliente-modal";
 
 type Cliente = {
@@ -14,6 +15,23 @@ type Cliente = {
   _count: { ventas: number };
 };
 
+type Columna = "nombre" | "telefono" | "email" | "direccion" | "ventas";
+
+function valorOrden(c: Cliente, columna: Columna): ValorOrden {
+  switch (columna) {
+    case "nombre":
+      return `${c.apellido}, ${c.nombre}`;
+    case "telefono":
+      return c.telefono || null;
+    case "email":
+      return c.email || null;
+    case "direccion":
+      return c.direccion || null;
+    case "ventas":
+      return c._count.ventas;
+  }
+}
+
 export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
   const [busqueda, setBusqueda] = useState("");
 
@@ -22,6 +40,7 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
     if (!q) return clientes;
     return clientes.filter((c) => `${c.nombre} ${c.apellido}`.toLowerCase().includes(q));
   }, [clientes, busqueda]);
+  const { ordenadas, orden, ordenar } = useOrden(filtrados, valorOrden);
 
   return (
     <>
@@ -48,16 +67,22 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Teléfono</th>
-              <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Dirección</th>
-              <th className="px-3 py-2 text-right">Ventas</th>
+              <ThOrdenable label="Nombre" columna="nombre" orden={orden} onOrdenar={ordenar} />
+              <ThOrdenable label="Teléfono" columna="telefono" orden={orden} onOrdenar={ordenar} />
+              <ThOrdenable label="Email" columna="email" orden={orden} onOrdenar={ordenar} />
+              <ThOrdenable label="Dirección" columna="direccion" orden={orden} onOrdenar={ordenar} />
+              <ThOrdenable
+                label="Ventas"
+                columna="ventas"
+                orden={orden}
+                onOrdenar={ordenar}
+                className="px-3 py-2 text-right"
+              />
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filtrados.map((c) => (
+            {ordenadas.map((c) => (
               <tr key={c.id} className="hover:bg-gray-50">
                 <td className="px-3 py-2 font-medium">
                   {c.apellido}, {c.nombre}
