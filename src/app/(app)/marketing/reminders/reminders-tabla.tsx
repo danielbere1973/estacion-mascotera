@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
 import { formatDate } from "@/lib/format";
 import type { StatusReminder, TipoMascota } from "@prisma/client";
 import {
@@ -359,7 +360,7 @@ const COLUMNAS: { label: string; columna?: Columna }[] = [
 
 // Valor por el que se ordena cada columna (null = sin dato, siempre al final).
 // Las columnas calculadas usan el Setup reminder guardado.
-function valorOrden(fila: FilaReminder, columna: Columna, hoy: string): string | number | null {
+function valorOrden(fila: FilaReminder, columna: Columna, hoy: string): ValorOrden {
   switch (columna) {
     case "cliente":
       return fila.cliente;
@@ -392,27 +393,6 @@ function valorOrden(fila: FilaReminder, columna: Columna, hoy: string): string |
   }
 }
 
-function comparar(a: string | number | null, b: string | number | null, asc: boolean) {
-  if (a === null && b === null) return 0;
-  if (a === null) return 1;
-  if (b === null) return -1;
-  const r =
-    typeof a === "number" && typeof b === "number"
-      ? a - b
-      : String(a).localeCompare(String(b), "es", { sensitivity: "base", numeric: true });
-  return asc ? r : -r;
-}
-
-// Triángulo del encabezado: ▲ A→Z, ▼ Z→A; los dos tenues si la columna no está ordenada.
-function IndicadorOrden({ estado }: { estado: "asc" | "desc" | null }) {
-  return (
-    <span className="ml-1 inline-flex flex-col text-[8px] leading-[8px]" aria-hidden="true">
-      <span className={estado === "asc" ? "text-gray-900" : "text-gray-300"}>▲</span>
-      <span className={estado === "desc" ? "text-gray-900" : "text-gray-300"}>▼</span>
-    </span>
-  );
-}
-
 // `hoy` (YYYY-MM-DD, hora Argentina) viene del server para que coincida con el render del cliente.
 export function RemindersTabla({
   filas,
@@ -424,16 +404,8 @@ export function RemindersTabla({
   mensajeVacio?: string;
 }) {
   // Sin orden elegido, las filas quedan como vienen del server (por cliente).
-  const [orden, setOrden] = useState<{ columna: Columna; asc: boolean } | null>(null);
-  const ordenar = (columna: Columna) =>
-    setOrden((o) => (o?.columna === columna ? { columna, asc: !o.asc } : { columna, asc: true }));
-
-  const ordenadas = useMemo(() => {
-    if (!orden) return filas;
-    return [...filas].sort((a, b) =>
-      comparar(valorOrden(a, orden.columna, hoy), valorOrden(b, orden.columna, hoy), orden.asc),
-    );
-  }, [filas, orden, hoy]);
+  const valor = useCallback((f: FilaReminder, c: Columna) => valorOrden(f, c, hoy), [hoy]);
+  const { ordenadas, orden, ordenar } = useOrden(filas, valor);
 
   // Primera fila visible de cada cliente: ahí van el combo de Status y Force Mail.
   const primeras = useMemo(() => {
@@ -452,29 +424,15 @@ export function RemindersTabla({
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
           <tr>
-            {COLUMNAS.map(({ label, columna }) => (
-              <th
-                key={label}
-                className="px-3 py-2"
-                aria-sort={
-                  columna && orden?.columna === columna ? (orden.asc ? "ascending" : "descending") : undefined
-                }
-              >
-                {columna ? (
-                  <button
-                    type="button"
-                    onClick={() => ordenar(columna)}
-                    title="Ordenar A→Z / Z→A"
-                    className="inline-flex items-center uppercase hover:text-gray-900"
-                  >
-                    {label}
-                    <IndicadorOrden estado={orden?.columna === columna ? (orden.asc ? "asc" : "desc") : null} />
-                  </button>
-                ) : (
-                  label
-                )}
-              </th>
-            ))}
+            {COLUMNAS.map(({ label, columna }) =>
+              columna ? (
+                <ThOrdenable key={label} label={label} columna={columna} orden={orden} onOrdenar={ordenar} />
+              ) : (
+                <th key={label} className="px-3 py-2">
+                  {label}
+                </th>
+              ),
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">

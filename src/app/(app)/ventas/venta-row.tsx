@@ -38,7 +38,7 @@ type DetalleVenta = {
   } | null;
 };
 
-type VentaRow = {
+export type VentaRow = {
   id: number;
   fechaVenta: Date;
   canalVenta: string;
@@ -57,15 +57,8 @@ type VentaRow = {
   pagos: { monto: string }[];
 };
 
-export function VentaExpandibleRow({
-  venta,
-  esRestringido,
-}: {
-  venta: VentaRow;
-  esRestringido: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-
+// Totales de una venta (también se usan para ordenar la tabla de Ventas).
+export function calcularTotalesVenta(venta: VentaRow) {
   const total = venta.detalles.reduce(
     (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario),
     0
@@ -90,6 +83,20 @@ export function VentaExpandibleRow({
   const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
   const pctGanancia = totalAbonado > 0 ? (ganancia / totalAbonado) * 100 : null;
   const pctSobreCosto = costoMercaderia > 0 ? (ganancia / costoMercaderia) * 100 : null;
+  return { total, descuento, costoMercaderia, costosCobranza, totalAbonado, ganancia, pctGanancia, pctSobreCosto };
+}
+
+export function VentaExpandibleRow({
+  venta,
+  esRestringido,
+}: {
+  venta: VentaRow;
+  esRestringido: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const { total, descuento, costosCobranza, totalAbonado, ganancia, pctGanancia, pctSobreCosto } =
+    calcularTotalesVenta(venta);
 
   const totalPagado = venta.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
   const estadoPago =
