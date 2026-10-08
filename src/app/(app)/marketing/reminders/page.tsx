@@ -5,6 +5,7 @@ import type { FilaReminder } from "./reminders-tabla";
 import { RemindersVista } from "./reminders-vista";
 import { SwitchStatusTodos } from "./switch-status-todos";
 import { EnviarReminders } from "./enviar-reminders";
+import { SwitchEnvioAutomatico } from "./switch-envio-automatico";
 import { clientesParaReminder } from "@/lib/reminders";
 
 // Día calendario en Argentina (YYYY-MM-DD), para que una venta de noche no
@@ -126,7 +127,12 @@ export default async function RemindersPage() {
   return (
     <div className="flex h-full flex-col gap-4">
       <RemindersVista
-        titulo={<h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>}
+        titulo={
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
+            <SwitchEnvioAutomatico activo={config?.envioAutomatico ?? true} />
+          </div>
+        }
         subtitulo={
           <p className="text-sm text-gray-500">
             Total Reminders: Activos {activos} -- Pausados: {pausados} -- Clientes/Mascotas pendientes:{" "}
