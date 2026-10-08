@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { enviarMailsIndividuales, escaparHtml } from "@/lib/mail";
+import { DIAS_ENTRE_REMINDERS } from "@/lib/reminders-reglas";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
@@ -15,8 +16,8 @@ export type ClienteReminder = { id: number; nombre: string; apellido: string; em
 
 // Clientes a los que corresponde enviar el reminder: Status Activo (en alguna de sus
 // mascotas, o en el cliente si no tiene mascotas) y más días desde la última compra que su
-// Setup reminder (si tiene varias mascotas activas, el menor de sus Setup), sin reminder
-// enviado desde esa última compra.
+// Setup reminder (si tiene varias mascotas activas, el menor de sus Setup), y sin reminder
+// enviado en los últimos DIAS_ENTRE_REMINDERS días (haya vuelto a comprar o no).
 // `sinEmail` son los que cumplen las condiciones pero no tienen email cargado.
 export async function clientesParaReminder() {
   const clientes = await prisma.cliente.findMany({
@@ -49,9 +50,8 @@ export async function clientesParaReminder() {
     if (setups.length === 0 || !ultimaVenta) continue;
     const dias = diasEntre(ultimaVenta.fechaVenta, hoy);
     if (dias <= Math.min(...setups)) continue;
-    // No se reenvía: si ya recibió un reminder desde su última compra, queda afuera hasta que vuelva a comprar.
-    if (c.fechaUltimoReminder && diaArgentina.format(c.fechaUltimoReminder) >= diaArgentina.format(ultimaVenta.fechaVenta))
-      continue;
+    // Mientras no vuelva a comprar recibe un reminder cada DIAS_ENTRE_REMINDERS días, nunca antes.
+    if (c.fechaUltimoReminder && diasEntre(c.fechaUltimoReminder, hoy) < DIAS_ENTRE_REMINDERS) continue;
     const email = c.email?.trim();
     if (email) elegibles.push({ id: c.id, nombre: c.nombre, apellido: c.apellido, email, dias });
     else sinEmail.push({ id: c.id, nombre: c.nombre, apellido: c.apellido });

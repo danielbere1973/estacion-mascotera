@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { ejecutarEnvioReminders } from "@/lib/reminders";
 
 // Envío automático diario de reminders (vercel.json, 13:00 UTC = 10:00 Argentina).
-// Misma lógica que el botón "Enviar reminders"; no reenvía a quien ya lo recibió desde su última compra.
+// Misma lógica que el botón "Enviar reminders"; no repite un reminder al mismo cliente antes de 30 días.
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {

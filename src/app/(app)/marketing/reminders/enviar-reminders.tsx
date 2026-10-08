@@ -10,7 +10,7 @@ export function EnviarReminders({ cantidad, sinEmail }: { cantidad: number; sinE
 
   const enviar = () => {
     if (cantidad === 0) {
-      setMensaje("No hay clientes que cumplan las condiciones (Activo, días transcurridos mayores al Setup reminder y sin reminder enviado desde la última compra).");
+      setMensaje("No hay clientes que cumplan las condiciones (Activo, días transcurridos mayores al Setup reminder y sin reminder enviado en los últimos 30 días).");
       return;
     }
     const aviso = sinEmail > 0 ? `\n(${sinEmail} clientes más cumplen las condiciones pero no tienen email.)` : "";
@@ -32,7 +32,7 @@ export function EnviarReminders({ cantidad, sinEmail }: { cantidad: number; sinE
         type="button"
         onClick={enviar}
         disabled={pending}
-        title="Status Activo, días transcurridos mayores al Setup reminder y sin reminder enviado desde la última compra"
+        title="Status Activo, días transcurridos mayores al Setup reminder y sin reminder enviado en los últimos 30 días"
         className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
       >
         {pending ? "Enviando…" : `Enviar reminders (${cantidad})`}
