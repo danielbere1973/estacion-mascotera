@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { escaparHtml } from "@/lib/mail";
+import { enviarMailsIndividuales, escaparHtml } from "@/lib/mail";
+import { DIAS_ENTRE_REMINDERS } from "@/lib/reminders-reglas";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
@@ -15,8 +16,8 @@ export type ClienteReminder = { id: number; nombre: string; apellido: string; em
 
 // Clientes a los que corresponde enviar el reminder: Status Activo (en alguna de sus
 // mascotas, o en el cliente si no tiene mascotas) y más días desde la última compra que su
-// Setup reminder (si tiene varias mascotas activas, el menor de sus Setup), sin reminder
-// enviado desde esa última compra.
+// Setup reminder (si tiene varias mascotas activas, el menor de sus Setup), y sin reminder
+// enviado en los últimos DIAS_ENTRE_REMINDERS días (haya vuelto a comprar o no).
 // `sinEmail` son los que cumplen las condiciones pero no tienen email cargado.
 export async function clientesParaReminder() {
   const clientes = await prisma.cliente.findMany({
@@ -49,9 +50,8 @@ export async function clientesParaReminder() {
     if (setups.length === 0 || !ultimaVenta) continue;
     const dias = diasEntre(ultimaVenta.fechaVenta, hoy);
     if (dias <= Math.min(...setups)) continue;
-    // No se reenvía: si ya recibió un reminder desde su última compra, queda afuera hasta que vuelva a comprar.
-    if (c.fechaUltimoReminder && diaArgentina.format(c.fechaUltimoReminder) >= diaArgentina.format(ultimaVenta.fechaVenta))
-      continue;
+    // Mientras no vuelva a comprar recibe un reminder cada DIAS_ENTRE_REMINDERS días, nunca antes.
+    if (c.fechaUltimoReminder && diasEntre(c.fechaUltimoReminder, hoy) < DIAS_ENTRE_REMINDERS) continue;
     const email = c.email?.trim();
     if (email) elegibles.push({ id: c.id, nombre: c.nombre, apellido: c.apellido, email, dias });
     else sinEmail.push({ id: c.id, nombre: c.nombre, apellido: c.apellido });
@@ -85,4 +85,62 @@ export function htmlReminder(nombre: string) {
 <p>Un abrazo,<br>
 El equipo de Estación Mascotera 🐶🐱</p>
 </div>`;
+}
+
+export type ResultadoEnvioReminders = { enviados: number; errores: number; sinEmail: number };
+
+// Envía el mail de reminder, uno por cliente, a los que cumplen las condiciones (ver
+// clientesParaReminder). Cada envío queda en el Event log. `usuarioId` null = envío automático
+// (cron); en ese caso los clientes sin email solo se cuentan en el resumen, para no repetir
+// una línea de error por cliente todos los días.
+export async function ejecutarEnvioReminders(usuarioId: number | null): Promise<ResultadoEnvioReminders> {
+  const automatico = usuarioId === null;
+  const { elegibles, sinEmail } = await clientesParaReminder();
+
+  const resultados = await enviarMailsIndividuales(
+    elegibles.map((c) => ({ to: c.email, subject: asuntoReminder(c.nombre), html: htmlReminder(c.nombre) })),
+  );
+
+  const eventos = [
+    ...elegibles.map((c, i) => ({
+      detalle: `${c.nombre} ${c.apellido} <${c.email}> (${c.dias} días desde la última compra)`,
+      resultado: resultados[i] ? `Error: ${resultados[i]}` : "OK",
+    })),
+    ...(automatico
+      ? []
+      : sinEmail.map((c) => ({ detalle: `${c.nombre} ${c.apellido}`, resultado: "Error: el cliente no tiene email" }))),
+  ];
+  try {
+    await prisma.logMarketing.createMany({
+      data: eventos.map((e) => ({ usuarioId, accion: "Envío de reminder", ...e })),
+    });
+  } catch (e) {
+    console.error("No se pudieron registrar los envíos de reminders", e);
+  }
+
+  // Fecha del último reminder enviado OK, para la columna "Reminder enviado".
+  try {
+    await prisma.cliente.updateMany({
+      where: { id: { in: elegibles.filter((_, i) => resultados[i] === null).map((c) => c.id) } },
+      data: { fechaUltimoReminder: new Date() },
+    });
+  } catch (e) {
+    console.error("No se pudo guardar la fecha del último reminder", e);
+  }
+
+  const enviados = resultados.filter((r) => r === null).length;
+  const errores = elegibles.length - enviados;
+  try {
+    await prisma.logMarketing.create({
+      data: {
+        usuarioId,
+        accion: "Envío de reminders",
+        detalle: `${automatico ? "Automático: " : ""}${enviados} enviados, ${errores} con error, ${sinEmail.length} sin email`,
+        resultado: errores === 0 ? "OK" : `Error: ${errores} envíos fallaron`,
+      },
+    });
+  } catch (e) {
+    console.error("No se pudo registrar el evento de Marketing", e);
+  }
+  return { enviados, errores, sinEmail: sinEmail.length };
 }

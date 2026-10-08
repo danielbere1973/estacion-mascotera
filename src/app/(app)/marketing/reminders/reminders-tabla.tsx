@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
 import { formatDate } from "@/lib/format";
+import { DIAS_ENTRE_REMINDERS } from "@/lib/reminders-reglas";
 import type { StatusReminder, TipoMascota } from "@prisma/client";
 import {
   actualizarDatoMascota,
@@ -49,15 +50,21 @@ function calcularDiasTranscurridos(ultimaVentaFecha: string | null, hoy: string)
   return Math.round((aFecha(hoy).getTime() - aFecha(ultimaVentaFecha).getTime()) / DIA_MS);
 }
 
-// Próximo reminder = hoy + (setup reminder - días transcurridos).
-// Si los días transcurridos superan el Setup reminder, el 1° del mes siguiente a hoy.
-function calcularProximo(hoy: string, setup: number, diasTranscurridos: number | null) {
-  if (diasTranscurridos === null) return null;
-  if (diasTranscurridos > setup) {
-    const [anio, mes] = hoy.split("-").map(Number);
-    return new Date(Date.UTC(anio, mes, 1, 12)); // `mes` es 1-based, como índice 0-based es el mes siguiente
+function sumarDias(dia: string, dias: number) {
+  return new Date(aFecha(dia).getTime() + dias * DIA_MS);
+}
+
+// Próximo reminder: el primer día en que se le envía según las reglas del envío, o sea
+// con más días desde la última compra que el Setup reminder (última compra + setup + 1) y a
+// DIAS_ENTRE_REMINDERS días o más del último reminder. Si esa fecha ya pasó (está pendiente), hoy.
+function calcularProximo(hoy: string, setup: number, fila: FilaReminder) {
+  if (!fila.ultimaVentaFecha) return null;
+  let proximo = sumarDias(fila.ultimaVentaFecha, setup + 1);
+  if (fila.ultimoReminderFecha) {
+    const porUltimoReminder = sumarDias(fila.ultimoReminderFecha, DIAS_ENTRE_REMINDERS);
+    if (porUltimoReminder > proximo) proximo = porUltimoReminder;
   }
-  return new Date(aFecha(hoy).getTime() + (setup - diasTranscurridos) * DIA_MS);
+  return proximo < aFecha(hoy) ? aFecha(hoy) : proximo;
 }
 
 // Texto editable inline (Mascota y Raza): guarda al salir del campo o con Enter.
@@ -71,14 +78,11 @@ function colorDiasTranscurridos(diasTranscurridos: number | null, setup: number)
   return "bg-red-200 text-red-900";
 }
 
-// Reminder enviado: al cliente se le envió un reminder desde su última compra (mismo criterio
-// que usa "Enviar reminders" para no reenviar) y hasta el próximo reminder, inclusive.
-// Sin compras, alcanza con que se le haya enviado. Si no, cruz.
-function reminderEnviado(fila: FilaReminder, proximo: Date | null) {
+// Reminder enviado: al cliente se le envió un reminder en los últimos DIAS_ENTRE_REMINDERS
+// días (mismo criterio que usa "Enviar reminders" para no repetir). Si no, cruz.
+function reminderEnviado(fila: FilaReminder, hoy: string) {
   const envio = fila.ultimoReminderFecha;
-  if (!envio) return false;
-  if (fila.ultimaVentaFecha && envio < fila.ultimaVentaFecha) return false;
-  return !proximo || envio <= proximo.toISOString().slice(0, 10);
+  return !!envio && sumarDias(envio, DIAS_ENTRE_REMINDERS) > aFecha(hoy);
 }
 
 function TextoEditable({
@@ -139,8 +143,8 @@ function Fila({ fila, hoy, mostrarStatus }: { fila: FilaReminder; hoy: string; m
   // Usa el setup que se está editando; si no es válido, el último guardado.
   const setupNum = Number.parseInt(dias, 10);
   const setup = Number.isFinite(setupNum) && setupNum >= 1 ? setupNum : fila.setupReminderDias;
-  const proximo = calcularProximo(hoy, setup, diasTranscurridos);
-  const enviado = reminderEnviado(fila, proximo);
+  const proximo = calcularProximo(hoy, setup, fila);
+  const enviado = reminderEnviado(fila, hoy);
   const [tipo, setTipo] = useState(fila.tipo);
   const [tipoServer, setTipoServer] = useState(fila.tipo);
   if (fila.tipo !== tipoServer) {
@@ -271,7 +275,7 @@ function Fila({ fila, hoy, mostrarStatus }: { fila: FilaReminder; hoy: string; m
             ✓
           </span>
         ) : (
-          <span className="text-lg font-bold text-red-600" title="Sin reminder enviado">
+          <span className="text-lg font-bold text-red-600" title={`Sin reminder enviado en los últimos ${DIAS_ENTRE_REMINDERS} días`}>
             ✗
           </span>
         )}
@@ -380,14 +384,10 @@ function valorOrden(fila: FilaReminder, columna: Columna, hoy: string): ValorOrd
       return calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
     case "setup":
       return fila.setupReminderDias;
-    case "proximo": {
-      const dias = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
-      return calcularProximo(hoy, fila.setupReminderDias, dias)?.getTime() ?? null;
-    }
-    case "enviado": {
-      const dias = calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
-      return reminderEnviado(fila, calcularProximo(hoy, fila.setupReminderDias, dias)) ? "SI" : "NO";
-    }
+    case "proximo":
+      return calcularProximo(hoy, fila.setupReminderDias, fila)?.getTime() ?? null;
+    case "enviado":
+      return reminderEnviado(fila, hoy) ? "SI" : "NO";
     case "status":
       return fila.statusCliente === "ACTIVO" ? "Activo" : "Pausado";
   }
