@@ -11,7 +11,7 @@ export function AltaClienteModal() {
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
       >
         Alta cliente
       </button>
@@ -22,7 +22,7 @@ export function AltaClienteModal() {
           onClick={() => setAbierto(false)}
         >
           <div
-            className="w-full max-w-lg rounded-xl bg-white p-5 shadow-lg"
+            className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Alta de cliente</h2>
@@ -40,7 +40,7 @@ export function AltaClienteModal() {
                     name="nombre"
                     required
                     autoFocus
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
                   />
                 </div>
 
@@ -49,7 +49,7 @@ export function AltaClienteModal() {
                   <input
                     name="apellido"
                     required
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
                   />
                 </div>
 
@@ -58,7 +58,7 @@ export function AltaClienteModal() {
                   <input
                     name="direccion"
                     required
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
                   />
                 </div>
 
@@ -66,8 +66,9 @@ export function AltaClienteModal() {
                   <label className="text-sm font-medium text-gray-700">Teléfono</label>
                   <input
                     name="telefono"
+                    type="tel"
                     required
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
                   />
                 </div>
 
@@ -76,7 +77,7 @@ export function AltaClienteModal() {
                   <input
                     name="email"
                     type="email"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
                   />
                 </div>
 
@@ -85,7 +86,7 @@ export function AltaClienteModal() {
                   <input
                     name="cuit"
                     placeholder="Ej: 20-12345678-9"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white font-mono"
                   />
                 </div>
 
@@ -93,8 +94,9 @@ export function AltaClienteModal() {
                   <label className="text-sm font-medium text-gray-700">DNI (opcional)</label>
                   <input
                     name="dni"
+                    inputMode="numeric"
                     placeholder="Ej: 12345678"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white font-mono"
                   />
                 </div>
               </div>

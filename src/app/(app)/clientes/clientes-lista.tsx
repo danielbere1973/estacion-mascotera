@@ -44,26 +44,80 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Clientes: {clientes.length}</h1>
+      {/* En mobile: título y botones en una fila, buscador abajo a todo el ancho. */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="whitespace-nowrap text-xl font-semibold text-gray-900">Clientes: {clientes.length}</h1>
+          <div className="flex items-center gap-2 md:hidden">
+            <AltaClienteModal />
+            <LinkReposiciones />
+          </div>
+        </div>
         <div className="flex items-center gap-2">
+          {/* Fondo gris en mobile: en iPhone el borde del campo no siempre se ve. */}
           <input
+            type="search"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre..."
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-gray-300 bg-gray-200 px-3 py-2 text-sm md:w-auto md:bg-white"
           />
-          <AltaClienteModal />
-          <Link
-            href="/clientes/reposicion"
-            className="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
-          >
-            Reposiciones pendientes
-          </Link>
+          <div className="hidden items-center gap-2 md:flex">
+            <AltaClienteModal />
+            <LinkReposiciones />
+          </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      {/* Mobile: una tarjeta por cliente. */}
+      <ul className="space-y-2 md:hidden">
+        {ordenadas.map((c) => (
+          <li key={c.id} className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-200">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-semibold text-gray-900">
+                {c.apellido}, {c.nombre}
+              </p>
+              <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                {c._count.ventas} {c._count.ventas === 1 ? "venta" : "ventas"}
+              </span>
+            </div>
+            <div className="mt-1 space-y-0.5 text-sm text-gray-600">
+              {c.telefono && (
+                <a href={`tel:${c.telefono}`} className="block text-blue-600">
+                  📞 {c.telefono}
+                </a>
+              )}
+              {c.email && (
+                <a href={`mailto:${c.email}`} className="block truncate text-blue-600">
+                  ✉️ {c.email}
+                </a>
+              )}
+              {c.direccion && <p className="truncate">📍 {c.direccion}</p>}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <Link
+                href={`/clientes/${c.id}`}
+                className="flex-1 rounded-md bg-gray-100 py-2 text-center text-sm font-medium text-gray-700"
+              >
+                Historial
+              </Link>
+              <Link
+                href={`/clientes/${c.id}/editar`}
+                className="flex-1 rounded-md bg-blue-50 py-2 text-center text-sm font-medium text-blue-600"
+              >
+                Editar
+              </Link>
+            </div>
+          </li>
+        ))}
+        {filtrados.length === 0 && (
+          <li className="py-6 text-center text-sm text-gray-400">
+            {busqueda ? "No se encontraron clientes para esa búsqueda." : "No hay clientes cargados todavía."}
+          </li>
+        )}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
@@ -122,5 +176,17 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
         </table>
       </div>
     </>
+  );
+}
+
+function LinkReposiciones() {
+  return (
+    <Link
+      href="/clientes/reposicion"
+      className="whitespace-nowrap rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
+    >
+      <span className="md:hidden">Reposiciones</span>
+      <span className="hidden md:inline">Reposiciones pendientes</span>
+    </Link>
   );
 }
