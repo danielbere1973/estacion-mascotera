@@ -240,7 +240,11 @@ export async function importarCostosMayoristaCore(
   for (const [sku, fila] of filasPorSku) {
     const nombre = String(fila["Nombre"] ?? "").trim();
     const precioCosto = parsearPrecio(fila["Precio Lista"]);
-    const precioConDescuento = parsearPrecio(fila["Precio c/dto"]);
+    // Cuando HYM no informa descuento para un producto, la columna viene vacía.
+    // Guardamos null (no 0) para que la UI pueda hacer `precioConDescuento ?? precioCostoScraped`
+    // y caer al precio de lista — si guardáramos 0 el "??" no lo detecta como ausente.
+    const precioConDescuentoTexto = String(fila["Precio c/dto"] ?? "").trim();
+    const precioConDescuento = precioConDescuentoTexto ? parsearPrecio(precioConDescuentoTexto) : null;
     const tamanios = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim() || null;
     const estadoStockMayorista = String(fila["Estado de stock"] ?? "").trim() || null;
     const tipoProducto = String(fila["Tipo"] ?? fila["Categoria"] ?? "").trim() || null;
