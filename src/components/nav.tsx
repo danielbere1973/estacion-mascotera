@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const links = [
   { href: "/", label: "Dashboard", icon: "🏠" },
@@ -176,20 +176,25 @@ export function TopBar({
 }) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6">
-      <div className="flex items-center">
+      <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
           onClick={onToggleSidebar}
           aria-label="Abrir menú"
-          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 md:hidden"
+          className="-ml-2 rounded-md p-2 text-gray-500 hover:bg-gray-100 md:hidden"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        {/* En mobile el sidebar está oculto: logo y nombre van en la barra superior. */}
+        <Link href="/" className="flex min-w-0 items-center gap-2 md:hidden">
+          <Image src="/logo.png" alt="" width={28} height={28} className="shrink-0 rounded-full" />
+          <span className="truncate text-sm font-bold text-gray-900">Estación Mascotera</span>
+        </Link>
       </div>
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-500">{userName}</span>
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+        <span className="hidden text-sm text-gray-500 sm:inline">{userName}</span>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="rounded-md px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800"
@@ -218,8 +223,17 @@ export function AppShell({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Con el menú abierto en mobile, Escape lo cierra.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const cerrar = (e: KeyboardEvent) => e.key === "Escape" && setSidebarOpen(false);
+    window.addEventListener("keydown", cerrar);
+    return () => window.removeEventListener("keydown", cerrar);
+  }, [sidebarOpen]);
+
+  // h-dvh: alto real de la pantalla en el celular (h-screen queda tapado por la barra del navegador).
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 md:hidden"
