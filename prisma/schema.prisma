@@ -495,11 +495,11 @@ model PendienteCompraMayorista {
 model LogMarketing {
   id        Int      @id @default(autoincrement())
   fecha     DateTime @default(now())
-  usuarioId Int
+  usuarioId Int? // null = envío automático (cron)
   accion    String
   detalle   String?
   resultado String // "OK" o "Error: <mensaje>"
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
 
   @@index([fecha])
 }

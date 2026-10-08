@@ -84,7 +84,7 @@ export default async function EventLogPage({
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">{formatoFecha.format(e.fecha)}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">{formatoHora.format(e.fecha)}</td>
                 <td className="whitespace-nowrap px-3 py-2">
-                  {e.usuario.nombre} {e.usuario.apellido}
+                  {e.usuario ? `${e.usuario.nombre} ${e.usuario.apellido}` : "Automático"}
                 </td>
                 <td className={`whitespace-nowrap px-3 py-2 ${e.accion === "Envío de reminders" ? "" : "font-medium"}`}>
                   {e.accion}

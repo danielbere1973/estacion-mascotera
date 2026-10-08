@@ -5,7 +5,12 @@ import { StatusReminder, TipoMascota } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { enviarMailsIndividuales } from "@/lib/mail";
-import { asuntoReminder, clientesParaReminder, htmlReminder } from "@/lib/reminders";
+import {
+  asuntoReminder,
+  ejecutarEnvioReminders,
+  htmlReminder,
+  type ResultadoEnvioReminders,
+} from "@/lib/reminders";
 
 // Los reminders se configuran por mascota, o por cliente cuando no tiene mascotas.
 export type DestinoReminder = "mascota" | "cliente";
@@ -285,50 +290,10 @@ export async function enviarReminderForzado(clienteId: number): Promise<{ error?
   return {};
 }
 
-// Envía el mail de reminder, uno por cliente, a los que cumplen las condiciones
-// (Status Activo y más días desde la última compra que su Setup reminder). Cada envío queda en el Event log.
-export async function enviarReminders(): Promise<{ enviados: number; errores: number; sinEmail: number }> {
+// Envío manual (botón "Enviar reminders"); el automático diario lo hace /api/cron/reminders.
+export async function enviarReminders(): Promise<ResultadoEnvioReminders> {
   const session = await requireAdmin();
-  const usuarioId = Number(session.user.id);
-  const { elegibles, sinEmail } = await clientesParaReminder();
-
-  const resultados = await enviarMailsIndividuales(
-    elegibles.map((c) => ({ to: c.email, subject: asuntoReminder(c.nombre), html: htmlReminder(c.nombre) })),
-  );
-
-  const eventos = [
-    ...elegibles.map((c, i) => ({
-      detalle: `${c.nombre} ${c.apellido} <${c.email}> (${c.dias} días desde la última compra)`,
-      resultado: resultados[i] ? `Error: ${resultados[i]}` : "OK",
-    })),
-    ...sinEmail.map((c) => ({ detalle: `${c.nombre} ${c.apellido}`, resultado: "Error: el cliente no tiene email" })),
-  ];
-  try {
-    await prisma.logMarketing.createMany({
-      data: eventos.map((e) => ({ usuarioId, accion: "Envío de reminder", ...e })),
-    });
-  } catch (e) {
-    console.error("No se pudieron registrar los envíos de reminders", e);
-  }
-
-  // Fecha del último reminder enviado OK, para la columna "Reminder enviado".
-  try {
-    await prisma.cliente.updateMany({
-      where: { id: { in: elegibles.filter((_, i) => resultados[i] === null).map((c) => c.id) } },
-      data: { fechaUltimoReminder: new Date() },
-    });
-  } catch (e) {
-    console.error("No se pudo guardar la fecha del último reminder", e);
-  }
+  const resultado = await ejecutarEnvioReminders(Number(session.user.id));
   revalidatePath("/marketing/reminders");
-
-  const enviados = resultados.filter((r) => r === null).length;
-  const errores = elegibles.length - enviados;
-  await registrarEvento(
-    usuarioId,
-    "Envío de reminders",
-    `${enviados} enviados, ${errores} con error, ${sinEmail.length} sin email`,
-    errores === 0 ? "OK" : `Error: ${errores} envíos fallaron`,
-  );
-  return { enviados, errores, sinEmail: sinEmail.length };
+  return resultado;
 }

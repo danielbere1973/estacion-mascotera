@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { escaparHtml } from "@/lib/mail";
+import { enviarMailsIndividuales, escaparHtml } from "@/lib/mail";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
@@ -85,4 +85,62 @@ export function htmlReminder(nombre: string) {
 <p>Un abrazo,<br>
 El equipo de Estación Mascotera 🐶🐱</p>
 </div>`;
+}
+
+export type ResultadoEnvioReminders = { enviados: number; errores: number; sinEmail: number };
+
+// Envía el mail de reminder, uno por cliente, a los que cumplen las condiciones (ver
+// clientesParaReminder). Cada envío queda en el Event log. `usuarioId` null = envío automático
+// (cron); en ese caso los clientes sin email solo se cuentan en el resumen, para no repetir
+// una línea de error por cliente todos los días.
+export async function ejecutarEnvioReminders(usuarioId: number | null): Promise<ResultadoEnvioReminders> {
+  const automatico = usuarioId === null;
+  const { elegibles, sinEmail } = await clientesParaReminder();
+
+  const resultados = await enviarMailsIndividuales(
+    elegibles.map((c) => ({ to: c.email, subject: asuntoReminder(c.nombre), html: htmlReminder(c.nombre) })),
+  );
+
+  const eventos = [
+    ...elegibles.map((c, i) => ({
+      detalle: `${c.nombre} ${c.apellido} <${c.email}> (${c.dias} días desde la última compra)`,
+      resultado: resultados[i] ? `Error: ${resultados[i]}` : "OK",
+    })),
+    ...(automatico
+      ? []
+      : sinEmail.map((c) => ({ detalle: `${c.nombre} ${c.apellido}`, resultado: "Error: el cliente no tiene email" }))),
+  ];
+  try {
+    await prisma.logMarketing.createMany({
+      data: eventos.map((e) => ({ usuarioId, accion: "Envío de reminder", ...e })),
+    });
+  } catch (e) {
+    console.error("No se pudieron registrar los envíos de reminders", e);
+  }
+
+  // Fecha del último reminder enviado OK, para la columna "Reminder enviado".
+  try {
+    await prisma.cliente.updateMany({
+      where: { id: { in: elegibles.filter((_, i) => resultados[i] === null).map((c) => c.id) } },
+      data: { fechaUltimoReminder: new Date() },
+    });
+  } catch (e) {
+    console.error("No se pudo guardar la fecha del último reminder", e);
+  }
+
+  const enviados = resultados.filter((r) => r === null).length;
+  const errores = elegibles.length - enviados;
+  try {
+    await prisma.logMarketing.create({
+      data: {
+        usuarioId,
+        accion: "Envío de reminders",
+        detalle: `${automatico ? "Automático: " : ""}${enviados} enviados, ${errores} con error, ${sinEmail.length} sin email`,
+        resultado: errores === 0 ? "OK" : `Error: ${errores} envíos fallaron`,
+      },
+    });
+  } catch (e) {
+    console.error("No se pudo registrar el evento de Marketing", e);
+  }
+  return { enviados, errores, sinEmail: sinEmail.length };
 }
