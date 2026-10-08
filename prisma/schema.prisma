@@ -507,8 +507,9 @@ model LogMarketing {
 // Configuración general de Marketing → Reminders (una sola fila, id = 1).
 model ConfigReminders {
   id           Int             @id @default(1)
-  switchStatus StatusReminder? // último clic del botón Switch (null = nunca se usó)
-  updatedAt    DateTime        @updatedAt
+  switchStatus    StatusReminder? // último clic del botón Switch (null = nunca se usó)
+  envioAutomatico Boolean         @default(true) // switch "Reminder Automático": el cron diario envía solo si está en On
+  updatedAt       DateTime        @updatedAt
 }
 
 model TiendanubeConfig {

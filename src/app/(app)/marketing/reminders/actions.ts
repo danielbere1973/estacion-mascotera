@@ -253,6 +253,25 @@ export async function actualizarStatusReminderTodos(status: string) {
   revalidatePath("/marketing/reminders");
 }
 
+// Switch "Reminder Automático": prende o apaga el envío diario del cron (/api/cron/reminders).
+export async function actualizarEnvioAutomatico(activo: boolean) {
+  const session = await requireAdmin();
+  const usuarioId = Number(session.user.id);
+  const estado = activo ? "On" : "Off";
+  try {
+    await prisma.configReminders.upsert({
+      where: { id: 1 },
+      create: { id: 1, envioAutomatico: activo },
+      update: { envioAutomatico: activo },
+    });
+    await registrarEvento(usuarioId, "Reminder Automático", estado, "OK");
+  } catch (e) {
+    await registrarEvento(usuarioId, "Reminder Automático", estado, mensajeError(e));
+    throw e;
+  }
+  revalidatePath("/marketing/reminders");
+}
+
 // Force Mail: envía el reminder a un cliente sin aplicar ninguna regla (Status, Setup ni
 // envíos previos). Queda en el Event log y cuenta como reminder enviado.
 export async function enviarReminderForzado(clienteId: number): Promise<{ error?: string }> {
