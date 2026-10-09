@@ -62,8 +62,41 @@ export function PagosVenta({
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${estadoClase}`}>{estado}</span>
       </div>
 
+      {/* Mobile: un renglón por pago. */}
       {pagos.length > 0 && (
-        <table className="w-full text-xs">
+        <ul className="divide-y divide-gray-100 text-sm md:hidden">
+          {pagos.map((p) => (
+            <li key={p.id} className="flex items-start justify-between gap-2 py-2">
+              <div className="min-w-0">
+                <p className="text-gray-800">
+                  {fmtDate(p.fechaPago)} · {p.medioPago}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {Number(p.comision) > 0 && <>Comisión {fmt(Number(p.comision))} · </>}
+                  Acred. {p.fechaAcreditacion ? fmtDate(p.fechaAcreditacion) : "—"}
+                  {p.cobradoPor && <> · {p.cobradoPor.apellido}, {p.cobradoPor.nombre}</>}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="font-semibold text-gray-900">{fmt(Number(p.monto))}</span>
+                <form action={eliminarPagoVenta}>
+                  <input type="hidden" name="id" value={p.id} />
+                  <input type="hidden" name="ventaId" value={ventaId} />
+                  <ConfirmSubmitButton
+                    confirmMessage="¿Eliminar este pago?"
+                    className="rounded-md px-2 py-1 text-red-500 hover:bg-red-50"
+                  >
+                    ✕
+                  </ConfirmSubmitButton>
+                </form>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {pagos.length > 0 && (
+        <table className="hidden w-full text-xs md:table">
           <thead>
             <tr className="text-left text-gray-400">
               <th className="pb-1 font-normal">Fecha</th>
@@ -104,7 +137,7 @@ export function PagosVenta({
         </table>
       )}
 
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 text-xs text-gray-500">
         <span>
           Pagado: {fmt(totalPagado)} de {fmt(totalACobrar)}
         </span>
@@ -127,7 +160,7 @@ export function PagosVenta({
                 await agregarPagoVenta(formData);
                 setMostrarForm(false);
               }}
-              className="space-y-2 rounded-md bg-gray-50 p-2"
+              className="space-y-2 rounded-md p-2 ring-1 ring-gray-200 md:bg-gray-50 md:ring-0"
             >
               <input type="hidden" name="ventaId" value={ventaId} />
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
