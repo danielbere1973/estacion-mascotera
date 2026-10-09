@@ -28,3 +28,15 @@ body {
     font-size: 16px;
   }
 }
+
+/* En el celular, campos con fondo gris: en iPhone el borde de los campos no siempre se ve.
+   Va en la capa base para que un bg-* puesto en el campo lo pise. */
+@layer base {
+  @media (max-width: 767px) {
+    input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="range"], [type="file"]),
+    select,
+    textarea {
+      background-color: var(--color-gray-100);
+    }
+  }
+}
