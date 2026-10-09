@@ -1,7 +1,7 @@
 "use client";
 
 import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
-import { calcularTotalesVenta, VentaExpandibleRow, type VentaRow } from "./venta-row";
+import { calcularTotalesVenta, VentaCard, VentaExpandibleRow, type VentaRow } from "./venta-row";
 
 type Columna = "fecha" | "cliente" | "total" | "totalAbonado" | "ganancia" | "facturado";
 
@@ -28,7 +28,17 @@ export function VentasTabla({ ventas, esRestringido }: { ventas: VentaRow[]; esR
   const th = { orden, onOrdenar: ordenar };
 
   return (
-    <table className="w-full text-sm">
+    <>
+      {/* Mobile: tarjetas, en el orden en que vienen (fecha descendente). */}
+      <ul className="space-y-2 md:hidden">
+        {ventas.map((venta) => (
+          <VentaCard key={venta.id} venta={venta} esRestringido={esRestringido} />
+        ))}
+        {ventas.length === 0 && (
+          <li className="py-6 text-center text-sm text-gray-400">No hay ventas registradas para este filtro.</li>
+        )}
+      </ul>
+    <table className="hidden w-full text-sm md:table">
       <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
         <tr>
           <th className="w-8 px-3 py-2"></th>
@@ -55,5 +65,6 @@ export function VentasTabla({ ventas, esRestringido }: { ventas: VentaRow[]; esR
         )}
       </tbody>
     </table>
+    </>
   );
 }

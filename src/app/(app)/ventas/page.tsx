@@ -97,21 +97,22 @@ export default async function VentasPage({
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Ventas: {totalVentas}</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="whitespace-nowrap text-xl font-semibold text-gray-900">Ventas: {totalVentas}</h1>
         {!esRestringido && (
           <div className="flex items-center gap-2">
             <Link
               href="/ventas/uso-interno"
-              className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              className="whitespace-nowrap rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
             >
-              Uso interno / Contenido
+              <span className="md:hidden">Uso interno</span>
+              <span className="hidden md:inline">Uso interno / Contenido</span>
             </Link>
             <Link
               href="/ventas/nueva"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 md:px-4"
             >
-              + Nueva venta
+              + Nueva<span className="hidden md:inline"> venta</span>
             </Link>
           </div>
         )}
@@ -133,7 +134,7 @@ export default async function VentasPage({
         const ventasInternas = ventas.filter((v) => v.esVentaInterna);
 
         const renderTabla = (lista: typeof ventas, titulo?: string) => (
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          <div className="md:overflow-x-auto md:rounded-xl md:border md:border-gray-200 md:bg-white">
             {titulo && (
               <div className="border-b border-gray-100 bg-gray-50 px-4 py-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{titulo}</span>
