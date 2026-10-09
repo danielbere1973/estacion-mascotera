@@ -38,5 +38,17 @@ body {
     textarea {
       background-color: var(--color-gray-100);
     }
+
+    /* Safari de iPhone le da a los campos de fecha un ancho mínimo propio y se salen del
+       formulario: sin apariencia nativa respetan el ancho (w-full) como el resto. */
+    input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"]) {
+      -webkit-appearance: none;
+      appearance: none;
+      min-width: 0;
+      min-height: 2.5rem;
+    }
+    input::-webkit-date-and-time-value {
+      text-align: left;
+    }
   }
 }
