@@ -92,7 +92,17 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
                   ✉️ {c.email}
                 </a>
               )}
-              {c.direccion && <p className="truncate">📍 {c.direccion}</p>}
+              {c.direccion && (
+                // Mismo link de Waze que usa el bot de Telegram: abre la app y arranca a navegar.
+                <a
+                  href={`https://waze.com/ul?q=${encodeURIComponent(c.direccion)}&navigate=yes`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate text-blue-600"
+                >
+                  📍 {c.direccion}
+                </a>
+              )}
             </div>
             <div className="mt-2 flex gap-2">
               <Link
