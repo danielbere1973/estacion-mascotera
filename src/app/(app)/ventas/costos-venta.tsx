@@ -54,13 +54,13 @@ export function CostosVenta({ costosIniciales = [] }: { costosIniciales?: CostoI
       </p>
 
       {rows.map((row) => (
-        <div key={row.key} className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 p-2">
+        <div key={row.key} className="flex flex-wrap items-center gap-2 rounded-lg p-2 ring-1 ring-gray-200 md:bg-gray-50 md:ring-0">
           <input
             type="text"
             value={row.concepto}
             onChange={(e) => updateRow(row.key, { concepto: e.target.value })}
             placeholder="Concepto (ej: Comisión Mercado Libre)"
-            className="min-w-[200px] flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-auto sm:min-w-[200px] sm:flex-1"
           />
           <input type="hidden" name="costoConcepto" value={row.concepto} />
 

@@ -130,7 +130,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
     <div className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <label className="text-sm font-medium text-gray-700">Productos</label>
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="flex w-full flex-wrap items-end gap-3 sm:w-auto">
           <label className="flex items-center gap-1.5 cursor-pointer select-none pb-1.5">
             <input
               type="checkbox"
@@ -140,12 +140,12 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
             />
             <span className="text-xs font-medium text-gray-600">Solo productos con stock distinto de 0</span>
           </label>
-          <div className="space-y-1">
+          <div className="w-full space-y-1 sm:w-auto">
             <label className="text-xs font-medium text-gray-500">Filtrar por proveedor</label>
             <select
               value={filtroProveedorId}
               onChange={(e) => setFiltroProveedorId(e.target.value)}
-              className="rounded-md border border-gray-300 px-2 py-1 text-xs"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs sm:w-auto"
             >
               <option value="">Todos los proveedores</option>
               {proveedores.map((prov) => (
@@ -177,8 +177,11 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
         const subtotal = cantidad * precio - descMonto - (cantidad * precio * descPct / 100);
 
         return (
-          <div key={row.key} className="flex flex-wrap items-center gap-2">
-            <div className="min-w-[180px] flex-1">
+          <div
+            key={row.key}
+            className="grid grid-cols-2 items-end gap-2 rounded-lg p-2 ring-1 ring-gray-200 sm:flex sm:flex-wrap sm:items-center sm:p-0 sm:ring-0"
+          >
+            <div className="col-span-2 min-w-[180px] flex-1">
               <Combobox
                 options={opciones}
                 value={row.productoId}
@@ -200,7 +203,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 required
                 value={row.cantidad}
                 onChange={(e) => onCantidadChange(row.key, e.target.value, row, maxCantidad)}
-                className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-16"
                 placeholder="Cant."
               />
             </div>
@@ -215,7 +218,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 required
                 value={row.precio}
                 onChange={(e) => onPrecioChange(row.key, e.target.value)}
-                className="w-28 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-28"
                 placeholder="Precio"
               />
             </div>
@@ -228,7 +231,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 step="0.01"
                 value={row.descuentoMonto}
                 onChange={(e) => onDescuentoMontoChange(row.key, e.target.value)}
-                className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-20"
                 placeholder="Dto. $"
                 title="Descuento en pesos (independiente del %)"
               />
@@ -244,13 +247,13 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
                 step="any"
                 value={row.descuento}
                 onChange={(e) => onDescuentoPctChange(row.key, e.target.value)}
-                className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-20"
                 placeholder="Dto. %"
                 title="Descuento % (independiente del $)"
               />
             </div>
 
-            <div className="w-24 text-right text-sm font-medium text-gray-700">
+            <div className="text-sm font-medium text-gray-700 sm:w-24 sm:text-right">
               <span className="block sm:hidden text-xs text-gray-400">Subtotal</span>
               {row.productoId ? fmt(subtotal) : "—"}
             </div>
@@ -258,13 +261,14 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
             <button
               type="button"
               onClick={() => removeRow(row.key)}
-              className="rounded-md px-2 py-1.5 text-sm text-red-500 hover:bg-red-50"
+              className="justify-self-end rounded-md px-2 py-1.5 text-sm text-red-500 hover:bg-red-50"
+              aria-label="Quitar producto"
             >
               ✕
             </button>
 
             {producto && producto.consignados.length > 0 && (
-              <div className="basis-full space-y-0.5">
+              <div className="col-span-2 basis-full space-y-0.5">
                 <label className="block text-xs text-gray-400">Origen</label>
                 <select
                   value={row.detalleConsignacionId}
@@ -282,7 +286,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
             )}
 
             {producto && (
-              <span className="basis-full text-xs text-gray-400">
+              <span className="col-span-2 basis-full text-xs text-gray-400">
                 {consignado
                   ? `Producto consignado por ${consignado.socioNombre} · disponible: ${consignado.disponible} · stock propio: ${producto.stockActual}`
                   : `Stock disponible: ${producto.stockActual}`}
@@ -300,7 +304,7 @@ export function VentaItems({ productos, proveedores }: { productos: Producto[]; 
         + Agregar producto
       </button>
 
-      <div className="flex items-end justify-between gap-4 border-t border-gray-100 pt-3">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-t border-gray-100 pt-3">
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Costo de envío</label>
           <input
