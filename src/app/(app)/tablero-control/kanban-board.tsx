@@ -173,13 +173,13 @@ export function KanbanBoard({
         <h1 className="text-xl font-semibold text-gray-900">
           Tablero de Control: {tarjetas.reduce((max, t) => Math.max(max, t.id), 0)}
         </h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Filtros:</span>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+          <div className="col-span-2 flex items-center gap-2">
+            <span className="hidden text-sm text-gray-500 sm:inline">Filtros:</span>
             <select
               value={filtroClienteId}
               onChange={(e) => setFiltroClienteId(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm sm:flex-none"
             >
               <option value="">Todos</option>
               {clientes.map((c) => (
@@ -211,7 +211,7 @@ export function KanbanBoard({
           <button
             onClick={handleForzarCorte}
             disabled={corteEnCurso}
-            className="rounded-md border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+            className="col-span-2 rounded-md border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-50"
           >
             {corteEnCurso ? "Iniciando..." : "Forzar corte compra HYM"}
           </button>
@@ -311,7 +311,7 @@ export function KanbanBoard({
         </form>
       )}
 
-      <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2">
+      <div className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:snap-none">
         {columnas.map((col) => {
           const tarjetasCol = tarjetasVisibles.filter((t) => t.columnaId === col.id);
           const cantidadRealCol = tarjetas.filter((t) => t.columnaId === col.id).length;
@@ -330,7 +330,7 @@ export function KanbanBoard({
                 e.preventDefault();
                 onDropEnColumna(col.id);
               }}
-              className={`flex h-full w-64 shrink-0 flex-col rounded-xl border bg-gray-50 transition-colors ${
+              className={`flex h-full w-[85vw] shrink-0 snap-start flex-col rounded-xl border bg-gray-50 transition-colors sm:w-64 ${
                 isOver ? "border-blue-400 bg-blue-50" : "border-gray-200"
               } ${isDraggingThisCol ? "opacity-50" : ""}`}
             >
@@ -424,7 +424,7 @@ export function KanbanBoard({
                         <input type="hidden" name="id" value={t.id} />
                         <button
                           type="submit"
-                          className="opacity-0 transition-opacity group-hover:opacity-100 text-gray-400 hover:text-red-600"
+                          className="text-gray-400 transition-opacity hover:text-red-600 md:opacity-0 md:group-hover:opacity-100"
                           title="Eliminar"
                         >
                           ✕
@@ -457,6 +457,7 @@ export function KanbanBoard({
           key={tarjetaEditando.id}
           tarjeta={tarjetaEditando}
           columnaNombre={columnas.find((c) => c.id === tarjetaEditando.columnaId)?.nombre ?? ""}
+          columnas={columnas}
           usuarios={usuarios}
           ventas={ventas}
           clientes={clientes}
