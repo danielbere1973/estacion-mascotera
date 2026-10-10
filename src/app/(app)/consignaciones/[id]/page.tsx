@@ -68,7 +68,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <Link href="/consignaciones" className="text-xs text-gray-400 hover:text-gray-600">← Consignaciones</Link>
           <h1 className="text-xl font-semibold text-gray-900 mt-1">
@@ -83,7 +83,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           </p>
         </div>
         {!esRestringido && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <EditarConsignacionForm
               id={cons.id}
               direccion={cons.direccion}
@@ -115,7 +115,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Resumen */}
-      <div className={`grid gap-3 ${esRestringido ? "grid-cols-2" : "grid-cols-4"}`}>
+      <div className={`grid grid-cols-2 gap-3 ${esRestringido ? "" : "md:grid-cols-4"}`}>
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-center">
           <p className="text-xs text-gray-400">Unidades entregadas</p>
           <p className="text-lg font-semibold text-gray-900">{cons.items.reduce((s, it) => s + it.cantidad, 0)}</p>
@@ -149,8 +149,8 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           <h2 className="text-sm font-semibold text-gray-700">Pagos</h2>
           <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
             {cons.pagos.map((p) => (
-              <div key={p.id} className="flex items-center justify-between px-4 py-2.5">
-                <div>
+              <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div className="min-w-0">
                   <span className="text-sm font-medium text-gray-900">{fmt(Number(p.monto))}</span>
                   <span className="text-xs text-gray-400 ml-2">{new Date(p.fecha).toLocaleDateString("es-AR")}</span>
                   {p.notas && <span className="text-xs text-gray-400 ml-2">· {p.notas}</span>}
@@ -171,25 +171,25 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           </div>
 
           {montoLiquidar > 0 && pendiente > 0 && (
-            <form action={registrarPagoConsignacion} className="rounded-xl border border-blue-100 bg-blue-50 p-3 flex gap-3 items-end flex-wrap">
+            <form action={registrarPagoConsignacion} className="rounded-xl border border-blue-100 bg-blue-50 p-3 grid grid-cols-2 gap-3 md:flex md:items-end md:flex-wrap">
               <input type="hidden" name="consignacionId" value={cons.id} />
               <div>
                 <label className="text-xs text-blue-700">Fecha</label>
                 <input name="fecha" type="date" defaultValue={today}
-                  className="block rounded-md border border-blue-200 bg-white px-2 py-1.5 text-sm" />
+                  className="block w-full rounded-md border border-blue-200 bg-white px-2 py-1.5 text-sm" />
               </div>
               <div>
                 <label className="text-xs text-blue-700">Monto</label>
                 <input name="monto" type="number" min={0.01} step={0.01} defaultValue={pendiente.toFixed(2)}
-                  className="block w-36 rounded-md border border-blue-200 bg-white px-2 py-1.5 text-sm" />
+                  className="block w-full md:w-36 rounded-md border border-blue-200 bg-white px-2 py-1.5 text-sm" />
               </div>
-              <div className="flex-1 min-w-[150px]">
+              <div className="col-span-2 md:flex-1 md:min-w-[150px]">
                 <label className="text-xs text-blue-700">Notas (opcional)</label>
                 <input name="notas" placeholder="Transferencia, efectivo..."
                   className="block w-full rounded-md border border-blue-200 bg-white px-2 py-1.5 text-sm" />
               </div>
               <button type="submit"
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 whitespace-nowrap">
+                className="col-span-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 whitespace-nowrap">
                 Registrar pago
               </button>
             </form>
@@ -206,7 +206,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
           const diff = montoItem - montoEsperado;
           return (
             <div key={item.id} className="rounded-xl border border-gray-200 bg-white p-4">
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-gray-900">
                     {item.producto ? `${item.producto.nombre} (${item.producto.marca})` : item.descripcion ?? "Sin descripción"}
@@ -229,7 +229,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                   )}
                 </div>
                 {!esRestringido && diff !== 0 && (
-                  <span className={`text-xs font-semibold ${diff > 0 ? "text-green-600" : "text-red-600"}`}>
+                  <span className={`shrink-0 text-right text-xs font-semibold ${diff > 0 ? "text-green-600" : "text-red-600"}`}>
                     {diff > 0 ? "+" : ""}{fmt(diff)} vs piso
                   </span>
                 )}
@@ -240,24 +240,24 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
               {!esRestringido && esEntregamos && disponible > 0 && cons.estado === "ABIERTA" && (
                 <form action={registrarVentaConsignacion} className="space-y-2 mb-3">
                   <input type="hidden" name="detalleId" value={item.id} />
-                  <div className="flex gap-2 items-end flex-wrap">
-                    <div>
+                  <div className="grid grid-cols-2 gap-2 md:flex md:items-end md:flex-wrap">
+                    <div className="col-span-2">
                       <label className="text-xs text-gray-400">Fecha</label>
                       <input name="fecha" type="date" defaultValue={today}
-                        className="w-36 rounded-md border border-gray-300 px-2 py-1 text-sm" />
+                        className="block w-full md:w-36 rounded-md border border-gray-300 px-2 py-1 text-sm" />
                     </div>
                     <div>
                       <label className="text-xs text-gray-400">Cant. vendida</label>
                       <input name="cantidad" type="number" min={1} max={disponible} defaultValue={1}
-                        className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm" />
+                        className="block w-full md:w-20 rounded-md border border-gray-300 px-2 py-1 text-sm" />
                     </div>
                     <div>
                       <label className="text-xs text-gray-400">Precio de venta</label>
                       <input name="precioVentaReal" type="number" min={0} step={0.01} defaultValue={Number(item.precioPiso)}
-                        className="w-32 rounded-md border border-gray-300 px-2 py-1 text-sm" />
+                        className="block w-full md:w-32 rounded-md border border-gray-300 px-2 py-1 text-sm" />
                     </div>
                     <button type="submit"
-                      className="rounded-md bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700">
+                      className="col-span-2 rounded-md bg-green-600 px-3 py-2 text-sm text-white hover:bg-green-700 md:py-1">
                       Registrar venta
                     </button>
                   </div>

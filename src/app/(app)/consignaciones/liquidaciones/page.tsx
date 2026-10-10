@@ -16,10 +16,13 @@ export default async function LiquidacionesPage() {
 
   return (
     <div className="w-full space-y-4">
-      <div className="relative flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Liquidaciones</h1>
+      <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <Link href="/consignaciones" className="text-xs text-gray-400 hover:text-gray-600">← Consignaciones</Link>
+          <h1 className="text-xl font-semibold text-gray-900 mt-1">Liquidaciones</h1>
+        </div>
         {saldoTotal !== 0 && (
-          <div className="absolute left-1/2 -translate-x-1/2 text-center">
+          <div className="rounded-xl border border-gray-200 bg-white p-3 text-center md:absolute md:left-1/2 md:-translate-x-1/2 md:border-0 md:bg-transparent md:p-0">
             <p className="text-xs text-gray-400 uppercase tracking-wide">Saldo general pendiente</p>
             <p className={`text-2xl font-bold ${saldoTotal >= 0 ? "text-green-700" : "text-red-600"}`}>
               {fmt(Math.abs(saldoTotal))}
@@ -32,17 +35,18 @@ export default async function LiquidacionesPage() {
       <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
         {liquidaciones.map((liq) => (
           <Link key={liq.id} href={`/consignaciones/liquidaciones/${liq.id}`}
-            className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-            <div>
+            className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50">
+            <div className="min-w-0">
               <span className="font-medium text-sm text-gray-900">
                 #{liq.id} · {liq.socio.nombre}
               </span>
               <p className="text-xs text-gray-400 mt-0.5">
                 {new Date(liq.fechaDesde).toLocaleDateString("es-AR")} → {new Date(liq.fechaHasta).toLocaleDateString("es-AR")}
-                {" · "}generada {new Date(liq.fecha).toLocaleDateString("es-AR")}
+                <span className="hidden md:inline">{" · "}</span>
+                <span className="block md:inline">generada {new Date(liq.fecha).toLocaleDateString("es-AR")}</span>
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 flex-col items-end gap-1 md:flex-row md:items-center md:gap-3">
               <span className={`text-sm font-semibold ${Number(liq.saldo) >= 0 ? "text-green-700" : "text-red-600"}`}>
                 {fmt(Math.abs(Number(liq.saldo)))}
               </span>
