@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
@@ -16,14 +17,17 @@ export default async function TiposProductoPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900">Tipos de producto</h1>
+      <div>
+        <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Tipos de producto</h1>
+      </div>
 
       <form action={crearTipoProducto} className="flex gap-2">
         <input
           name="nombre"
           placeholder="Nuevo tipo (ej: Medicamento)"
           required
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
         />
         <button
           type="submit"
