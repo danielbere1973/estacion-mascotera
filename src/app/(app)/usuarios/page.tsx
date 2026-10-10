@@ -120,7 +120,30 @@ export default async function UsuariosPage() {
         </form>
       </details>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      {/* Mobile: tarjetas */}
+      <ul className="space-y-2 md:hidden">
+        {usuarios.map((u) => (
+          <li key={u.id}>
+            <Link href={`/usuarios/${u.id}/editar`} className="block rounded-xl border border-gray-200 bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 text-sm font-medium text-gray-900">{u.nombre} {u.apellido}</p>
+                {u.activo ? (
+                  <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Activo</span>
+                ) : (
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Inactivo</span>
+                )}
+              </div>
+              <p className="mt-0.5 break-all text-xs text-gray-500">{u.email}</p>
+              <p className="mt-0.5 text-xs text-gray-500">
+                {ROL_LABELS[u.rol]}
+                {u.proveedorRestricto && ` · ${u.proveedorRestricto.nombre}`}
+              </p>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>

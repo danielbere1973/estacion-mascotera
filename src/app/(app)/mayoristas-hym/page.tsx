@@ -7,7 +7,7 @@ export default async function MayoristasHymPage() {
 
   return (
     <div className="space-y-4 w-full">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Actualizar Stock y Precios — HYM</h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -17,7 +17,7 @@ export default async function MayoristasHymPage() {
         </div>
         <Link
           href="/mayoristas-hym/historial"
-          className="shrink-0 rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+          className="shrink-0 self-start rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
         >
           Ver historial de corridas automáticas
         </Link>

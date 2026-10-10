@@ -186,7 +186,7 @@ export function TablaCambiosHym({
         </button>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-600">
           {filasAAplicar.length} de {resultado.cambios.length} cambios se van a aplicar
           {excluidas.size > 0 && ` (${excluidas.size} excluidos manualmente)`}.
@@ -258,7 +258,19 @@ export function TablaCambiosHym({
           &quot;sin resolver&quot; más abajo.
         </p>
       ) : (
-      <div className="overflow-x-auto rounded-xl border border-gray-200">
+      <>
+      {/* Mobile: tarjetas */}
+      <ul className="space-y-2 md:hidden">
+        {filasMostradas.map((f) => (
+          <FilaTarjeta
+            key={f.skuHym}
+            fila={f}
+            excluida={excluidas.has(f.skuHym)}
+            onToggle={() => toggleExcluida(f.skuHym)}
+          />
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 md:block">
         <table className="w-full text-xs">
           <thead className="bg-gray-50 text-left uppercase text-gray-500">
             <tr>
@@ -287,6 +299,7 @@ export function TablaCambiosHym({
           </tbody>
         </table>
       </div>
+      </>
       )}
 
       {resultado.sinResolver.length > 0 && (
@@ -348,6 +361,45 @@ function StatFiltro({
     >
       {label}: <span className={`font-semibold ${claseValor ?? ""}`}>{valor}</span>
     </button>
+  );
+}
+
+function claseDeFila(fila: FilaCambioHym, excluida: boolean) {
+  if (fila.sinCambioReal || excluida) return "bg-gray-50 text-gray-400";
+  return fila.esVaciarPorSinStock ? "bg-red-50" : "";
+}
+
+// Mobile: el mismo cambio como tarjeta; la casilla incluye/excluye igual que en la tabla.
+function FilaTarjeta({
+  fila,
+  excluida,
+  onToggle,
+}: {
+  fila: FilaCambioHym;
+  excluida: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <li className={`rounded-xl border border-gray-200 p-3 text-xs ${claseDeFila(fila, excluida) || "bg-white"}`}>
+      <label className="flex items-start gap-2">
+        {!fila.sinCambioReal && (
+          <input type="checkbox" checked={!excluida} onChange={onToggle} className="mt-0.5 h-4 w-4 shrink-0" />
+        )}
+        <span className="min-w-0 text-sm font-medium">{fila.nombreTN}</span>
+      </label>
+      <p className="mt-0.5 font-mono text-gray-500">
+        {fila.skuHym} · {fila.skuInterno}
+      </p>
+      <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+        <p>
+          Precio: {formatMoney(fila.tnPrecioActual)} → <span className="font-medium">{formatMoney(fila.nuevoPrecio)}</span>
+        </p>
+        <p>Stock: {fila.tnStockActual ?? "—"} → {fila.nuevoStock ?? "—"}</p>
+        {fila.nuevoPromocional !== undefined && <p>Promo: {formatMoney(fila.nuevoPromocional)}</p>}
+        <p>Estado HYM: {fila.estadoStockHym}</p>
+      </div>
+      <p className="mt-1 text-gray-500">{fila.accion}</p>
+    </li>
   );
 }
 

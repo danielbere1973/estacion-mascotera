@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { actualizarUsuario } from "../../actions";
@@ -22,7 +23,10 @@ export default async function EditarUsuarioPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Editar usuario</h1>
+      <div>
+        <Link href="/usuarios" className="text-xs text-gray-400 hover:text-gray-600">← Usuarios</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Editar usuario</h1>
+      </div>
 
       <form
         action={actualizarUsuario}

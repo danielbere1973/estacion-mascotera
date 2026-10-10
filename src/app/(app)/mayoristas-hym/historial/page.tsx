@@ -14,7 +14,8 @@ export default async function HistorialSyncHymPage() {
   return (
     <div className="space-y-4 w-full">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Historial Sync HYM automático</h1>
+        <Link href="/mayoristas-hym" className="text-xs text-gray-400 hover:text-gray-600">← Precios HYM</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Historial Sync HYM automático</h1>
         <p className="mt-1 text-sm text-gray-500">
           Cada corrida del scraper (martes a sábado de madrugada) que llegó a tocar Tiendanube queda registrada
           acá con el detalle de qué cambió.{" "}
