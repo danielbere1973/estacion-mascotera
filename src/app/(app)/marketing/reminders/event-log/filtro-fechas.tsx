@@ -14,7 +14,7 @@ export function FiltroFechas({ desde, hasta }: { desde: string; hasta: string })
 
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4">
-      <form className="flex flex-wrap items-end gap-3">
+      <form className="grid w-full grid-cols-2 items-end gap-3 sm:flex sm:w-auto sm:flex-wrap">
         <div className="space-y-1">
           <label htmlFor="desde" className="text-sm font-medium text-gray-700">
             Desde
@@ -26,7 +26,7 @@ export function FiltroFechas({ desde, hasta }: { desde: string; hasta: string })
             defaultValue={desde}
             max={hasta || undefined}
             onClick={abrirCalendario}
-            className="block w-44 cursor-pointer rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
+            className="block w-full cursor-pointer rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm sm:w-44"
           />
         </div>
         <div className="space-y-1">
@@ -40,7 +40,7 @@ export function FiltroFechas({ desde, hasta }: { desde: string; hasta: string })
             defaultValue={hasta}
             min={desde || undefined}
             onClick={abrirCalendario}
-            className="block w-44 cursor-pointer rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
+            className="block w-full cursor-pointer rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm sm:w-44"
           />
         </div>
         <button
@@ -51,12 +51,12 @@ export function FiltroFechas({ desde, hasta }: { desde: string; hasta: string })
         </button>
         <a
           href="/marketing/reminders/event-log"
-          className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
+          className="rounded-md bg-white px-4 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100"
         >
           Limpiar
         </a>
       </form>
-      <div className="ml-auto">
+      <div className="sm:ml-auto">
         <DepurarLogs />
       </div>
     </div>
