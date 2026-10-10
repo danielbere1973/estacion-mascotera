@@ -141,12 +141,9 @@ export default async function ConsignacionesPage() {
       )}
 
       {!esRestringido && (
-        <div className="flex gap-4">
+        <div>
           <Link href="/consignaciones/liquidaciones" className="text-sm text-blue-600 hover:underline">
             Ver todas las liquidaciones →
-          </Link>
-          <Link href="/consignaciones/dropshipping" className="text-sm text-blue-600 hover:underline">
-            Dropshipping →
           </Link>
         </div>
       )}
