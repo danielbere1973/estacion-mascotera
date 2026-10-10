@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Combobox } from "@/components/combobox";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { editarTarjeta, obtenerProductosVenta } from "./actions";
+import { editarTarjeta, moverTarjeta, obtenerProductosVenta } from "./actions";
 
 interface ProductoVenta {
   sku: string;
@@ -36,6 +36,7 @@ interface ClienteOpcion {
 interface Tarjeta {
   id: number;
   titulo: string;
+  columnaId: number;
   notas: string | null;
   usuarioAsignadoId: number | null;
   ventaId: number | null;
@@ -45,6 +46,7 @@ interface Tarjeta {
 export function EditarTarjetaModal({
   tarjeta,
   columnaNombre,
+  columnas,
   usuarios,
   ventas,
   clientes,
@@ -52,6 +54,7 @@ export function EditarTarjetaModal({
 }: {
   tarjeta: Tarjeta;
   columnaNombre: string;
+  columnas: { id: number; nombre: string }[];
   usuarios: Usuario[];
   ventas: VentaOpcion[];
   clientes: ClienteOpcion[];
@@ -59,6 +62,8 @@ export function EditarTarjetaModal({
 }) {
   const [ventaId, setVentaId] = useState(tarjeta.ventaId ? String(tarjeta.ventaId) : "");
   const [clienteId, setClienteId] = useState(tarjeta.clienteId ? String(tarjeta.clienteId) : "");
+  // En el celular no se puede arrastrar la tarjeta: se mueve eligiendo la columna acá.
+  const [columnaId, setColumnaId] = useState(String(tarjeta.columnaId));
   const [productos, setProductos] = useState<ProductoVenta[]>([]);
   const [cargandoProductos, setCargandoProductos] = useState(false);
 
@@ -103,7 +108,7 @@ export function EditarTarjetaModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg"
+        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-baseline justify-between gap-2">
@@ -113,6 +118,7 @@ export function EditarTarjetaModal({
         <form
           action={(fd) => {
             editarTarjeta(fd);
+            if (columnaId !== String(tarjeta.columnaId)) moverTarjeta(tarjeta.id, Number(columnaId));
             onClose();
           }}
           className="space-y-3"
@@ -134,7 +140,18 @@ export function EditarTarjetaModal({
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Estado</label>
-            <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+            <select
+              value={columnaId}
+              onChange={(e) => setColumnaId(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm md:hidden"
+            >
+              {columnas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+            <p className="hidden rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 md:block">
               {columnaNombre}
             </p>
           </div>
