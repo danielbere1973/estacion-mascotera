@@ -33,7 +33,10 @@ export default async function ComprasPage() {
   return (
     <div className="w-full space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Compras</h1>
+        <div>
+          <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+          <h1 className="text-xl font-semibold text-gray-900 mt-1">Compras</h1>
+        </div>
         {!esRestringido && (
           <Link
             href="/inventario/compra"
@@ -45,7 +48,7 @@ export default async function ComprasPage() {
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-400 font-medium pl-11">
+        <div className="hidden sm:grid grid-cols-5 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-400 font-medium pl-11">
           <span>Fecha</span>
           <span>Proveedor</span>
           <span>N° Pedido</span>

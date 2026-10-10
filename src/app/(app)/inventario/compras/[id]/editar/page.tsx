@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { EditorCompraForm } from "./editar-compra-form";
 
@@ -43,7 +44,10 @@ export default async function EditarCompraPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Editar compra #{compra.id}</h1>
+      <div>
+        <Link href="/inventario/compras" className="text-xs text-gray-400 hover:text-gray-600">← Compras</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Editar compra #{compra.id}</h1>
+      </div>
       <EditorCompraForm
         compra={{
           id: compra.id,
