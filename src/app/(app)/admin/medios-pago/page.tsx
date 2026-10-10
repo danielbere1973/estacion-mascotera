@@ -15,7 +15,7 @@ export default async function MediosPagoPage() {
           name="nombre"
           required
           placeholder="Ej: Débito"
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
         />
         <button
           type="submit"
@@ -28,11 +28,11 @@ export default async function MediosPagoPage() {
       {/* Lista */}
       <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
         {medios.map((m) => (
-          <div key={m.id} className="flex items-center justify-between px-4 py-3">
+          <div key={m.id} className="flex items-center justify-between gap-3 px-4 py-3">
             <span className={`text-sm font-medium ${m.activo ? "text-gray-900" : "text-gray-400 line-through"}`}>
               {m.nombre}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <form action={toggleMedioPago}>
                 <input type="hidden" name="id" value={m.id} />
                 <input type="hidden" name="activo" value={String(m.activo)} />

@@ -111,7 +111,31 @@ export default async function ActividadPage({
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      {/* Mobile: tarjetas */}
+      <ul className="space-y-2 md:hidden">
+        {logs.map((log) => (
+          <li key={log.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 font-medium text-gray-900">
+                {ENTIDAD_LABELS[log.entidad] ?? log.entidad}
+                {log.entidadId ? ` #${log.entidadId}` : ""}
+              </p>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ACCION_COLORS[log.accion] ?? ""}`}>
+                {ACCION_LABELS[log.accion] ?? log.accion}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {formatDateTime(log.fecha)} · {log.usuario.nombre} {log.usuario.apellido}
+            </p>
+            {log.detalle && <p className="mt-1 break-words text-xs text-gray-600">{log.detalle}</p>}
+          </li>
+        ))}
+        {logs.length === 0 && (
+          <li className="py-6 text-center text-sm text-gray-400">No hay actividad registrada.</li>
+        )}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>

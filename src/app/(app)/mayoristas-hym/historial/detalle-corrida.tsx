@@ -50,14 +50,14 @@ export function DetalleCorrida({ corrida }: { corrida: SincronizacionHym }) {
         onClick={() => setAbierto((v) => !v)}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
       >
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-medium text-gray-800">{formatFecha(corrida.fecha)}</p>
           <p className="text-xs text-gray-500">
             {corrida.exitosos} cambios aplicados
             {corrida.erroresCount > 0 && `, ${corrida.erroresCount} errores`} · {corrida.totalFilasCsv} filas en el CSV
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {huboProblema && (
             <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Revisar</span>
           )}
@@ -81,7 +81,36 @@ export function DetalleCorrida({ corrida }: { corrida: SincronizacionHym }) {
           {cambios.length === 0 ? (
             <p className="text-sm text-gray-500">No hubo cambios reales para aplicar en esta corrida.</p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <>
+            {/* Mobile: lista */}
+            <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 text-xs md:hidden">
+              {cambios.map((f) => {
+                const error = erroresPorSku.get(f.skuHym);
+                return (
+                  <li key={f.skuHym} className={`p-2.5 ${error ? "bg-red-50" : ""}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="min-w-0 font-medium text-gray-800">{f.nombreTN}</p>
+                      {error ? (
+                        <span className="shrink-0 text-red-600">{error.status}</span>
+                      ) : (
+                        <span className="shrink-0 text-green-600">OK</span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 font-mono text-gray-500">
+                      {f.skuHym} · {f.skuInterno}
+                    </p>
+                    <p className="mt-0.5 text-gray-600">
+                      Precio {formatMoney(f.tnPrecioActual)} → <span className="font-medium">{formatMoney(f.nuevoPrecio)}</span>
+                      {f.nuevoPromocional !== undefined && ` · promo ${formatMoney(f.nuevoPromocional)}`} · Stock{" "}
+                      {f.tnStockActual ?? "—"} → {f.nuevoStock ?? "—"}
+                    </p>
+                    <p className="text-gray-500">{f.accion}</p>
+                    {error && <p className="text-red-600">{error.detalle}</p>}
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="hidden overflow-x-auto rounded-lg border border-gray-200 md:block">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 text-left uppercase text-gray-500">
                   <tr>
@@ -130,6 +159,7 @@ export function DetalleCorrida({ corrida }: { corrida: SincronizacionHym }) {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           {sinResolver.length > 0 && (
@@ -137,7 +167,18 @@ export function DetalleCorrida({ corrida }: { corrida: SincronizacionHym }) {
               <p className="mb-1 text-xs font-medium text-gray-600">
                 Sin resolver ({sinResolver.length}):
               </p>
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 text-xs md:hidden">
+                {sinResolver.map((f, i) => (
+                  <li key={`${f.skuHym}-${i}`} className="p-2.5">
+                    <p className="text-gray-800">{f.nombreHym}</p>
+                    <p className="mt-0.5 font-mono text-gray-500">
+                      {f.skuHym} · {f.skuInterno ?? "—"}
+                    </p>
+                    <p className="text-gray-500">{f.motivo}</p>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden overflow-x-auto rounded-lg border border-gray-200 md:block">
                 <table className="w-full text-xs">
                   <thead className="bg-gray-50 text-left uppercase text-gray-500">
                     <tr>
