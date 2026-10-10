@@ -34,14 +34,14 @@ export function RemindersVista({
     <>
       <div>
         {titulo}
-        <div className="mt-1 flex items-center justify-between gap-4">
+        <div className="mt-1 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
           {subtitulo}
-          <div className="flex items-start gap-2">
+          <div className="flex flex-wrap items-start gap-2">
             <input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar cliente o mascota..."
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm md:w-auto"
             />
             {acciones}
           </div>

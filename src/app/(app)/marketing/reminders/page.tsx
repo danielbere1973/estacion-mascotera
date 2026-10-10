@@ -128,7 +128,7 @@ export default async function RemindersPage() {
     <div className="flex h-full flex-col gap-4">
       <RemindersVista
         titulo={
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
             <SwitchEnvioAutomatico activo={config?.envioAutomatico ?? true} />
           </div>

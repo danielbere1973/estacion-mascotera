@@ -89,10 +89,12 @@ function TextoEditable({
   guardado,
   obligatorio,
   onGuardar,
+  className = "w-32",
 }: {
   guardado: string;
   obligatorio?: boolean;
   onGuardar: (valor: string) => void;
+  className?: string;
 }) {
   const [valor, setValor] = useState(guardado);
   // Si el valor cambia desde el server, sincronizar el input.
@@ -123,13 +125,24 @@ function TextoEditable({
         if (texto !== guardado) onGuardar(texto);
       }}
       placeholder="-"
-      className="w-32 rounded-md border border-gray-300 px-2 py-1 text-sm"
+      className={`${className} rounded-md border border-gray-300 px-2 py-1 text-sm`}
     />
   );
 }
 
 // `mostrarStatus`: el combo de Status va solo en la primera fila de cada cliente y se aplica a todas sus mascotas.
-function Fila({ fila, hoy, mostrarStatus }: { fila: FilaReminder; hoy: string; mostrarStatus: boolean }) {
+// `vista`: "tabla" (fila de la tabla en desktop) o "tarjeta" (mobile); misma lógica y mismos datos.
+function Fila({
+  fila,
+  hoy,
+  mostrarStatus,
+  vista = "tabla",
+}: {
+  fila: FilaReminder;
+  hoy: string;
+  mostrarStatus: boolean;
+  vista?: "tabla" | "tarjeta";
+}) {
   const [dias, setDias] = useState(fila.setupReminderDias.toString());
   const [status, setStatus] = useState(fila.statusCliente);
   // Si el status cambia desde el server (p. ej. el switch "Todo Activo/Pausado"), sincronizar el select.
@@ -167,134 +180,179 @@ function Fila({ fila, hoy, mostrarStatus }: { fila: FilaReminder; hoy: string; m
     if (b.nombre && b.tipo) startTransition(() => crearMascotaDesdeReminders(fila.id, b.nombre, b.tipo, b.raza));
   };
   const ayudaBorrador = "Completá Mascota y Tipo para crear la mascota";
+  const ancho = vista === "tarjeta" ? "w-full" : undefined;
+
+  const celdaMascota = esMascota ? (
+    <TextoEditable guardado={fila.mascota ?? ""} obligatorio onGuardar={(v) => editarMascota("nombre", v)} className={ancho} />
+  ) : (
+    <TextoEditable guardado={borrador.nombre} onGuardar={(v) => editarBorrador({ nombre: v })} className={ancho} />
+  );
+
+  const celdaTipo =
+    esMascota && tipo ? (
+      <select
+        value={tipo}
+        onChange={(e) => {
+          setTipo(e.target.value as TipoMascota);
+          editarMascota("tipo", e.target.value);
+        }}
+        className={`${ancho ?? ""} rounded-md border border-gray-300 px-2 py-1 text-sm`}
+      >
+        {Object.entries(TIPO_LABEL).map(([valor, label]) => (
+          <option key={valor} value={valor}>
+            {label}
+          </option>
+        ))}
+      </select>
+    ) : (
+      <select
+        value={borrador.tipo}
+        onChange={(e) => editarBorrador({ tipo: e.target.value as TipoMascota | "" })}
+        title={ayudaBorrador}
+        className={`${ancho ?? ""} rounded-md border border-gray-300 px-2 py-1 text-sm`}
+      >
+        <option value="">-</option>
+        {Object.entries(TIPO_LABEL).map(([valor, label]) => (
+          <option key={valor} value={valor}>
+            {label}
+          </option>
+        ))}
+      </select>
+    );
+
+  const celdaRaza = esMascota ? (
+    <TextoEditable guardado={fila.raza ?? ""} onGuardar={(v) => editarMascota("raza", v)} className={ancho} />
+  ) : (
+    <TextoEditable guardado={borrador.raza} onGuardar={(v) => editarBorrador({ raza: v })} className={ancho} />
+  );
+
+  const linkUltimaVenta = fila.ultimaVentaId ? (
+    <Link
+      href={`/ventas/${fila.ultimaVentaId}/editar`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:underline"
+    >
+      #{fila.ultimaVentaId}
+    </Link>
+  ) : (
+    "-"
+  );
+
+  const fechaUltimaVenta = fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-";
+
+  const badgeDias = (
+    <span
+      className={`inline-block min-w-10 rounded-md px-2 py-1 text-center ${
+        colorDiasTranscurridos(diasTranscurridos, setup) || "text-gray-600"
+      }`}
+    >
+      {diasTranscurridos ?? "-"}
+    </span>
+  );
+
+  const inputSetup = (
+    <input
+      type="number"
+      min={1}
+      required
+      value={dias}
+      onChange={(e) => setDias(e.target.value)}
+      onBlur={() => {
+        const guardado = fila.setupReminderDias.toString();
+        const n = Number.parseInt(dias, 10);
+        // No se permite vacío ni menor a 1: vuelve al último valor guardado.
+        if (!Number.isFinite(n) || n < 1) {
+          setDias(guardado);
+          return;
+        }
+        if (n.toString() !== guardado) {
+          setDias(n.toString());
+          startTransition(() => actualizarSetupReminder(fila.destino, fila.id, n.toString()));
+        }
+      }}
+      placeholder="días"
+      className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm"
+    />
+  );
+
+  const marcaEnviado = enviado ? (
+    <span className="text-lg font-bold text-green-600" title={`Enviado el ${formatDate(aFecha(fila.ultimoReminderFecha!))}`}>
+      ✓
+    </span>
+  ) : (
+    <span className="text-lg font-bold text-red-600" title={`Sin reminder enviado en los últimos ${DIAS_ENTRE_REMINDERS} días`}>
+      ✗
+    </span>
+  );
+
+  const selectStatus = mostrarStatus && (
+    <select
+      value={status}
+      onChange={(e) => {
+        setStatus(e.target.value as StatusReminder);
+        startTransition(() => actualizarStatusReminder(fila.destino, fila.id, e.target.value));
+      }}
+      className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+    >
+      <option value="ACTIVO">Activo</option>
+      <option value="PAUSADO">Pausado</option>
+    </select>
+  );
+
+  if (vista === "tarjeta") {
+    return (
+      <li className={`rounded-xl border border-gray-200 bg-white p-3 text-sm ${pending ? "opacity-60" : ""}`}>
+        <div className="flex items-center justify-between gap-2">
+          <p className="min-w-0 font-medium text-gray-900">{fila.cliente}</p>
+          {mostrarStatus && (
+            <div className="flex shrink-0 items-center gap-2">
+              {selectStatus}
+              <ForceMail fila={fila} />
+            </div>
+          )}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          <div>
+            <label className="text-xs text-gray-500">Mascota</label>
+            {celdaMascota}
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Tipo</label>
+            {celdaTipo}
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Raza</label>
+            {celdaRaza}
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-gray-500">
+          Mail: {fila.tieneEmail ? "SI" : "NO"} · Última compra {linkUltimaVenta} ({fechaUltimaVenta})
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-100 pt-2 text-xs text-gray-600">
+          <span className="flex items-center gap-1">Días {badgeDias}</span>
+          <span className="flex items-center gap-1">Setup {inputSetup}</span>
+          <span>Próximo: {proximo ? formatDate(proximo) : "-"}</span>
+          <span className="flex items-center gap-1">Enviado {marcaEnviado}</span>
+        </div>
+      </li>
+    );
+  }
 
   return (
     <tr className={`hover:bg-gray-50 ${pending ? "opacity-60" : ""}`}>
       <td className="px-3 py-2 font-medium">{fila.cliente}</td>
-      <td className="px-3 py-2 text-gray-600">
-        {esMascota ? (
-          <TextoEditable guardado={fila.mascota ?? ""} obligatorio onGuardar={(v) => editarMascota("nombre", v)} />
-        ) : (
-          <TextoEditable guardado={borrador.nombre} onGuardar={(v) => editarBorrador({ nombre: v })} />
-        )}
-      </td>
-      <td className="px-3 py-2 text-gray-600">
-        {esMascota && tipo ? (
-          <select
-            value={tipo}
-            onChange={(e) => {
-              setTipo(e.target.value as TipoMascota);
-              editarMascota("tipo", e.target.value);
-            }}
-            className="rounded-md border border-gray-300 px-2 py-1 text-sm"
-          >
-            {Object.entries(TIPO_LABEL).map(([valor, label]) => (
-              <option key={valor} value={valor}>
-                {label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <select
-            value={borrador.tipo}
-            onChange={(e) => editarBorrador({ tipo: e.target.value as TipoMascota | "" })}
-            title={ayudaBorrador}
-            className="rounded-md border border-gray-300 px-2 py-1 text-sm"
-          >
-            <option value="">-</option>
-            {Object.entries(TIPO_LABEL).map(([valor, label]) => (
-              <option key={valor} value={valor}>
-                {label}
-              </option>
-            ))}
-          </select>
-        )}
-      </td>
-      <td className="px-3 py-2 text-gray-600">
-        {esMascota ? (
-          <TextoEditable guardado={fila.raza ?? ""} onGuardar={(v) => editarMascota("raza", v)} />
-        ) : (
-          <TextoEditable guardado={borrador.raza} onGuardar={(v) => editarBorrador({ raza: v })} />
-        )}
-      </td>
+      <td className="px-3 py-2 text-gray-600">{celdaMascota}</td>
+      <td className="px-3 py-2 text-gray-600">{celdaTipo}</td>
+      <td className="px-3 py-2 text-gray-600">{celdaRaza}</td>
       <td className="px-3 py-2 text-gray-600">{fila.tieneEmail ? "SI" : "NO"}</td>
-      <td className="px-3 py-2 text-gray-600">
-        {fila.ultimaVentaId ? (
-          <Link
-            href={`/ventas/${fila.ultimaVentaId}/editar`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-          >
-            #{fila.ultimaVentaId}
-          </Link>
-        ) : (
-          "-"
-        )}
-      </td>
-      <td className="px-3 py-2 text-gray-600">
-        {fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-"}
-      </td>
-      <td className="px-3 py-2">
-        <span
-          className={`inline-block min-w-10 rounded-md px-2 py-1 text-center ${
-            colorDiasTranscurridos(diasTranscurridos, setup) || "text-gray-600"
-          }`}
-        >
-          {diasTranscurridos ?? "-"}
-        </span>
-      </td>
-      <td className="px-3 py-2">
-        <input
-          type="number"
-          min={1}
-          required
-          value={dias}
-          onChange={(e) => setDias(e.target.value)}
-          onBlur={() => {
-            const guardado = fila.setupReminderDias.toString();
-            const n = Number.parseInt(dias, 10);
-            // No se permite vacío ni menor a 1: vuelve al último valor guardado.
-            if (!Number.isFinite(n) || n < 1) {
-              setDias(guardado);
-              return;
-            }
-            if (n.toString() !== guardado) {
-              setDias(n.toString());
-              startTransition(() => actualizarSetupReminder(fila.destino, fila.id, n.toString()));
-            }
-          }}
-          placeholder="días"
-          className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm"
-        />
-      </td>
+      <td className="px-3 py-2 text-gray-600">{linkUltimaVenta}</td>
+      <td className="px-3 py-2 text-gray-600">{fechaUltimaVenta}</td>
+      <td className="px-3 py-2">{badgeDias}</td>
+      <td className="px-3 py-2">{inputSetup}</td>
       <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
-      <td className="px-3 py-2 text-center">
-        {enviado ? (
-          <span className="text-lg font-bold text-green-600" title={`Enviado el ${formatDate(aFecha(fila.ultimoReminderFecha!))}`}>
-            ✓
-          </span>
-        ) : (
-          <span className="text-lg font-bold text-red-600" title={`Sin reminder enviado en los últimos ${DIAS_ENTRE_REMINDERS} días`}>
-            ✗
-          </span>
-        )}
-      </td>
-      <td className="px-3 py-2">
-        {mostrarStatus && (
-          <select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as StatusReminder);
-              startTransition(() => actualizarStatusReminder(fila.destino, fila.id, e.target.value));
-            }}
-            className="rounded-md border border-gray-300 px-2 py-1 text-sm"
-          >
-            <option value="ACTIVO">Activo</option>
-            <option value="PAUSADO">Pausado</option>
-          </select>
-        )}
-      </td>
+      <td className="px-3 py-2 text-center">{marcaEnviado}</td>
+      <td className="px-3 py-2">{selectStatus}</td>
       <td className="px-3 py-2 text-center">
         {mostrarStatus && <ForceMail fila={fila} />}
       </td>
@@ -420,7 +478,15 @@ export function RemindersTabla({
   }, [ordenadas]);
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+    <>
+      {/* Mobile: tarjetas, en el orden en que vienen (por cliente). */}
+      <ul className="space-y-2 md:hidden">
+        {ordenadas.map((f) => (
+          <Fila key={f.key} fila={f} hoy={hoy} mostrarStatus={primeras.has(f.key)} vista="tarjeta" />
+        ))}
+        {filas.length === 0 && <li className="py-6 text-center text-sm text-gray-400">{mensajeVacio}</li>}
+      </ul>
+    <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
           <tr>
@@ -449,5 +515,6 @@ export function RemindersTabla({
         </tbody>
       </table>
     </div>
+    </>
   );
 }

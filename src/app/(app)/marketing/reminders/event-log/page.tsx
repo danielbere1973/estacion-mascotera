@@ -62,7 +62,40 @@ export default async function EventLogPage({
         </p>
       </div>
       <FiltroFechas desde={desde} hasta={hasta} />
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      {/* Mobile: tarjetas */}
+      <ul className="space-y-2 md:hidden">
+        {eventos.map((e) => (
+          <li
+            key={e.id}
+            className={`rounded-xl border border-gray-200 bg-white p-3 text-sm ${
+              e.accion === "Envío de reminders" ? "font-bold text-gray-900" : ""
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className={`min-w-0 ${e.accion === "Envío de reminders" ? "" : "font-medium"}`}>{e.accion}</p>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  e.resultado === "OK" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                }`}
+              >
+                {e.resultado}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs font-normal text-gray-500">
+              {formatoFecha.format(e.fecha)} {formatoHora.format(e.fecha)} ·{" "}
+              {e.usuario ? `${e.usuario.nombre} ${e.usuario.apellido}` : "Automático"}
+            </p>
+            {e.detalle && <p className="mt-1 break-words text-xs font-normal text-gray-600">{e.detalle}</p>}
+          </li>
+        ))}
+        {eventos.length === 0 && (
+          <li className="py-6 text-center text-sm text-gray-400">
+            {rango ? "No hay eventos en ese rango de fechas." : "Todavía no hay eventos registrados."}
+          </li>
+        )}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
