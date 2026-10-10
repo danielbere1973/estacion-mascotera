@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { ResolverBtn } from "./resolver-btn";
@@ -16,8 +17,11 @@ export default async function PendientesHymPage() {
 
   return (
     <div className="space-y-4 w-full">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-gray-900">Pendientes de compra a mayorista</h1>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div>
+          <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+          <h1 className="text-xl font-semibold text-gray-900 mt-1">Pendientes de compra a mayorista</h1>
+        </div>
         <div className="text-sm text-gray-500">
           <span className="font-medium text-gray-700">{pendientes.length} pendiente(s)</span>
         </div>
@@ -34,8 +38,29 @@ export default async function PendientesHymPage() {
         </div>
       )}
 
+      {/* Mobile: tarjetas */}
       {pendientes.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <ul className="space-y-2 md:hidden">
+          {pendientes.map((p) => (
+            <li key={p.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 text-gray-800">{p.producto.nombre}</p>
+                <p className="shrink-0 font-medium text-gray-700">× {p.cantidad}</p>
+              </div>
+              <p className="mt-0.5 text-xs text-gray-500">
+                {p.proveedor.nombre} · <span className="font-mono">{p.producto.skuInterno}</span> ·{" "}
+                {p.estado === "EN_PROCESO" ? "En proceso" : "Pendiente"}
+              </p>
+              <div className="mt-2 border-t border-gray-100 pt-2">
+                <ResolverBtn pendienteId={p.id} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {pendientes.length > 0 && (
+        <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
           <table className="w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase text-gray-500">
               <tr>

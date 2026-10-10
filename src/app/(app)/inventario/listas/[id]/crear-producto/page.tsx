@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { crearProductoDesdeListaMayorista } from "../../../actions";
 
@@ -21,7 +22,10 @@ export default async function CrearProductoDesdeListaPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Crear producto desde lista</h1>
+      <div>
+        <Link href={`/inventario/listas?proveedorId=${proveedorId ?? item.proveedorId ?? ""}`} className="text-xs text-gray-400 hover:text-gray-600">← Lista de precios</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Crear producto desde lista</h1>
+      </div>
 
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
         <p><span className="font-medium">SKU:</span> {item.sku}</p>

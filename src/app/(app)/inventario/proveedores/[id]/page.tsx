@@ -25,8 +25,8 @@ export default async function ProveedorDetallePage({ params }: { params: Promise
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <Link href="/inventario/proveedores" className="text-xs text-gray-400 hover:text-gray-600">← Proveedores</Link>
           <h1 className="text-xl font-semibold text-gray-900 mt-1">{proveedor.nombre}</h1>
           {proveedor.contacto && <p className="text-sm text-gray-500">{proveedor.contacto}</p>}
@@ -34,7 +34,7 @@ export default async function ProveedorDetallePage({ params }: { params: Promise
           {proveedor.accountManager && <p className="text-sm text-gray-500">Account Manager: {proveedor.accountManager}</p>}
           {proveedor.horarios && <p className="text-sm text-gray-500">Horarios: {proveedor.horarios}</p>}
         </div>
-        <Link href={`/inventario/proveedores/${proveedor.id}/editar`} className="rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+        <Link href={`/inventario/proveedores/${proveedor.id}/editar`} className="shrink-0 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
           Editar
         </Link>
       </div>
@@ -44,7 +44,39 @@ export default async function ProveedorDetallePage({ params }: { params: Promise
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <p className="text-sm font-medium text-gray-700">Productos vinculados <span className="text-gray-400">({conProducto.length})</span></p>
         </div>
-        <table className="w-full text-sm">
+        {/* Mobile: lista */}
+        <ul className="divide-y divide-gray-100 md:hidden">
+          {conProducto.map((h) => {
+            const costo = Number(h.precioConDescuento ?? h.precioCostoScraped);
+            const venta = Number(h.producto!.precioVenta);
+            const margen = costo > 0 ? ((venta - costo) / costo) * 100 : null;
+            return (
+              <li key={h.id} className={`px-4 py-2.5 text-sm ${h.producto?.activo === false ? "opacity-40" : ""}`}>
+                <div className="flex justify-between gap-3">
+                  <Link href={`/inventario/productos/${h.producto!.id}/editar`} className="min-w-0 text-blue-600">
+                    {h.producto!.nombre}
+                    {h.producto?.activo === false && <span className="ml-1 text-xs text-gray-400">(inactivo)</span>}
+                  </Link>
+                  {margen !== null && (
+                    <span className={`shrink-0 font-medium ${margen >= 25 ? "text-green-600" : "text-orange-500"}`}>
+                      {margen.toFixed(1)}%
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {h.producto!.marca} · <span className="font-mono">{h.sku}</span>
+                </p>
+                <p className="text-xs text-gray-500">
+                  Costo {formatCurrency(costo.toString())} · Venta {formatCurrency(venta.toString())}
+                </p>
+              </li>
+            );
+          })}
+          {conProducto.length === 0 && (
+            <li className="px-4 py-6 text-center text-sm text-gray-400">Sin productos vinculados</li>
+          )}
+        </ul>
+        <table className="hidden w-full text-sm md:table">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
               <th className="px-4 py-2">SKU proveedor</th>
