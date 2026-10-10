@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { actualizarProducto, reactivarProducto } from "../../../actions";
 import { agregarProveedorProducto, quitarProveedorProducto } from "./actions";
@@ -42,10 +43,13 @@ export default async function EditarProductoPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900">Editar producto</h1>
+      <div>
+        <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Editar producto</h1>
+      </div>
 
       {!producto.activo && (
-        <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
           <p className="text-sm text-orange-700 font-medium">Este producto está inactivo y no aparece en el catálogo.</p>
           <form action={reactivarProducto}>
             <input type="hidden" name="id" value={producto.id} />
@@ -132,15 +136,15 @@ export default async function EditarProductoPage({
         {producto.historialStock.length > 0 && (
           <div className="space-y-2">
             {producto.historialStock.map((h) => (
-              <div key={h.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm">
-                <div>
-                  <span className="font-medium text-gray-800">{h.proveedor?.nombre ?? "—"}</span>
-                  <span className="ml-3 text-gray-500 font-mono text-xs">{h.sku}</span>
+              <div key={h.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <span className="block font-medium text-gray-800 sm:inline">{h.proveedor?.nombre ?? "—"}</span>
+                  <span className="text-gray-500 font-mono text-xs sm:ml-3">{h.sku}</span>
                   <span className="ml-3 text-gray-600">
                     ${Number(h.precioConDescuento ?? h.precioCostoScraped).toLocaleString("es-AR")}
                   </span>
                 </div>
-                <form action={quitarProveedorProducto}>
+                <form action={quitarProveedorProducto} className="shrink-0">
                   <input type="hidden" name="historialId" value={h.id} />
                   <input type="hidden" name="productoId" value={producto.id} />
                   <button type="submit" className="text-xs text-red-500 hover:text-red-700">
