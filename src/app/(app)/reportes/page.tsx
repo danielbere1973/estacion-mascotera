@@ -143,7 +143,7 @@ export default async function ReportesPage({
             ].map((c) => (
               <div key={c.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p className="text-xs text-gray-500">{c.label}</p>
-                <p className={`mt-1 text-xl font-semibold ${c.red ? "text-red-600" : c.green ? "text-green-600" : "text-gray-900"}`}>{c.value}</p>
+                <p className={`mt-1 break-words text-lg font-semibold sm:text-xl ${c.red ? "text-red-600" : c.green ? "text-green-600" : "text-gray-900"}`}>{c.value}</p>
               </div>
             ))}
           </div>
@@ -161,6 +161,7 @@ export default async function ReportesPage({
           headers={["SKU", "Producto", "Unidades", "Total"]}
           rows={[...productoMap.values()].sort((a, b) => b.total - a.total).map((p) => [p.sku, p.nombre, p.unidades, formatARS(p.total)])}
           alignRight={[2, 3]}
+          tarjeta={{ titulo: 1, destacado: 3 }}
           empty="Sin ventas en el período"
         />
       )}
@@ -244,6 +245,7 @@ export default async function ReportesPage({
               c.pagadoPor ? `${c.pagadoPor.apellido}, ${c.pagadoPor.nombre}` : "-",
             ])}
             alignRight={[4, 5]}
+            tarjeta={{ titulo: 3, destacado: 5 }}
             empty="Sin compras en el período"
           />
         </div>
@@ -268,6 +270,7 @@ export default async function ReportesPage({
               g.descripcion ?? "",
             ])}
             alignRight={[2]}
+            tarjeta={{ titulo: 1, destacado: 2 }}
             empty="Sin gastos en el período"
           />
         </div>
@@ -284,7 +287,7 @@ export default async function ReportesPage({
             ].map((c) => (
               <div key={c.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p className="text-xs text-gray-500">{c.label}</p>
-                <p className={`mt-1 text-xl font-semibold ${c.red ? "text-red-600" : "text-gray-900"}`}>{c.value}</p>
+                <p className={`mt-1 break-words text-lg font-semibold sm:text-xl ${c.red ? "text-red-600" : "text-gray-900"}`}>{c.value}</p>
               </div>
             ))}
           </div>
@@ -292,6 +295,7 @@ export default async function ReportesPage({
             headers={["SKU", "Nombre", "Categoría", "Stock", "Costo unit.", "Precio lista", "Valor lista"]}
             rows={productos.map((p) => [p.skuInterno, p.nombre, p.categoria, p.stockActual, formatARS(Number(p.precioCostoUnitario)), formatARS(Number(p.precioVenta)), formatARS(p.stockActual * Number(p.precioVenta))])}
             alignRight={[3, 4, 5, 6]}
+            tarjeta={{ titulo: 1, destacado: 6 }}
             empty="Sin productos"
           />
         </div>
@@ -300,19 +304,47 @@ export default async function ReportesPage({
   );
 }
 
+// tarjeta: en el celular, las tablas anchas se muestran como tarjetas. "titulo" y "destacado" son
+// índices de columna (arriba a la izquierda y a la derecha); el resto va como "Columna: valor".
 function ReporteTable({
   headers,
   rows,
   alignRight = [],
+  tarjeta,
   empty,
 }: {
   headers: string[];
   rows: (string | number)[][];
   alignRight?: number[];
+  tarjeta?: { titulo: number; destacado: number };
   empty: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+    <>
+      {tarjeta && (
+        <ul className="space-y-2 md:hidden">
+          {rows.length === 0 && <li className="py-6 text-center text-sm text-gray-400">{empty}</li>}
+          {rows.map((row, ri) => (
+            <li key={ri} className="rounded-xl border border-gray-200 bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 text-sm font-medium text-gray-900">{row[tarjeta.titulo]}</p>
+                <p className="shrink-0 text-sm font-semibold tabular-nums text-gray-900">{row[tarjeta.destacado]}</p>
+              </div>
+              <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+                {row.map((cell, ci) =>
+                  ci === tarjeta.titulo || ci === tarjeta.destacado || cell === "" ? null : (
+                    <div key={ci} className="min-w-0">
+                      <dt className="inline text-gray-400">{headers[ci]}: </dt>
+                      <dd className="inline break-words text-gray-700">{cell}</dd>
+                    </div>
+                  )
+                )}
+              </dl>
+            </li>
+          ))}
+        </ul>
+      )}
+    <div className={`overflow-x-auto rounded-xl border border-gray-200 bg-white ${tarjeta ? "hidden md:block" : ""}`}>
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
           <tr>
@@ -336,5 +368,6 @@ function ReporteTable({
         </tbody>
       </table>
     </div>
+    </>
   );
 }
