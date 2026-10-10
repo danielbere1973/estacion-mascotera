@@ -115,11 +115,11 @@ export function ComprasAgrupadas({
               </span>
 
               <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-2 items-center">
-                <span className="text-xs text-gray-500 whitespace-nowrap">
+                <span className="order-2 text-right text-xs text-gray-500 whitespace-nowrap sm:order-none sm:text-left">
                   {formatDate(g.fecha)}
                 </span>
-                <span className="font-medium text-sm">{g.proveedor}</span>
-                <span className="text-xs text-gray-500">
+                <span className="order-1 font-medium text-sm sm:order-none">{g.proveedor}</span>
+                <span className="order-4 text-xs text-gray-500 sm:order-none">
                   {g.numeroPedido ? (
                     <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">
                       {g.numeroPedido}
@@ -128,12 +128,12 @@ export function ComprasAgrupadas({
                     <span className="text-gray-300">—</span>
                   )}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="order-3 col-span-2 text-xs text-gray-500 sm:order-none sm:col-span-1">
                   {esMultiple
                     ? `${g.items.length} productos · ${g.totalItems} unid.`
                     : `${g.items[0].producto.sku} · ${g.items[0].producto.nombre}`}
                 </span>
-                <div className="flex items-center gap-2 justify-end">
+                <div className="order-5 flex flex-wrap items-center gap-x-2 gap-y-1 justify-end sm:order-none sm:flex-nowrap">
                   <span className="text-sm font-medium tabular-nums">
                     {formatCurrency(g.totalCosto)}
                     {g.costoEnvio > 0 && (
@@ -167,7 +167,42 @@ export function ComprasAgrupadas({
             {/* Detalle de productos (expandible) */}
             {(abierto || !esMultiple) && esMultiple && (
               <div className="bg-gray-50 border-t border-gray-100">
-                <table className="w-full text-xs">
+                <ul className="divide-y divide-gray-100 sm:hidden">
+                  {g.items.map((item) => (
+                    <li key={item.id} className="px-4 py-2 text-xs">
+                      <div className="flex justify-between gap-3">
+                        <span className="min-w-0 text-gray-800">{item.producto.nombre}</span>
+                        <span className="shrink-0 font-medium tabular-nums">
+                          {formatCurrency(item.cantidad * Number(item.precioCostoUnitario) * (1 - Number(item.descuentoPorcentaje) / 100))}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-gray-500">
+                        <span className="font-mono">{item.producto.sku}</span> · {item.cantidad} × {formatCurrency(item.precioCostoUnitario)}
+                        {Number(item.descuentoPorcentaje) > 0 && ` · dto ${item.descuentoPorcentaje}%`}
+                      </p>
+                      {!esRestringido && (
+                        <div className="mt-1 flex gap-3">
+                          <Link href={`/inventario/compras/${item.id}/editar`} className="text-blue-500 hover:text-blue-700">
+                            Editar
+                          </Link>
+                          <form action={accionEliminar} className="inline">
+                            <input type="hidden" name="id" value={item.id} />
+                            <button
+                              type="submit"
+                              className="text-red-400 hover:text-red-600"
+                              onClick={(e) => {
+                                if (!confirm("¿Eliminar este ítem? Se revertirá el stock.")) e.preventDefault();
+                              }}
+                            >
+                              Eliminar
+                            </button>
+                          </form>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <table className="hidden w-full text-xs sm:table">
                   <thead>
                     <tr className="text-gray-400 uppercase">
                       <th className="pl-10 pr-3 py-1.5 text-left font-medium">SKU</th>
