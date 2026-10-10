@@ -30,20 +30,20 @@ export function VentaRow({ venta }: Props) {
         <form action={async (fd) => { await actualizarVentaConsignacion(fd); setEditando(false); }}
           className="space-y-2">
           <input type="hidden" name="id" value={venta.id} />
-          <div className="flex gap-2 items-end flex-wrap">
+          <div className="grid grid-cols-2 gap-2 md:flex md:items-end md:flex-wrap">
             <div>
               <label className="text-gray-500">Cantidad</label>
               <input name="cantidad" type="number" min={1} max={venta.maxCantidad} step={1}
                 defaultValue={venta.cantidad}
-                className="block w-20 rounded border border-gray-300 px-2 py-1" />
+                className="block w-full md:w-20 rounded border border-gray-300 px-2 py-1" />
             </div>
             <div>
               <label className="text-gray-500">Precio real de venta</label>
               <input name="precioVentaReal" type="number" min={0} step={0.01}
                 defaultValue={venta.precioVentaReal}
-                className="block w-32 rounded border border-gray-300 px-2 py-1" />
+                className="block w-full md:w-32 rounded border border-gray-300 px-2 py-1" />
             </div>
-            <div className="flex-1">
+            <div className="col-span-2 md:flex-1">
               <label className="text-gray-500">N° Factura</label>
               <div className="flex gap-1 items-center">
                 <input type="checkbox" name="facturado" defaultChecked={venta.facturado} />
@@ -69,8 +69,8 @@ export function VentaRow({ venta }: Props) {
   }
 
   return (
-    <div className="flex justify-between items-center text-xs text-gray-600 group">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-0.5 py-1 text-xs text-gray-600 group md:flex-row md:items-center md:justify-between md:py-0">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span>{new Date(venta.fecha).toLocaleDateString("es-AR")} · {venta.cantidad} u. a {fmt(venta.precioVentaReal)}</span>
         <button onClick={() => setEditando(true)}
           className="text-blue-500 hover:text-blue-700 underline">

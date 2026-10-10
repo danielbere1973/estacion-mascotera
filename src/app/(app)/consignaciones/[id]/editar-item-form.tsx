@@ -32,7 +32,7 @@ export function EditarItemForm({
         await editarItemConsignacion(fd);
         setOpen(false);
       }}
-      className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2"
+      className="mt-2 grid grid-cols-3 items-end gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 md:flex md:flex-wrap"
     >
       <input type="hidden" name="id" value={item.id} />
 
@@ -45,7 +45,7 @@ export function EditarItemForm({
           step={1}
           defaultValue={item.cantidad}
           required
-          className="w-20 rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
+          className="w-full md:w-20 rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
         />
       </div>
 
@@ -57,7 +57,7 @@ export function EditarItemForm({
           min={0}
           step={0.01}
           defaultValue={item.precioCosto}
-          className="w-28 rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
+          className="w-full md:w-28 rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
         />
       </div>
 
@@ -69,11 +69,11 @@ export function EditarItemForm({
           min={0}
           step={0.01}
           defaultValue={item.precioPiso}
-          className="w-28 rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
+          className="w-full md:w-28 rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
         />
       </div>
 
-      <div className="flex gap-2">
+      <div className="col-span-3 flex gap-2">
         <button
           type="submit"
           className="rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-yellow-700"

@@ -11,25 +11,28 @@ export default async function SociosPage() {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Socios comerciales</h1>
-        <Link href="/consignaciones/socios/nuevo"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-          + Nuevo socio
-        </Link>
+      <div>
+        <Link href="/consignaciones" className="text-xs text-gray-400 hover:text-gray-600">← Consignaciones</Link>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <h1 className="text-xl font-semibold text-gray-900">Socios comerciales</h1>
+          <Link href="/consignaciones/socios/nuevo"
+            className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 md:px-4">
+            + Nuevo<span className="hidden md:inline"> socio</span>
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
         {socios.map((s) => (
-          <div key={s.id} className="flex items-center justify-between px-4 py-3">
-            <div>
+          <div key={s.id} className="flex items-center justify-between gap-2 px-4 py-3">
+            <div className="min-w-0">
               <p className="font-medium text-sm text-gray-900">{s.nombre}</p>
               <p className="text-xs text-gray-400 mt-0.5">
-                {s.contacto && <span className="mr-3">{s.contacto}</span>}
-                {s.proveedor && <span className="text-blue-600">Proveedor: {s.proveedor.nombre}</span>}
+                {s.contacto && <span className="mr-3 break-words">{s.contacto}</span>}
+                {s.proveedor && <span className="inline-block text-blue-600">Proveedor: {s.proveedor.nombre}</span>}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2">
               <Link href={`/consignaciones/socios/${s.id}/editar`}
                 className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50">
                 Editar

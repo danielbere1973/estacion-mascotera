@@ -27,7 +27,7 @@ export function EditarConsignacionForm({ id, direccion, fecha, notas }: Props) {
   return (
     <form
       action={async (fd) => { await editarConsignacion(fd); setOpen(false); }}
-      className="flex gap-2 items-end flex-wrap rounded-xl border border-yellow-200 bg-yellow-50 p-3"
+      className="flex w-full flex-col gap-2 rounded-xl border border-yellow-200 bg-yellow-50 p-3 md:w-auto md:flex-row md:flex-wrap md:items-end"
     >
       <input type="hidden" name="id" value={id} />
 
@@ -36,7 +36,7 @@ export function EditarConsignacionForm({ id, direccion, fecha, notas }: Props) {
         <select
           name="direccion"
           defaultValue={direccion}
-          className="block rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
+          className="block w-full rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm md:w-auto"
         >
           <option value="RECIBIMOS">Recibimos (el socio nos da mercadería)</option>
           <option value="ENTREGAMOS">Entregamos (nosotros damos mercadería al socio)</option>
@@ -49,11 +49,11 @@ export function EditarConsignacionForm({ id, direccion, fecha, notas }: Props) {
           name="fecha"
           type="date"
           defaultValue={fecha}
-          className="block rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
+          className="block w-full rounded-md border border-yellow-200 bg-white px-2 py-1.5 text-sm"
         />
       </div>
 
-      <div className="flex-1 min-w-[150px]">
+      <div className="md:flex-1 md:min-w-[150px]">
         <label className="text-xs text-yellow-700">Notas</label>
         <input
           name="notas"
