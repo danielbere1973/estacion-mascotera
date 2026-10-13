@@ -4,7 +4,7 @@ import { authConfig } from "@/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const RUTAS_PERMITIDAS_LECTOR_RESTRINGIDO = ["/", "/ventas", "/inventario/compras"];
+const RUTAS_PERMITIDAS_LECTOR_RESTRINGIDO = ["/", "/ventas", "/inventario/compras", "/logistica"];
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
@@ -29,6 +29,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!api/auth|api/tiendanube|api/hym|api/cron|api/telegram|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|ico|webp)).*)",
+    "/((?!api/auth|api/tiendanube|api/hym|api/cron|api/telegram|api/seguimiento|seguimiento/|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|ico|webp)).*)",
   ],
 };
