@@ -184,6 +184,14 @@ export function EditarTarjetaModal({
               </p>
             </div>
           </div>
+          {clienteId && (
+            <Link
+              href={`/logistica?clienteId=${clienteId}`}
+              className="block w-full rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm font-semibold text-blue-700 hover:bg-blue-100"
+            >
+              📍 Compartir ubicación con el cliente
+            </Link>
+          )}
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Staff asignado</label>

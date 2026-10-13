@@ -15,6 +15,7 @@ const links = [
   { href: "/gastos", label: "Gastos", icon: "💸" },
   { href: "/reportes", label: "Reportes", icon: "📊" },
   { href: "/tablero-control", label: "Tablero de Control", icon: "🎛️" },
+  { href: "/logistica", label: "Logística", icon: "🚚" },
 ];
 
 const marketingLinks = [
@@ -27,6 +28,7 @@ const linksRestringido = [
   { href: "/ventas", label: "Ventas", icon: "🛒" },
   { href: "/inventario/compras", label: "Compras", icon: "📦" },
   { href: "/consignaciones", label: "Consignaciones", icon: "🤝" },
+  { href: "/logistica", label: "Logística", icon: "🚚" },
 ];
 
 const adminLinks = [

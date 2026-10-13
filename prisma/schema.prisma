@@ -29,6 +29,7 @@ model Usuario {
   ventasVendidas       Venta[]        @relation("VentaVendidaPor")
   tarjetasAsignadas    TarjetaTablero[]
   pagosVentaCobrados   PagoVenta[]    @relation("PagoVentaCobradoPor")
+  seguimientos         SeguimientoUbicacion[]
 }
 
 model TipoProducto {
@@ -147,6 +148,7 @@ model Cliente {
   recordatorios        RecordatorioReposicion[]
   ventas               Venta[]
   tarjetasTablero      TarjetaTablero[]
+  seguimientos         SeguimientoUbicacion[]
 }
 
 model Mascota {
@@ -645,6 +647,28 @@ model TarjetaTablero {
   @@index([usuarioAsignadoId])
   @@index([ventaId])
   @@index([clienteId])
+}
+
+// Ubicación en vivo compartida con un cliente desde Logística. Se guarda solo
+// la última posición (sin historial del recorrido); el cliente la ve en
+// /seguimiento/<token> hasta venceAt o hasta que se finaliza a mano.
+model SeguimientoUbicacion {
+  id           Int       @id @default(autoincrement())
+  token        String    @unique
+  clienteId    Int
+  usuarioId    Int
+  latitud      Float?
+  longitud     Float?
+  precision    Float?
+  ubicacionAt  DateTime?
+  venceAt      DateTime
+  finalizadoAt DateTime?
+  createdAt    DateTime  @default(now())
+  cliente      Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  usuario      Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+  @@index([usuarioId])
 }
 
 enum StatusReminder {
