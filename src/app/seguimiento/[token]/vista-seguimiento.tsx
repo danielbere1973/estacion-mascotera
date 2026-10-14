@@ -25,7 +25,15 @@ function haceCuanto(fecha: string, ahora: number) {
   return min === 1 ? "hace 1 minuto" : `hace ${min} minutos`;
 }
 
-export function VistaSeguimiento({ token, inicial }: { token: string; inicial: Datos }) {
+export function VistaSeguimiento({
+  token,
+  staff,
+  inicial,
+}: {
+  token: string;
+  staff: string;
+  inicial: Datos;
+}) {
   const [datos, setDatos] = useState<Datos>(inicial);
   const [ahora, setAhora] = useState(() => Date.now());
   const activo = datos.estado === "ACTIVO";
@@ -59,7 +67,9 @@ export function VistaSeguimiento({ token, inicial }: { token: string; inicial: D
         <Image src="/logo.png" alt="Estación Mascotera" width={36} height={36} className="rounded-full" />
         <div>
           <p className="text-sm font-bold text-gray-900">Estación Mascotera</p>
-          <p className="text-xs text-gray-500">Tu pedido está en marcha, seguí la ubicación del mismo</p>
+          <p className="text-xs text-gray-500">
+            ¡Tu pedido ya está en marcha! Seguí la ubicación del mismo que será entregado por {staff}
+          </p>
         </div>
       </header>
 
