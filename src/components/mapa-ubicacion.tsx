@@ -34,13 +34,15 @@ export function MapaUbicacion({
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(mapa);
-      // divIcon en vez del ícono por defecto: el default de Leaflet referencia
-      // imágenes por ruta relativa que el bundler no resuelve.
+      // divIcon con el logo en vez del ícono por defecto: el default de Leaflet
+      // referencia imágenes por ruta relativa que el bundler no resuelve. El
+      // logo es un círculo dentro de una imagen vertical, por eso va recortado
+      // con background-size: cover centrado.
       const icono = L.divIcon({
         className: "",
-        html: '<div style="width:22px;height:22px;border-radius:9999px;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 2px rgba(37,99,235,.35),0 1px 4px rgba(0,0,0,.4)"></div>',
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
+        html: '<div style="width:48px;height:48px;border-radius:9999px;background:#fff url(/logo.png) center/cover no-repeat;box-shadow:0 0 0 3px rgba(37,99,235,.45),0 2px 6px rgba(0,0,0,.4)"></div>',
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
       });
       marcadorRef.current = L.marker([latitud, longitud], { icon: icono }).addTo(mapa);
       circuloRef.current = L.circle([latitud, longitud], {
