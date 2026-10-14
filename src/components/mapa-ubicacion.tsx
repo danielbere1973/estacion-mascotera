@@ -40,9 +40,9 @@ export function MapaUbicacion({
       // con background-size: cover centrado.
       const icono = L.divIcon({
         className: "",
-        html: '<div style="width:48px;height:48px;border-radius:9999px;background:#fff url(/logo.png) center/cover no-repeat;box-shadow:0 0 0 3px rgba(37,99,235,.45),0 2px 6px rgba(0,0,0,.4)"></div>',
-        iconSize: [48, 48],
-        iconAnchor: [24, 24],
+        html: '<div style="width:36px;height:36px;border-radius:9999px;background:#fff url(/logo.png) center/cover no-repeat;box-shadow:0 0 0 2px rgba(37,99,235,.45),0 1px 4px rgba(0,0,0,.4)"></div>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
       });
       marcadorRef.current = L.marker([latitud, longitud], { icon: icono }).addTo(mapa);
       circuloRef.current = L.circle([latitud, longitud], {
