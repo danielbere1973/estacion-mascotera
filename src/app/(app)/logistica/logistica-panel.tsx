@@ -1,16 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Combobox } from "@/components/combobox";
 import { INTERVALO_ACTUALIZACION_MS } from "@/lib/seguimiento";
-import { actualizarUbicacion, finalizarSeguimiento, iniciarSeguimiento } from "./actions";
+import {
+  actualizarUbicacion,
+  finalizarSeguimiento,
+  iniciarSeguimiento,
+  listarSeguimientosActivos,
+} from "./actions";
 
 const MapaUbicacion = dynamic(
   () => import("@/components/mapa-ubicacion").then((m) => m.MapaUbicacion),
   { ssr: false }
 );
+
+const MapaSeguimientos = dynamic(
+  () => import("@/components/mapa-seguimientos").then((m) => m.MapaSeguimientos),
+  { ssr: false }
+);
+
+// Si un celular no manda posición hace más de esto (pantalla bloqueada, sin
+// señal), se marca en gris en el mapa general.
+const SIN_SENAL_MS = 2 * 60 * 1000;
+const COLOR_PROPIO = "#2563eb";
+const COLOR_SIN_SENAL = "#9ca3af";
+const COLORES_EQUIPO = ["#16a34a", "#ea580c", "#9333ea", "#db2777"];
 
 interface Cliente {
   id: number;
@@ -89,7 +105,6 @@ export function LogisticaPanel({
   clienteIdInicial: string;
   origen: string;
 }) {
-  const router = useRouter();
   const [clienteId, setClienteId] = useState(
     clientes.some((c) => String(c.id) === clienteIdInicial) ? clienteIdInicial : ""
   );
@@ -109,11 +124,30 @@ export function LogisticaPanel({
   const [ultimoEnvio, setUltimoEnvio] = useState<Date | null>(mio?.ubicacionAt ?? null);
   const [ahora, setAhora] = useState(() => Date.now());
   const posicionRef = useRef<Posicion | null>(posicion);
+  // Lista de activos refrescada en vivo (null hasta la primera consulta: se
+  // usa la que vino del servidor al cargar la página).
+  const [activosVivos, setActivosVivos] = useState<Seguimiento[] | null>(null);
+  const lista = activosVivos ?? activos;
+
+  const refrescar = useCallback(async () => {
+    try {
+      setActivosVivos(await listarSeguimientosActivos());
+    } catch {
+      // Sin conexión momentánea: se reintenta en el próximo ciclo.
+    }
+  }, []);
 
   useEffect(() => {
-    const t = setInterval(() => setAhora(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
+    const reloj = setInterval(() => setAhora(Date.now()), 1000);
+    const intervalo = setInterval(refrescar, INTERVALO_ACTUALIZACION_MS);
+    const alVolver = () => document.visibilityState === "visible" && refrescar();
+    document.addEventListener("visibilitychange", alVolver);
+    return () => {
+      clearInterval(reloj);
+      clearInterval(intervalo);
+      document.removeEventListener("visibilitychange", alVolver);
+    };
+  }, [refrescar]);
 
   // Mientras se transmite: seguir el GPS, mandar la última posición cada
   // INTERVALO_ACTUALIZACION_MS y pedir que la pantalla no se apague.
@@ -130,7 +164,7 @@ export function LogisticaPanel({
       setTransmitiendo(false);
       setMio(null);
       if (mensaje) setError(mensaje);
-      router.refresh();
+      refrescar();
     }
 
     async function enviar() {
@@ -182,7 +216,7 @@ export function LogisticaPanel({
       document.removeEventListener("visibilitychange", alVolver);
       wakeLock?.release().catch(() => {});
     };
-  }, [transmitiendo, mio, router]);
+  }, [transmitiendo, mio, refrescar]);
 
   const opcionesCliente = clientes.map((c) => ({
     value: String(c.id),
@@ -220,7 +254,7 @@ export function LogisticaPanel({
         usuario: { nombre: "", apellido: "" },
       });
       setTransmitiendo(true);
-      router.refresh();
+      refrescar();
     } catch (e) {
       if (e && typeof e === "object" && "code" in e && "PERMISSION_DENIED" in e) {
         setError(mensajeErrorGeo(e as GeolocationPositionError));
@@ -238,10 +272,34 @@ export function LogisticaPanel({
       setMio(null);
     }
     await finalizarSeguimiento(id);
-    router.refresh();
+    refrescar();
   }
 
   const urlSeguimiento = mio ? `${origen}/seguimiento/${mio.token}` : "";
+
+  // Para el propio seguimiento se usa la posición local (más fresca que la
+  // última que guardó el servidor).
+  const ultimaUbicacion = (s: Seguimiento) => (s.id === mio?.id ? ultimoEnvio : s.ubicacionAt);
+  const sinSenal = (s: Seguimiento) => {
+    const u = ultimaUbicacion(s);
+    return !u || ahora - new Date(u).getTime() > SIN_SENAL_MS;
+  };
+  const puntosMapa = lista.flatMap((s) => {
+    const propio = s.id === mio?.id && posicion;
+    const latitud = propio ? posicion.latitud : s.latitud;
+    const longitud = propio ? posicion.longitud : s.longitud;
+    if (latitud == null || longitud == null) return [];
+    const color = sinSenal(s)
+      ? COLOR_SIN_SENAL
+      : s.usuarioId === usuarioId
+        ? COLOR_PROPIO
+        : COLORES_EQUIPO[s.usuarioId % COLORES_EQUIPO.length];
+    const quien = s.usuarioId === usuarioId ? "Yo" : s.usuario.nombre;
+    return [{ id: s.id, latitud, longitud, color, etiqueta: `${quien} → ${s.cliente.nombre} ${s.cliente.apellido}` }];
+  });
+  // El mapa general se muestra cuando hay entregas de otros: si solo está la
+  // propia, ya se ve en el mapa de arriba.
+  const mostrarMapaGeneral = lista.some((s) => s.usuarioId !== usuarioId);
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -346,11 +404,23 @@ export function LogisticaPanel({
 
       <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-4">
         <h2 className="font-semibold text-gray-900">Seguimientos activos</h2>
-        {activos.length === 0 ? (
+        {mostrarMapaGeneral && puntosMapa.length > 0 && (
+          <>
+            <MapaSeguimientos
+              puntos={puntosMapa}
+              className="h-72 w-full overflow-hidden rounded-lg border border-gray-200 sm:h-96"
+            />
+            <p className="text-xs text-gray-500">
+              Este mapa es solo para el equipo: cada cliente ve únicamente la entrega que le
+              compartieron. En gris, los que no mandan ubicación hace más de 2 minutos.
+            </p>
+          </>
+        )}
+        {lista.length === 0 ? (
           <p className="text-sm text-gray-400">No hay ningún seguimiento activo.</p>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {activos.map((s) => (
+            {lista.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                 <div className="min-w-0">
                   <p className="font-medium text-gray-900">
@@ -358,7 +428,8 @@ export function LogisticaPanel({
                   </p>
                   <p className="text-xs text-gray-500">
                     Por {s.usuario.nombre} {s.usuario.apellido} · actualizado{" "}
-                    {haceCuanto(s.id === mio?.id ? ultimoEnvio : s.ubicacionAt, ahora)} · vence{" "}
+                    {haceCuanto(ultimaUbicacion(s), ahora)}
+                    {sinSenal(s) && <span className="text-amber-600"> (sin señal)</span>} · vence{" "}
                     {hora(s.venceAt)}
                   </p>
                 </div>
