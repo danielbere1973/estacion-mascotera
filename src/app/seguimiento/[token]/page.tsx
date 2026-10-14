@@ -22,6 +22,7 @@ export default async function SeguimientoPage({ params }: { params: Promise<{ to
       ubicacionAt: true,
       venceAt: true,
       finalizadoAt: true,
+      usuario: { select: { nombre: true } },
     },
   });
   if (!s) notFound();
@@ -30,6 +31,7 @@ export default async function SeguimientoPage({ params }: { params: Promise<{ to
   return (
     <VistaSeguimiento
       token={token}
+      staff={s.usuario.nombre}
       inicial={
         estado === "ACTIVO"
           ? {
