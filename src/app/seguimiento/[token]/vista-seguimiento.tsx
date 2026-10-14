@@ -59,7 +59,7 @@ export function VistaSeguimiento({ token, inicial }: { token: string; inicial: D
         <Image src="/logo.png" alt="Estación Mascotera" width={36} height={36} className="rounded-full" />
         <div>
           <p className="text-sm font-bold text-gray-900">Estación Mascotera</p>
-          <p className="text-xs text-gray-500">Ubicación en vivo</p>
+          <p className="text-xs text-gray-500">Tu pedido está en marcha, seguí la ubicación del mismo</p>
         </div>
       </header>
 
