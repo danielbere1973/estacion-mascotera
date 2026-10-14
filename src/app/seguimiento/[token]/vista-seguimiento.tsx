@@ -68,7 +68,8 @@ export function VistaSeguimiento({
         <div>
           <p className="text-sm font-bold text-gray-900">Estación Mascotera</p>
           <p className="text-xs text-gray-500">
-            ¡Tu pedido ya está en marcha! Seguí la ubicación del mismo que será entregado por {staff}
+            ¡Tu pedido ya está en marcha! Seguí la ubicación del mismo que será entregado por{" "}
+            <span className="font-semibold text-gray-900">{staff}</span>
           </p>
         </div>
       </header>
