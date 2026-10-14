@@ -77,6 +77,28 @@ export async function actualizarUbicacion(token: string, posicion: Posicion) {
   return count > 0;
 }
 
+// Seguimientos activos de todo el equipo, para la lista y el mapa general de
+// Logística (solo usuarios logueados; el cliente nunca ve esto).
+export async function listarSeguimientosActivos() {
+  await requireAuth();
+  return prisma.seguimientoUbicacion.findMany({
+    where: { finalizadoAt: null, venceAt: { gt: new Date() } },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      token: true,
+      usuarioId: true,
+      latitud: true,
+      longitud: true,
+      precision: true,
+      ubicacionAt: true,
+      venceAt: true,
+      cliente: { select: { nombre: true, apellido: true, telefono: true } },
+      usuario: { select: { nombre: true, apellido: true } },
+    },
+  });
+}
+
 export async function finalizarSeguimiento(id: number) {
   await requireAuth();
   await prisma.seguimientoUbicacion.updateMany({
