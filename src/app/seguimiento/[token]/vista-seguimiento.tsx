@@ -95,7 +95,16 @@ export function VistaSeguimiento({
             <p className="text-4xl">🐾</p>
             <p className="font-semibold text-gray-900">El seguimiento finalizó</p>
             <p className="text-sm text-gray-500">
-              Este link ya no muestra la ubicación. Si necesitás algo, escribinos por WhatsApp.
+              Este link ya no muestra la ubicación. Si necesitás algo, escribinos por{" "}
+              <a
+                href="https://wa.me/5491173711835"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-green-600 underline"
+              >
+                WhatsApp
+              </a>
+              .
             </p>
           </div>
         </div>
