@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 import { crearCompraCore } from "@/lib/compras";
 import { importarCostosMayoristaCore } from "@/lib/importar-costos-mayorista";
+import { importarCostosKfCore } from "@/lib/importar-costos-kf";
 import { Presentacion, UnidadMedida } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
@@ -636,7 +637,21 @@ export async function importarExcel(formData: FormData) {
   if (!proveedorId) throw new Error("Debe seleccionar un proveedor.");
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const resultado = await importarCostosMayoristaCore(buffer, file.name, Number(proveedorId));
+
+  const proveedor = await prisma.proveedor.findUnique({
+    where: { id: Number(proveedorId) },
+    select: { nombre: true },
+  });
+  // KF es un proveedor sin web (todo por excel, sin código propio, sin API):
+  // su excel viene en un formato totalmente distinto al de mayoristas con
+  // scraper (múltiples hojas, texto libre sin SKU), así que usa su propio
+  // importador. Nunca actualiza el costo activo del Producto: KF es un
+  // proveedor "de referencia"/backup de HYM, no la fuente de costo de la web.
+  const esKf = proveedor?.nombre?.toUpperCase() === "KF";
+
+  const resultado = esKf
+    ? await importarCostosKfCore(buffer, Number(proveedorId))
+    : await importarCostosMayoristaCore(buffer, file.name, Number(proveedorId));
 
   revalidatePath("/inventario");
   revalidatePath("/");
