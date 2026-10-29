@@ -23,7 +23,15 @@ type PedidoTiendanube = {
     phone: string | null;
     identification: string | null;
   };
-  shipping_address: { address?: string | null } | null;
+  shipping_address: {
+    address?: string | null;
+    number?: string | null;
+    floor?: string | null;
+    locality?: string | null;
+    city?: string | null;
+    province?: string | null;
+    zipcode?: string | null;
+  } | null;
   shipping_cost_customer: string;
   products: {
     sku: string | null;
@@ -46,6 +54,30 @@ async function traerPedidoTiendanube(storeId: string, accessToken: string, order
   }
 
   return (await res.json()) as PedidoTiendanube;
+}
+
+// Nosotros guardamos la dirección del cliente en un solo campo de texto;
+// Tiendanube la manda partida en varios (calle, número, piso/depto, CP,
+// localidad, provincia), así que la concatenamos para no perder datos.
+function armarDireccion(shippingAddress: PedidoTiendanube["shipping_address"]): string | undefined {
+  if (!shippingAddress) return undefined;
+
+  const calleYNumero = [shippingAddress.address, shippingAddress.number].filter(Boolean).join(" ");
+
+  const localidad = [shippingAddress.locality, shippingAddress.city]
+    .filter((parte): parte is string => Boolean(parte && parte.trim()))
+    .filter((parte, i, arr) => arr.indexOf(parte) === i) // evita repetir si locality === city
+    .join(" ");
+
+  const partes = [
+    calleYNumero,
+    shippingAddress.floor,
+    shippingAddress.zipcode,
+    localidad,
+    shippingAddress.province,
+  ].filter((parte): parte is string => Boolean(parte && parte.trim()));
+
+  return partes.length > 0 ? partes.join(", ") : undefined;
 }
 
 function partirNombre(nombreCompleto: string) {
@@ -131,7 +163,7 @@ export async function POST(req: NextRequest) {
       const cliente = await buscarOCrearCliente(tx, {
         nombre,
         apellido,
-        direccion: pedido.shipping_address?.address ?? undefined,
+        direccion: armarDireccion(pedido.shipping_address),
         telefono: pedido.customer.phone,
         email: pedido.customer.email,
         dni: pedido.customer.identification,
