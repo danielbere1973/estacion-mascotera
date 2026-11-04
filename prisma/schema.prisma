@@ -112,6 +112,7 @@ model Proveedor {
   direccion            String?
   contacto             String?
   email                String?
+  cuit                 String? // CUIT o CUIL
   alias                String?
   cbu                  String? // CBU o CVU
   accountManager       String?

@@ -38,6 +38,10 @@ export default async function EditarProveedorPage({
           <input name="email" type="email" defaultValue={proveedor.email ?? ""} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
         <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">CUIT/CUIL</label>
+          <input name="cuit" defaultValue={proveedor.cuit ?? ""} placeholder="Ej: 20-12345678-9" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
+        </div>
+        <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Alias</label>
           <input name="alias" defaultValue={proveedor.alias ?? ""} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono" />
         </div>
