@@ -99,6 +99,25 @@ export function AltaClienteModal() {
                     className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white font-mono"
                   />
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Alias (opcional)</label>
+                  <input
+                    name="alias"
+                    placeholder="Ej: mascota.feliz.mp"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">CBU/CVU (opcional)</label>
+                  <input
+                    name="cbu"
+                    inputMode="numeric"
+                    placeholder="22 dígitos"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white font-mono"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

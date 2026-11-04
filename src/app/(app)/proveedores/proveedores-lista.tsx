@@ -9,6 +9,8 @@ type Proveedor = {
   nombre: string;
   contacto: string | null; // teléfono
   email: string | null;
+  alias: string | null;
+  cbu: string | null;
   direccion: string | null;
   accountManager: string | null;
   horarios: string | null;
@@ -99,6 +101,8 @@ export function ProveedoresLista({ proveedores }: { proveedores: Proveedor[] }) 
               )}
               {p.accountManager && <p className="text-xs text-gray-500">Account Manager: {p.accountManager}</p>}
               {p.horarios && <p className="text-xs text-gray-500">Horarios: {p.horarios}</p>}
+              {p.alias && <p className="text-xs text-gray-500">Alias: <span className="font-mono">{p.alias}</span></p>}
+              {p.cbu && <p className="text-xs text-gray-500">CBU/CVU: <span className="font-mono">{p.cbu}</span></p>}
             </div>
             <div className="mt-2 flex gap-2">
               <Link
