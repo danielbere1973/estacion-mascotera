@@ -12,6 +12,8 @@ export default async function ProveedoresPage() {
       nombre: true,
       contacto: true,
       email: true,
+      alias: true,
+      cbu: true,
       direccion: true,
       accountManager: true,
       horarios: true,

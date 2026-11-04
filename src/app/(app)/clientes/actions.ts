@@ -16,13 +16,15 @@ export async function crearCliente(formData: FormData) {
   const email = formData.get("email")?.toString().trim() || null;
   const cuit = formData.get("cuit")?.toString().trim() || null;
   const dni = formData.get("dni")?.toString().trim() || null;
+  const alias = formData.get("alias")?.toString().trim() || null;
+  const cbu = formData.get("cbu")?.toString().trim() || null;
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
   }
 
   await prisma.cliente.create({
-    data: { nombre, apellido, direccion, telefono, email, cuit, dni },
+    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu },
   });
 
   revalidatePath("/clientes");
@@ -42,6 +44,8 @@ export async function actualizarCliente(formData: FormData) {
   const email = formData.get("email")?.toString().trim() || null;
   const cuit = formData.get("cuit")?.toString().trim() || null;
   const dni = formData.get("dni")?.toString().trim() || null;
+  const alias = formData.get("alias")?.toString().trim() || null;
+  const cbu = formData.get("cbu")?.toString().trim() || null;
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
@@ -49,7 +53,7 @@ export async function actualizarCliente(formData: FormData) {
 
   await prisma.cliente.update({
     where: { id },
-    data: { nombre, apellido, direccion, telefono, email, cuit, dni },
+    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu },
   });
 
   revalidatePath("/clientes");

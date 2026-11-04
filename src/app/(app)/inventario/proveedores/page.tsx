@@ -40,10 +40,12 @@ export default async function ProveedoresPage() {
       {/* Formulario nuevo proveedor */}
       <form action={crearProveedor} className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
         <p className="text-sm font-medium text-gray-700">Nuevo proveedor</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-6">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
           <input name="nombre" required placeholder="Nombre *" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="contacto" placeholder="Teléfono" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="email" type="email" placeholder="Email" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="alias" placeholder="Alias" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="cbu" inputMode="numeric" placeholder="CBU/CVU" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="direccion" placeholder="Dirección" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="accountManager" placeholder="Account Manager" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="horarios" placeholder="Horarios" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />

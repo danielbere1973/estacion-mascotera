@@ -121,6 +121,27 @@ export default async function EditarClientePage({
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
             />
           </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Alias (opcional)</label>
+            <input
+              name="alias"
+              defaultValue={cliente.alias ?? ""}
+              placeholder="Ej: mascota.feliz.mp"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">CBU/CVU (opcional)</label>
+            <input
+              name="cbu"
+              defaultValue={cliente.cbu ?? ""}
+              inputMode="numeric"
+              placeholder="22 dígitos"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+            />
+          </div>
         </div>
 
         <button

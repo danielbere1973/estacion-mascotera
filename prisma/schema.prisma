@@ -112,6 +112,8 @@ model Proveedor {
   direccion            String?
   contacto             String?
   email                String?
+  alias                String?
+  cbu                  String? // CBU o CVU
   accountManager       String?
   horarios             String?
   compras              Compra[]
@@ -155,6 +157,8 @@ model Cliente {
   email                String?
   cuit                 String?
   dni                  String?
+  alias                String?
+  cbu                  String? // CBU o CVU
   setupReminderDias    Int                         @default(30)
   statusReminder       StatusReminder              @default(ACTIVO)
   fechaUltimoReminder  DateTime? // último mail de reminder enviado OK
