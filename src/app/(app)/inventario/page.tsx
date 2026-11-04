@@ -108,6 +108,12 @@ export default async function InventarioPage({
             Ver compras
           </Link>
           <Link
+            href="/inventario/combos"
+            className="rounded-md bg-white px-2 py-2 text-center text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100 sm:px-4"
+          >
+            Combos
+          </Link>
+          <Link
             href="/inventario/productos/nuevo"
             className="order-first rounded-md bg-green-600 px-2 py-2 text-center text-sm font-semibold text-white hover:bg-green-700 sm:order-none sm:px-4"
           >

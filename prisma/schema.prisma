@@ -55,6 +55,7 @@ model Producto {
   updatedAt            DateTime                    @updatedAt
   stockEnConsignacion  Int                         @default(0)
   activo               Boolean                     @default(true)
+  esCombo              Boolean                     @default(false)
   compras              Compra[]
   detallesConsignacion DetalleConsignacion[]
   detalleVentas        DetalleVenta[]
@@ -64,8 +65,22 @@ model Producto {
   recordatorios        RecordatorioReposicion[]
   pendientesCompra     PendienteCompraMayorista[]
   categoriasTiendanube ProductoCategoriaTiendanube[]
+  componentesCombo     ComboComponente[]           @relation("ComboComponenteCombo")
+  usadoEnCombos        ComboComponente[]           @relation("ComboComponenteProducto")
 
   @@index([categoria])
+}
+
+model ComboComponente {
+  id         Int      @id @default(autoincrement())
+  comboId    Int
+  productoId Int
+  cantidad   Int      @default(1)
+  combo      Producto @relation("ComboComponenteCombo", fields: [comboId], references: [id], onDelete: Cascade)
+  producto   Producto @relation("ComboComponenteProducto", fields: [productoId], references: [id])
+
+  @@unique([comboId, productoId])
+  @@index([productoId])
 }
 
 model CategoriaTiendanube {
