@@ -20,12 +20,13 @@ const TIPOS_REPORTE = [
   { value: "compras", label: "Compras" },
   { value: "gastos", label: "Gastos" },
   { value: "inventario", label: "Inventario" },
+  { value: "producto-historial", label: "Producto — Historial de compras y ventas" },
 ];
 
 export default async function ReportesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ periodo?: string; desde?: string; hasta?: string; tipo?: string }>;
+  searchParams: Promise<{ periodo?: string; desde?: string; hasta?: string; tipo?: string; producto?: string }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
@@ -36,8 +37,9 @@ export default async function ReportesPage({
   const needsCompras = tipo === "compras";
   const needsGastos = tipo === "gastos";
   const needsInventario = tipo === "inventario";
+  const needsProductoHistorial = tipo === "producto-historial" && !!sp.producto?.trim();
 
-  const [ventas, compras, gastos, productos] = await Promise.all([
+  const [ventas, compras, gastos, productos, historialCompras, historialVentas] = await Promise.all([
     needsVentas
       ? prisma.venta.findMany({
           where: { fechaVenta: { gte: fechaDesde, lte: fechaHasta } },
@@ -74,6 +76,37 @@ export default async function ReportesPage({
     needsInventario
       ? prisma.producto.findMany({ where: { activo: true }, orderBy: [{ stockActual: "asc" }, { nombre: "asc" }] })
       : Promise.resolve([]),
+    needsProductoHistorial
+      ? prisma.compra.findMany({
+          where: {
+            producto: {
+              OR: [
+                { skuInterno: { contains: sp.producto, mode: "insensitive" } },
+                { nombre: { contains: sp.producto, mode: "insensitive" } },
+              ],
+            },
+          },
+          include: { proveedor: { select: { nombre: true } }, producto: { select: { nombre: true, skuInterno: true } } },
+          orderBy: { fechaCompra: "desc" },
+        })
+      : Promise.resolve([]),
+    needsProductoHistorial
+      ? prisma.detalleVenta.findMany({
+          where: {
+            producto: {
+              OR: [
+                { skuInterno: { contains: sp.producto, mode: "insensitive" } },
+                { nombre: { contains: sp.producto, mode: "insensitive" } },
+              ],
+            },
+          },
+          include: {
+            producto: { select: { nombre: true, skuInterno: true } },
+            venta: { select: { id: true, fechaVenta: true, canalVenta: true, cliente: { select: { nombre: true, apellido: true } } } },
+          },
+          orderBy: { venta: { fechaVenta: "desc" } },
+        })
+      : Promise.resolve([]),
   ]);
 
   // ---- Agregaciones de ventas ----
@@ -106,7 +139,9 @@ export default async function ReportesPage({
     const cli = clienteMap.get(v.clienteId) ?? { nombre: `${v.cliente.apellido}, ${v.cliente.nombre}`, cantidad: 0, total: 0 };
     clienteMap.set(v.clienteId, { ...cli, cantidad: cli.cantidad + 1, total: cli.total + neto });
   }
-  const ganancia = totalBruto - totalDescuentos - costoMercaderia - totalCostoEnvios;
+  // totalCostoEnvios es lo cobrado al cliente por envío (no un gasto propio): entra como
+  // ingreso, no se resta de la ganancia.
+  const ganancia = totalBruto - totalDescuentos - costoMercaderia + totalCostoEnvios;
 
   const tipoLabel = TIPOS_REPORTE.find((t) => t.value === tipo)?.label ?? "";
 
@@ -149,7 +184,7 @@ export default async function ReportesPage({
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-500 space-y-1">
             <p>Ventas: <span className="font-medium text-gray-800">{ventas.length}</span></p>
-            <p>Costo envíos: <span className="font-medium text-gray-800">{formatARS(totalCostoEnvios)}</span></p>
+            <p>Envío cobrado a clientes: <span className="font-medium text-gray-800">{formatARS(totalCostoEnvios)}</span></p>
             <p>Total neto (bruto − descuentos): <span className="font-medium text-gray-800">{formatARS(totalBruto - totalDescuentos)}</span></p>
           </div>
         </div>
@@ -298,6 +333,59 @@ export default async function ReportesPage({
             tarjeta={{ titulo: 1, destacado: 6 }}
             empty="Sin productos"
           />
+        </div>
+      )}
+
+      {/* ===== PRODUCTO: HISTORIAL DE COMPRAS Y VENTAS ===== */}
+      {tipo === "producto-historial" && (
+        <div className="space-y-4">
+          {!sp.producto?.trim() ? (
+            <p className="py-6 text-center text-sm text-gray-400">Buscá un producto por SKU o nombre para ver su historial.</p>
+          ) : (
+            <>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                  Compras ({historialCompras.length})
+                </p>
+                <ReporteTable
+                  headers={["Fecha", "Proveedor", "SKU", "Producto", "Cant.", "Costo unit.", "Total"]}
+                  rows={historialCompras.map((c) => [
+                    new Date(c.fechaCompra).toLocaleDateString("es-AR"),
+                    c.proveedor.nombre,
+                    c.producto.skuInterno,
+                    c.producto.nombre,
+                    c.cantidad,
+                    formatARS(Number(c.precioCostoUnitario)),
+                    formatARS(Number(c.precioCostoUnitario) * c.cantidad),
+                  ])}
+                  alignRight={[4, 5, 6]}
+                  tarjeta={{ titulo: 3, destacado: 6 }}
+                  empty="Sin compras registradas para este producto"
+                />
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                  Ventas ({historialVentas.length})
+                </p>
+                <ReporteTable
+                  headers={["Venta #", "Fecha", "Canal", "Cliente", "SKU", "Cant.", "Precio unit."]}
+                  rows={historialVentas.map((d) => [
+                    d.venta.id,
+                    new Date(d.venta.fechaVenta).toLocaleDateString("es-AR"),
+                    CANAL_LABELS[d.venta.canalVenta] ?? d.venta.canalVenta,
+                    `${d.venta.cliente.apellido}, ${d.venta.cliente.nombre}`,
+                    d.producto.skuInterno,
+                    d.cantidad,
+                    formatARS(Number(d.precioVentaUnitario)),
+                  ])}
+                  alignRight={[5, 6]}
+                  tarjeta={{ titulo: 3, destacado: 6 }}
+                  empty="Sin ventas registradas para este producto"
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

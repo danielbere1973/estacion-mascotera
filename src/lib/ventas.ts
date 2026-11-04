@@ -46,7 +46,51 @@ export function calcularMontoCosto(
   return costo.esPorcentaje ? (base * costo.valor) / 100 : costo.valor;
 }
 
-async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVentaInput) {
+// Los combos no tienen stock propio: se venden como un producto más pero
+// representan N productos reales. Antes de tocar stock hay que "explotarlos"
+// en sus componentes, prorrateando el precio cobrado según el costo de cada
+// uno para que el margen por producto no quede falseado.
+async function explotarCombos(tx: Prisma.TransactionClient, items: ItemVentaInput[]): Promise<ItemVentaInput[]> {
+  const combosIds = items.map((i) => i.productoId);
+  const combos = await tx.producto.findMany({
+    where: { id: { in: combosIds }, esCombo: true },
+    include: { componentesCombo: { include: { producto: { select: { id: true, precioCostoUnitario: true } } } } },
+  });
+  const comboPorId = new Map(combos.map((c) => [c.id, c]));
+  if (comboPorId.size === 0) return items;
+
+  const resultado: ItemVentaInput[] = [];
+  for (const item of items) {
+    const combo = comboPorId.get(item.productoId);
+    if (!combo) {
+      resultado.push(item);
+      continue;
+    }
+    if (combo.componentesCombo.length === 0) {
+      throw new Error(`El combo "${combo.nombre}" no tiene componentes configurados.`);
+    }
+
+    const precioTotalItem = item.cantidad * item.precioVentaUnitario * (1 - (item.descuentoPorcentaje ?? 0) / 100);
+    const costoTotalCombo = combo.componentesCombo.reduce(
+      (acc, c) => acc + c.cantidad * Number(c.producto.precioCostoUnitario),
+      0
+    );
+
+    for (const componente of combo.componentesCombo) {
+      const costoComponente = componente.cantidad * Number(componente.producto.precioCostoUnitario);
+      const proporcion = costoTotalCombo > 0 ? costoComponente / costoTotalCombo : 1 / combo.componentesCombo.length;
+      resultado.push({
+        productoId: componente.productoId,
+        cantidad: componente.cantidad * item.cantidad,
+        precioVentaUnitario: (precioTotalItem * proporcion) / (componente.cantidad * item.cantidad),
+      });
+    }
+  }
+  return resultado;
+}
+
+async function ejecutarCrearVenta(tx: Prisma.TransactionClient, inputOriginal: CrearVentaInput) {
+  const input = { ...inputOriginal, items: await explotarCombos(tx, inputOriginal.items) };
   const costoEnvio = input.costoEnvio ?? 0;
   const facturado = input.facturado ?? false;
   const numeroFactura = input.numeroFactura ?? null;

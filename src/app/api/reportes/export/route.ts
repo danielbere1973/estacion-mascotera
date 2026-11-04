@@ -70,8 +70,8 @@ export async function GET(req: NextRequest) {
         ["Total bruto", totalBruto],
         ["Descuentos", totalDescuentos],
         ["Costo mercadería", costoMercaderia],
-        ["Costo envíos", totalCostoEnvios],
-        ["Ganancia neta", totalBruto - totalDescuentos - costoMercaderia - totalCostoEnvios],
+        ["Envío cobrado a clientes", totalCostoEnvios],
+        ["Ganancia neta", totalBruto - totalDescuentos - costoMercaderia + totalCostoEnvios],
         ["Cantidad de ventas", ventas.length],
       ];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Resumen ventas");

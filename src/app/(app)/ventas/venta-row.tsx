@@ -80,7 +80,10 @@ export function calcularTotalesVenta(venta: VentaRow) {
   }, 0);
   const costosCobranza = venta.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0);
   const totalAbonado = total - descuento + Number(venta.costoEnvio);
-  const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
+  // venta.costoEnvio es lo cobrado al cliente por el envío (entra junto con el pago de la
+  // venta), no un gasto propio: suma a la ganancia. Lo que la empresa paga al correo se carga
+  // aparte como CostoVenta (concepto "Envío") y ya se resta vía costosCobranza.
+  const ganancia = total - descuento - costoMercaderia + Number(venta.costoEnvio) - costosCobranza;
   const pctGanancia = totalAbonado > 0 ? (ganancia / totalAbonado) * 100 : null;
   const pctSobreCosto = costoMercaderia > 0 ? (ganancia / costoMercaderia) * 100 : null;
   return { total, descuento, costoMercaderia, costosCobranza, totalAbonado, ganancia, pctGanancia, pctSobreCosto };

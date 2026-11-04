@@ -644,3 +644,123 @@ export async function importarExcel(formData: FormData) {
 
   return resultado;
 }
+
+export async function crearCombo(formData: FormData) {
+  const session = await requireAdmin();
+
+  const nombre = formData.get("nombre")?.toString().trim();
+  const marca = formData.get("marca")?.toString().trim() || "Combo";
+  const categoria = formData.get("categoria")?.toString().trim() || "Combos";
+  const precioVenta = Number(formData.get("precioVenta") || 0);
+
+  if (!nombre) throw new Error("Falta el nombre del combo.");
+  if (!precioVenta || precioVenta <= 0) throw new Error("El precio de venta no es válido.");
+
+  const productoIds = formData.getAll("componenteProductoId").map((v) => Number(v));
+  const cantidades = formData.getAll("componenteCantidad").map((v) => Number(v) || 1);
+  if (productoIds.length === 0 || productoIds.some((id) => !id)) {
+    throw new Error("Agregá al menos un componente válido.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const skuInternoAuto = await siguienteSkuInterno(tx);
+
+    const productosCosto = await tx.producto.findMany({
+      where: { id: { in: productoIds } },
+      select: { id: true, precioCostoUnitario: true },
+    });
+    const costoPorId = new Map(productosCosto.map((p) => [p.id, Number(p.precioCostoUnitario)]));
+    const precioCostoUnitario = productoIds.reduce(
+      (acc, id, i) => acc + (costoPorId.get(id) ?? 0) * cantidades[i],
+      0
+    );
+
+    const combo = await tx.producto.create({
+      data: {
+        skuInterno: skuInternoAuto,
+        nombre,
+        marca,
+        categoria,
+        presentacion: "INDIVIDUAL",
+        unidadMedida: "UNIDAD",
+        contenido: 1,
+        precioCostoUnitario,
+        margenPorcentaje: precioCostoUnitario > 0 ? ((precioVenta - precioCostoUnitario) / precioCostoUnitario) * 100 : 0,
+        precioVenta,
+        stockActual: 0,
+        esCombo: true,
+        componentesCombo: {
+          create: productoIds.map((productoId, i) => ({ productoId, cantidad: cantidades[i] })),
+        },
+      },
+    });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "CREAR",
+      entidad: "PRODUCTO",
+      entidadId: combo.id,
+      detalle: `Combo ${nombre} (${skuInternoAuto})`,
+    });
+  });
+
+  revalidatePath("/inventario/combos");
+  revalidatePath("/ventas/nueva");
+  redirect("/inventario/combos");
+}
+
+export async function actualizarCombo(formData: FormData) {
+  const session = await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Combo inválido.");
+
+  const nombre = formData.get("nombre")?.toString().trim();
+  const precioVenta = Number(formData.get("precioVenta") || 0);
+  if (!nombre) throw new Error("Falta el nombre del combo.");
+  if (!precioVenta || precioVenta <= 0) throw new Error("El precio de venta no es válido.");
+
+  const productoIds = formData.getAll("componenteProductoId").map((v) => Number(v));
+  const cantidades = formData.getAll("componenteCantidad").map((v) => Number(v) || 1);
+  if (productoIds.length === 0 || productoIds.some((pid) => !pid)) {
+    throw new Error("Agregá al menos un componente válido.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const productosCosto = await tx.producto.findMany({
+      where: { id: { in: productoIds } },
+      select: { id: true, precioCostoUnitario: true },
+    });
+    const costoPorId = new Map(productosCosto.map((p) => [p.id, Number(p.precioCostoUnitario)]));
+    const precioCostoUnitario = productoIds.reduce(
+      (acc, pid, i) => acc + (costoPorId.get(pid) ?? 0) * cantidades[i],
+      0
+    );
+
+    await tx.comboComponente.deleteMany({ where: { comboId: id } });
+    const combo = await tx.producto.update({
+      where: { id },
+      data: {
+        nombre,
+        precioVenta,
+        precioCostoUnitario,
+        margenPorcentaje: precioCostoUnitario > 0 ? ((precioVenta - precioCostoUnitario) / precioCostoUnitario) * 100 : 0,
+        componentesCombo: {
+          create: productoIds.map((productoId, i) => ({ productoId, cantidad: cantidades[i] })),
+        },
+      },
+    });
+
+    await registrarLog(tx, {
+      usuarioId: Number(session.user.id),
+      accion: "ACTUALIZAR",
+      entidad: "PRODUCTO",
+      entidadId: id,
+      detalle: `Combo ${nombre} (${combo.skuInterno})`,
+    });
+  });
+
+  revalidatePath("/inventario/combos");
+  revalidatePath("/ventas/nueva");
+  redirect("/inventario/combos");
+}
