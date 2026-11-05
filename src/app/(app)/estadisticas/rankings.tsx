@@ -1,137 +1,99 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { formatARS } from "@/lib/reporte-utils";
+import { TablaRanking, type Columna } from "./tabla-ranking";
 
+export type ProductoRanking = { sku: string; nombre: string; unidades: number; total: number; ventas: number };
 export type ClienteRanking = { nombre: string; compras: number; unidades: number; total: number };
 export type GastoCategoria = { categoria: string; cantidad: number; total: number };
 
-// Devuelve las filas con su puesto en el ranking completo (no cambia al filtrar), filtradas por texto.
-function useFiltroRanking<T>(items: T[], texto: (item: T) => string) {
-  const [filtro, setFiltro] = useState("");
-  const filtrados = useMemo(() => {
-    const q = filtro.trim().toLowerCase();
-    const conPuesto = items.map((item, i) => ({ item, puesto: i + 1 }));
-    return q ? conPuesto.filter(({ item }) => texto(item).toLowerCase().includes(q)) : conPuesto;
-  }, [items, filtro, texto]);
-  return { filtro, setFiltro, filtrados, filtrando: filtro.trim() !== "" };
-}
+const sumar = <T,>(items: T[], f: (t: T) => number) => items.reduce((a, t) => a + f(t), 0);
 
-function Buscador({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+// ---- Productos ----
+const columnasProductos: Columna<ProductoRanking>[] = [
+  { key: "sku", label: "SKU", valor: (p) => p.sku, ocultarMobile: true, render: (p) => <span className="text-gray-500">{p.sku}</span> },
+  {
+    key: "nombre",
+    label: "Producto",
+    valor: (p) => p.nombre,
+    render: (p) => (
+      <>
+        {p.nombre}
+        <span className="block text-xs text-gray-400 sm:hidden">{p.sku}</span>
+      </>
+    ),
+  },
+  { key: "unidades", label: "Unidades", valor: (p) => p.unidades, align: "right", destacada: true, total: (ps) => sumar(ps, (p) => p.unidades) },
+  { key: "total", label: "Total", valor: (p) => p.total, align: "right", render: (p) => formatARS(p.total), total: (ps) => formatARS(sumar(ps, (p) => p.total)) },
+];
+const textoProducto = (p: ProductoRanking) => `${p.nombre} ${p.sku}`;
+
+export function ProductosMasVendidos({ productos }: { productos: ProductoRanking[] }) {
   return (
-    <input
-      type="search"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm sm:w-72"
+    <TablaRanking
+      items={productos}
+      columnas={columnasProductos}
+      textoBusqueda={textoProducto}
+      placeholder="Buscar por nombre o SKU…"
+      vacio="Sin ventas en el período"
+      sinCoincidencias="Ningún producto coincide con la búsqueda"
+      nombrePlural="productos"
+      criterio="ranking por unidades vendidas"
     />
   );
 }
 
+// ---- Clientes ----
+const columnasClientes: Columna<ClienteRanking>[] = [
+  { key: "nombre", label: "Cliente", valor: (c) => c.nombre },
+  { key: "compras", label: "Compras", valor: (c) => c.compras, align: "right", total: (cs) => sumar(cs, (c) => c.compras) },
+  { key: "unidades", label: "Unidades", valor: (c) => c.unidades, align: "right", ocultarMobile: true, total: (cs) => sumar(cs, (c) => c.unidades) },
+  { key: "total", label: "Total", valor: (c) => c.total, align: "right", destacada: true, render: (c) => formatARS(c.total), total: (cs) => formatARS(sumar(cs, (c) => c.total)) },
+];
 const textoCliente = (c: ClienteRanking) => c.nombre;
-const textoGasto = (g: GastoCategoria) => g.categoria;
 
 export function ClientesMasCompras({ clientes }: { clientes: ClienteRanking[] }) {
-  const { filtro, setFiltro, filtrados, filtrando } = useFiltroRanking(clientes, textoCliente);
-
   return (
-    <div className="space-y-2">
-      <Buscador value={filtro} onChange={setFiltro} placeholder="Buscar cliente…" />
-      <div className="max-h-[32rem] overflow-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-gray-50 text-left text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-3 py-2 w-10">#</th>
-              <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2 text-right">Compras</th>
-              <th className="hidden px-3 py-2 text-right sm:table-cell">Unidades</th>
-              <th className="px-3 py-2 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filtrados.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
-                  {clientes.length === 0 ? "Sin ventas en el período" : "Ningún cliente coincide con la búsqueda"}
-                </td>
-              </tr>
-            ) : (
-              filtrados.map(({ item: c, puesto }) => (
-                <tr key={puesto} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 text-gray-400 tabular-nums">{puesto}</td>
-                  <td className="px-3 py-2">{c.nombre}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.compras}</td>
-                  <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{c.unidades}</td>
-                  <td className="px-3 py-2 text-right font-medium tabular-nums">{formatARS(c.total)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-xs text-gray-400">
-        {filtrando ? `${filtrados.length} de ${clientes.length} clientes` : `${clientes.length} clientes`} · ordenado por total comprado
-      </p>
-    </div>
+    <TablaRanking
+      items={clientes}
+      columnas={columnasClientes}
+      textoBusqueda={textoCliente}
+      placeholder="Buscar cliente…"
+      vacio="Sin ventas en el período"
+      sinCoincidencias="Ningún cliente coincide con la búsqueda"
+      nombrePlural="clientes"
+      criterio="ranking por total comprado"
+    />
   );
 }
 
+// ---- Gastos por categoría ----
+const textoGasto = (g: GastoCategoria) => g.categoria;
+
 export function GastosPorCategoria({ categorias }: { categorias: GastoCategoria[] }) {
-  const { filtro, setFiltro, filtrados, filtrando } = useFiltroRanking(categorias, textoGasto);
-  const totalGeneral = categorias.reduce((a, c) => a + c.total, 0);
-  const totalVisible = filtrados.reduce((a, { item }) => a + item.total, 0);
-  const cantidadVisible = filtrados.reduce((a, { item }) => a + item.cantidad, 0);
+  // El % es siempre sobre el total general del período, aunque se filtre.
+  const columnas = useMemo<Columna<GastoCategoria>[]>(() => {
+    const totalGeneral = sumar(categorias, (c) => c.total);
+    const pct = (n: number) => (totalGeneral > 0 ? `${((n / totalGeneral) * 100).toFixed(1)}%` : "-");
+    return [
+      { key: "categoria", label: "Categoría", valor: (c) => c.categoria },
+      { key: "cantidad", label: "Gastos", valor: (c) => c.cantidad, align: "right", total: (cs) => sumar(cs, (c) => c.cantidad) },
+      { key: "pct", label: "% del total", valor: (c) => c.total, align: "right", ocultarMobile: true, render: (c) => pct(c.total), total: (cs) => pct(sumar(cs, (c) => c.total)) },
+      { key: "total", label: "Total", valor: (c) => c.total, align: "right", destacada: true, render: (c) => formatARS(c.total), total: (cs) => formatARS(sumar(cs, (c) => c.total)) },
+    ];
+  }, [categorias]);
 
   return (
-    <div className="space-y-2">
-      <Buscador value={filtro} onChange={setFiltro} placeholder="Buscar categoría…" />
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-3 py-2 w-10">#</th>
-              <th className="px-3 py-2">Categoría</th>
-              <th className="px-3 py-2 text-right">Gastos</th>
-              <th className="hidden px-3 py-2 text-right sm:table-cell">% del total</th>
-              <th className="px-3 py-2 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filtrados.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
-                  {categorias.length === 0 ? "Sin gastos en el período" : "Ninguna categoría coincide con la búsqueda"}
-                </td>
-              </tr>
-            ) : (
-              filtrados.map(({ item: c, puesto }) => (
-                <tr key={c.categoria} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 text-gray-400 tabular-nums">{puesto}</td>
-                  <td className="px-3 py-2">{c.categoria}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.cantidad}</td>
-                  <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
-                    {totalGeneral > 0 ? `${((c.total / totalGeneral) * 100).toFixed(1)}%` : "-"}
-                  </td>
-                  <td className="px-3 py-2 text-right font-medium tabular-nums">{formatARS(c.total)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-          {filtrados.length > 0 && (
-            <tfoot className="bg-gray-50 text-sm font-semibold text-gray-800">
-              <tr>
-                <td colSpan={2} className="px-3 py-2">{filtrando ? "Total filtrado" : "Total"}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{cantidadVisible}</td>
-                <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
-                  {filtrando && totalGeneral > 0 ? `${((totalVisible / totalGeneral) * 100).toFixed(1)}%` : ""}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatARS(totalVisible)}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-    </div>
+    <TablaRanking
+      items={categorias}
+      columnas={columnas}
+      textoBusqueda={textoGasto}
+      placeholder="Buscar categoría…"
+      vacio="Sin gastos en el período"
+      sinCoincidencias="Ninguna categoría coincide con la búsqueda"
+      nombrePlural="categorías"
+      criterio="ranking por monto"
+    />
   );
 }
