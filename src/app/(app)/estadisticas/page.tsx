@@ -3,8 +3,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { calcularRango } from "@/lib/reporte-utils";
 import { FiltroPeriodo } from "./filtro-periodo";
-import { ProductosMasVendidos, type ProductoRanking } from "./productos-mas-vendidos";
-import { ClientesMasCompras, GastosPorCategoria } from "./rankings";
+import { ProductosMasVendidos, ClientesMasCompras, GastosPorCategoria, type ProductoRanking } from "./rankings";
 
 function rangoEstadisticas(periodo: string | undefined, desde: string | undefined, hasta: string | undefined) {
   const now = new Date();
