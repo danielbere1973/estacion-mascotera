@@ -60,7 +60,7 @@ export function EditarTarjetaModal({
   clientes: ClienteOpcion[];
   onClose: () => void;
 }) {
-  const [ventaId, setVentaId] = useState(tarjeta.ventaId ? String(tarjeta.ventaId) : "");
+  const [ventaId, setVentaId] = useState(tarjeta.ventaId != null ? String(tarjeta.ventaId) : "");
   const [clienteId, setClienteId] = useState(tarjeta.clienteId ? String(tarjeta.clienteId) : "");
   // En el celular no se puede arrastrar la tarjeta: se mueve eligiendo la columna acá.
   const [columnaId, setColumnaId] = useState(String(tarjeta.columnaId));
