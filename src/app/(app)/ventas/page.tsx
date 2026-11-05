@@ -81,8 +81,8 @@ export default async function VentasPage({
         costos: { select: { montoCalculado: true } },
         pagos: { select: { monto: true } },
       },
+      // Sin límite: el listado muestra todas las ventas que cumplen el filtro (las mismas que cuenta el título).
       orderBy: { fechaVenta: "desc" },
-      take: 100,
     }),
     prisma.venta.count({ where }),
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
