@@ -15,6 +15,14 @@ import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { CanalVenta } from "@prisma/client";
 
+// Los IDs de venta pueden ser 0 (la venta #0 existe), así que no alcanza con `!id`.
+function parseVentaId(valor: FormDataEntryValue | null): number | null {
+  const texto = valor?.toString().trim();
+  if (!texto) return null;
+  const n = Number(texto);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
 function parseCostos(formData: FormData) {
   const conceptos = formData.getAll("costoConcepto").map((v) => v.toString().trim());
   const modos = formData.getAll("costoModo").map((v) => v.toString());
@@ -190,8 +198,8 @@ export async function crearVenta(formData: FormData) {
 export async function actualizarVenta(formData: FormData) {
   const session = await requireAdmin();
 
-  const id = Number(formData.get("id"));
-  if (!id) throw new Error("Venta inválida.");
+  const id = parseVentaId(formData.get("id"));
+  if (id === null) throw new Error("Venta inválida.");
 
   const canalVenta = formData.get("canalVenta")?.toString() as CanalVenta;
   const medioPago = formData.get("medioPago")?.toString().trim();
@@ -459,8 +467,8 @@ export async function actualizarVenta(formData: FormData) {
 export async function eliminarVenta(formData: FormData) {
   const session = await requireAdmin();
 
-  const id = Number(formData.get("id"));
-  if (!id) throw new Error("Venta inválida.");
+  const id = parseVentaId(formData.get("id"));
+  if (id === null) throw new Error("Venta inválida.");
 
   await eliminarVentaCore(id, Number(session.user.id));
 
@@ -472,8 +480,8 @@ export async function eliminarVenta(formData: FormData) {
 export async function agregarPagoVenta(formData: FormData) {
   const session = await requireAdmin();
 
-  const ventaId = Number(formData.get("ventaId"));
-  if (!ventaId) throw new Error("Venta inválida.");
+  const ventaId = parseVentaId(formData.get("ventaId"));
+  if (ventaId === null) throw new Error("Venta inválida.");
 
   const monto = Number(formData.get("monto"));
   const comision = Number(formData.get("comision") || 0);
@@ -502,11 +510,11 @@ export async function eliminarPagoVenta(formData: FormData) {
   const session = await requireAdmin();
 
   const id = Number(formData.get("id"));
-  const ventaId = Number(formData.get("ventaId"));
+  const ventaId = parseVentaId(formData.get("ventaId"));
   if (!id) throw new Error("Pago inválido.");
 
   await eliminarPagoVentaCore(id, Number(session.user.id));
 
   revalidatePath("/ventas");
-  if (ventaId) revalidatePath(`/ventas/${ventaId}/editar`);
+  if (ventaId !== null) revalidatePath(`/ventas/${ventaId}/editar`);
 }
