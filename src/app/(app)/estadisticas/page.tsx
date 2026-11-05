@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import { requireAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { calcularRango, formatARS } from "@/lib/reporte-utils";
+import { calcularRango } from "@/lib/reporte-utils";
 import { FiltroPeriodo } from "./filtro-periodo";
 import { ProductosMasVendidos, type ProductoRanking } from "./productos-mas-vendidos";
+import { ClientesMasCompras, GastosPorCategoria } from "./rankings";
 
 function rangoEstadisticas(periodo: string | undefined, desde: string | undefined, hasta: string | undefined) {
   const now = new Date();
@@ -76,7 +77,6 @@ export default async function EstadisticasPage({
   const categorias = gastos
     .map((g) => ({ categoria: g.categoriaGasto || "Sin categoría", cantidad: g._count._all, total: Number(g._sum.monto ?? 0) }))
     .sort((a, b) => b.total - a.total);
-  const totalGastos = categorias.reduce((a, c) => a + c.total, 0);
 
   return (
     <div className="w-full space-y-5">
@@ -100,82 +100,14 @@ export default async function EstadisticasPage({
       {/* ===== CLIENTES CON MÁS COMPRAS ===== */}
       <section className="min-w-0 space-y-2">
         <h2 className="text-base font-semibold text-gray-800">Clientes con más compras</h2>
-        {/* Espaciador del alto del buscador de productos, para que las tablas arranquen a la misma altura en desktop */}
-        <div className="hidden h-[38px] lg:block" />
-        <div className="max-h-[32rem] overflow-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 text-left text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-3 py-2 w-10">#</th>
-                <th className="px-3 py-2">Cliente</th>
-                <th className="px-3 py-2 text-right">Compras</th>
-                <th className="hidden px-3 py-2 text-right sm:table-cell">Unidades</th>
-                <th className="px-3 py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {clientes.length === 0 ? (
-                <tr><td colSpan={5} className="px-3 py-6 text-center text-gray-400">Sin ventas en el período</td></tr>
-              ) : (
-                clientes.map((c, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-gray-400 tabular-nums">{i + 1}</td>
-                    <td className="px-3 py-2">{c.nombre}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{c.compras}</td>
-                    <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{c.unidades}</td>
-                    <td className="px-3 py-2 text-right font-medium tabular-nums">{formatARS(c.total)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <ClientesMasCompras clientes={clientes} />
       </section>
       </div>
 
       {/* ===== GASTOS POR CATEGORÍA ===== */}
       <section className="space-y-2">
         <h2 className="text-base font-semibold text-gray-800">Gastos por categoría</h2>
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-3 py-2 w-10">#</th>
-                <th className="px-3 py-2">Categoría</th>
-                <th className="px-3 py-2 text-right">Gastos</th>
-                <th className="hidden px-3 py-2 text-right sm:table-cell">% del total</th>
-                <th className="px-3 py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {categorias.length === 0 ? (
-                <tr><td colSpan={5} className="px-3 py-6 text-center text-gray-400">Sin gastos en el período</td></tr>
-              ) : (
-                categorias.map((c, i) => (
-                  <tr key={c.categoria} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-gray-400 tabular-nums">{i + 1}</td>
-                    <td className="px-3 py-2">{c.categoria}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{c.cantidad}</td>
-                    <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
-                      {totalGastos > 0 ? `${((c.total / totalGastos) * 100).toFixed(1)}%` : "-"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium tabular-nums">{formatARS(c.total)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-            {categorias.length > 0 && (
-              <tfoot className="bg-gray-50 text-sm font-semibold text-gray-800">
-                <tr>
-                  <td colSpan={2} className="px-3 py-2">Total</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{categorias.reduce((a, c) => a + c.cantidad, 0)}</td>
-                  <td className="hidden px-3 py-2 sm:table-cell" />
-                  <td className="px-3 py-2 text-right tabular-nums">{formatARS(totalGastos)}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
+        <GastosPorCategoria categorias={categorias} />
       </section>
     </div>
   );
