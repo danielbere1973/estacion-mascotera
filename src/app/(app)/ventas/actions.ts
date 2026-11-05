@@ -205,6 +205,8 @@ export async function actualizarVenta(formData: FormData) {
 
   if (!canalVenta || !medioPago) throw new Error("Faltan datos de la venta.");
 
+  const clienteIdNuevo = Number(formData.get("clienteId")) || null;
+
   const detalleIdsRaw = formData.getAll("detalleId").map((v) => v.toString());
   const productoIdsRaw = formData.getAll("productoId").map((v) => v.toString());
   const cantidades = formData.getAll("cantidad").map((v) => Number(v));
@@ -386,9 +388,28 @@ export async function actualizarVenta(formData: FormData) {
       });
     }
 
+    // Cambio de cliente: se valida que exista y se arrastra a las tarjetas del tablero de esta venta.
+    const { clienteId: clienteIdAnterior } = await tx.venta.findUniqueOrThrow({ where: { id }, select: { clienteId: true } });
+    let detalleCambioCliente: string | undefined;
+    if (clienteIdNuevo && clienteIdNuevo !== clienteIdAnterior) {
+      const [anterior, nuevo] = await Promise.all([
+        tx.cliente.findUniqueOrThrow({ where: { id: clienteIdAnterior }, select: { nombre: true, apellido: true } }),
+        tx.cliente.findUnique({ where: { id: clienteIdNuevo }, select: { nombre: true, apellido: true } }),
+      ]);
+      if (!nuevo) throw new Error("El cliente seleccionado no existe.");
+      await tx.tarjetaTablero.updateMany({
+        where: { ventaId: id, clienteId: clienteIdAnterior },
+        data: { clienteId: clienteIdNuevo },
+      });
+      detalleCambioCliente = `Cliente cambiado: ${anterior.nombre} ${anterior.apellido} → ${nuevo.nombre} ${nuevo.apellido}`;
+    }
+
     await tx.venta.update({
       where: { id },
-      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, descripcion, numeroFactura, fechaVenta },
+      data: {
+        canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, descripcion, numeroFactura, fechaVenta,
+        ...(detalleCambioCliente && clienteIdNuevo ? { clienteId: clienteIdNuevo } : {}),
+      },
     });
 
     await registrarLog(tx, {
@@ -396,6 +417,7 @@ export async function actualizarVenta(formData: FormData) {
       accion: "ACTUALIZAR",
       entidad: "VENTA",
       entidadId: id,
+      ...(detalleCambioCliente ? { detalle: detalleCambioCliente } : {}),
     });
 
     const { huboPendienteHym, sinMapeoHym, conMapeoHym } = await registrarPendientesCompra(tx, productosStockNegativo);

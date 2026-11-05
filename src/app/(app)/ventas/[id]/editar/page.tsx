@@ -14,7 +14,7 @@ export default async function EditarVentaPage({
 }) {
   const { id } = await params;
 
-  const [venta, productos, itemsConsignados, usuarios, mediosPago] = await Promise.all([
+  const [venta, productos, itemsConsignados, usuarios, mediosPago, clientes] = await Promise.all([
     prisma.venta.findUnique({
       where: { id: Number(id) },
       include: {
@@ -44,6 +44,10 @@ export default async function EditarVentaPage({
     prisma.medioPago.findMany({
       where: { activo: true },
       orderBy: { nombre: "asc" },
+    }),
+    prisma.cliente.findMany({
+      orderBy: [{ nombre: "asc" }, { apellido: "asc" }],
+      select: { id: true, nombre: true, apellido: true },
     }),
   ]);
 
@@ -119,9 +123,18 @@ export default async function EditarVentaPage({
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Cliente</label>
-          <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-            {venta.cliente.nombre} {venta.cliente.apellido}
-          </p>
+          <select
+            name="clienteId"
+            required
+            defaultValue={venta.clienteId}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          >
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} {c.apellido}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
