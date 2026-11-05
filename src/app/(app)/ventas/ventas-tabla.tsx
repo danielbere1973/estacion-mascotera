@@ -3,10 +3,12 @@
 import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
 import { calcularTotalesVenta, VentaCard, VentaExpandibleRow, type VentaRow } from "./venta-row";
 
-type Columna = "fecha" | "cliente" | "total" | "totalAbonado" | "ganancia" | "facturado";
+type Columna = "id" | "fecha" | "cliente" | "total" | "totalAbonado" | "ganancia" | "facturado";
 
 function valorOrden(venta: VentaRow, columna: Columna): ValorOrden {
   switch (columna) {
+    case "id":
+      return venta.id;
     case "fecha":
       return new Date(venta.fechaVenta).getTime();
     case "cliente":
@@ -42,6 +44,7 @@ export function VentasTabla({ ventas, esRestringido }: { ventas: VentaRow[]; esR
       <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
         <tr>
           <th className="w-8 px-3 py-2"></th>
+          <ThOrdenable label="ID#" columna="id" {...th} />
           <ThOrdenable label="Fecha" columna="fecha" {...th} />
           <ThOrdenable label="Cliente" columna="cliente" {...th} />
           <ThOrdenable label="Total" columna="total" className="px-3 py-2 text-right" {...th} />
@@ -58,7 +61,7 @@ export function VentasTabla({ ventas, esRestringido }: { ventas: VentaRow[]; esR
         ))}
         {ventas.length === 0 && (
           <tr>
-            <td colSpan={esRestringido ? 6 : 7} className="px-3 py-8 text-center text-gray-400">
+            <td colSpan={esRestringido ? 7 : 8} className="px-3 py-8 text-center text-gray-400">
               No hay ventas registradas para este filtro.
             </td>
           </tr>

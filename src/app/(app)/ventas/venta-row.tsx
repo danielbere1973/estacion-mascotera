@@ -143,7 +143,9 @@ export function VentaCard({ venta, esRestringido }: { venta: VentaRow; esRestrin
           <p className="font-semibold text-gray-900">
             {venta.cliente.nombre} {venta.cliente.apellido}
           </p>
-          <span className="shrink-0 text-sm text-gray-500">{fmtDate(venta.fechaVenta)}</span>
+          <span className="shrink-0 text-sm text-gray-500">
+            <span className="tabular-nums text-gray-400">#{venta.id}</span> · {fmtDate(venta.fechaVenta)}
+          </span>
         </div>
         <div className="mt-1 flex items-baseline justify-between gap-2">
           <span className="text-lg font-bold text-blue-600">{fmt(totalAbonado)}</span>
@@ -257,6 +259,7 @@ export function VentaExpandibleRow({
             +
           </button>
         </td>
+        <td className="whitespace-nowrap px-3 py-2 text-sm tabular-nums text-gray-500">#{venta.id}</td>
         <td className="whitespace-nowrap px-3 py-2 text-gray-500 text-sm">
           {fmtDate(venta.fechaVenta)}
         </td>
@@ -300,7 +303,7 @@ export function VentaExpandibleRow({
 
       {open && (
         <tr>
-          <td colSpan={esRestringido ? 6 : 7} className="px-4 pb-3 pt-0 bg-blue-50">
+          <td colSpan={esRestringido ? 7 : 8} className="px-4 pb-3 pt-0 bg-blue-50">
             <div className="rounded-lg border border-blue-100 bg-white overflow-hidden">
 
               {/* Fila de datos secundarios */}
