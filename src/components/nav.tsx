@@ -15,6 +15,7 @@ const links = [
   { href: "/consignaciones", label: "Consignaciones", icon: "🤝" },
   { href: "/gastos", label: "Gastos", icon: "💸" },
   { href: "/reportes", label: "Reportes", icon: "📊" },
+  { href: "/estadisticas", label: "Estadísticas", icon: "📈" },
   { href: "/tablero-control", label: "Tablero de Control", icon: "🎛️" },
   { href: "/logistica", label: "Logística", icon: "🚚" },
 ];
