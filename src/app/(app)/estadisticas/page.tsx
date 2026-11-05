@@ -90,18 +90,21 @@ export default async function EstadisticasPage({
 
       <p className="text-sm text-gray-500">Período: {label}</p>
 
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
       {/* ===== PRODUCTOS MÁS VENDIDOS ===== */}
-      <section className="space-y-2">
+      <section className="min-w-0 space-y-2">
         <h2 className="text-base font-semibold text-gray-800">Productos más vendidos</h2>
         <ProductosMasVendidos productos={productos} />
       </section>
 
       {/* ===== CLIENTES CON MÁS COMPRAS ===== */}
-      <section className="space-y-2">
+      <section className="min-w-0 space-y-2">
         <h2 className="text-base font-semibold text-gray-800">Clientes con más compras</h2>
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        {/* Espaciador del alto del buscador de productos, para que las tablas arranquen a la misma altura en desktop */}
+        <div className="hidden h-[38px] lg:block" />
+        <div className="max-h-[32rem] overflow-auto rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
+            <thead className="sticky top-0 bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-3 py-2 w-10">#</th>
                 <th className="px-3 py-2">Cliente</th>
@@ -128,6 +131,7 @@ export default async function EstadisticasPage({
           </table>
         </div>
       </section>
+      </div>
 
       {/* ===== GASTOS POR CATEGORÍA ===== */}
       <section className="space-y-2">
