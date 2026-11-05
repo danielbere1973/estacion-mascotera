@@ -97,8 +97,15 @@ export default async function VentasPage({
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="whitespace-nowrap text-xl font-semibold text-gray-900">Ventas: {totalVentas}</h1>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="whitespace-nowrap text-xl font-semibold text-gray-900">Ventas: {totalVentas}</h1>
+          {!esRestringido && (
+            <p className="rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-800 ring-1 ring-amber-200">
+              <span className="font-semibold">Nota:</span> ID #0 es el registro de capital inicial simbólico. Los registros #1 a #9 están reservados para sistema/pruebas.
+            </p>
+          )}
+        </div>
         {!esRestringido && (
           <div className="flex items-center gap-2">
             <Link
