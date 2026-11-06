@@ -6,6 +6,7 @@ import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla
 import { formatDate } from "@/lib/format";
 import { DIAS_ENTRE_REMINDERS } from "@/lib/reminders-reglas";
 import type { StatusReminder, TipoMascota } from "@prisma/client";
+import type { MetodoRecompra, RecompraEstimada } from "@/lib/recompra";
 import {
   actualizarDatoMascota,
   actualizarSetupReminder,
@@ -32,12 +33,19 @@ export type FilaReminder = {
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
   productoMasComprado: { nombre: string; unidades: number } | null; // a la fecha, sin ventas internas
+  recompraEstimada: RecompraEstimada | null; // del producto más comprado
   setupReminderDias: number;
   statusReminder: StatusReminder;
   statusCliente: StatusReminder; // Activo si alguna mascota del cliente lo está (o el cliente sin mascota)
 };
 
 const TIPO_LABEL: Record<TipoMascota, string> = { PERRO: "Perro", GATO: "Gato" };
+
+const METODO_RECOMPRA: Record<MetodoRecompra, { label: string; ayuda: string }> = {
+  historial: { label: "historial", ayuda: "Según el ritmo de compra de este cliente con este producto" },
+  promedio: { label: "promedio", ayuda: "Según el ritmo promedio de otros clientes que recompraron este producto" },
+  aproximado: { label: "aprox.", ayuda: "Según el contenido del producto y el consumo típico de sus mascotas" },
+};
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -242,6 +250,20 @@ function Fila({
 
   const fechaUltimaVenta = fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-";
 
+  const recompra = fila.recompraEstimada;
+  const recompraVencida = !!recompra && recompra.fecha < hoy;
+  const recompraEstimada = recompra ? (
+    <span
+      title={`${METODO_RECOMPRA[recompra.metodo].ayuda} · le dura unos ${recompra.dias} días${recompraVencida ? " · ya debería haber recomprado" : ""}`}
+      className="whitespace-nowrap"
+    >
+      <span className={recompraVencida ? "font-medium text-red-600" : ""}>{formatDate(aFecha(recompra.fecha))}</span>{" "}
+      <span className="text-xs text-gray-400">({METODO_RECOMPRA[recompra.metodo].label})</span>
+    </span>
+  ) : (
+    "-"
+  );
+
   const productoTop = fila.productoMasComprado ? (
     <>
       {fila.productoMasComprado.nombre}{" "}
@@ -340,6 +362,7 @@ function Fila({
           Mail: {fila.tieneEmail ? "SI" : "NO"} · Última compra {linkUltimaVenta} ({fechaUltimaVenta})
         </p>
         <p className="mt-1 text-xs text-gray-500">Producto más comprado: {productoTop}</p>
+        <p className="mt-1 text-xs text-gray-500">Recompra estimada: {recompraEstimada}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-100 pt-2 text-xs text-gray-600">
           <span className="flex items-center gap-1">Días {badgeDias}</span>
           <span className="flex items-center gap-1">Setup {inputSetup}</span>
@@ -360,6 +383,7 @@ function Fila({
       <td className="px-3 py-2 text-gray-600">{linkUltimaVenta}</td>
       <td className="px-3 py-2 text-gray-600">{fechaUltimaVenta}</td>
       <td className="min-w-48 px-3 py-2 text-gray-600">{productoTop}</td>
+      <td className="px-3 py-2 text-gray-600">{recompraEstimada}</td>
       <td className="px-3 py-2">{badgeDias}</td>
       <td className="px-3 py-2">{inputSetup}</td>
       <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
@@ -411,6 +435,7 @@ type Columna =
   | "ultimaCompra"
   | "fechaUltimaCompra"
   | "productoMasComprado"
+  | "recompraEstimada"
   | "diasTranscurridos"
   | "setup"
   | "proximo"
@@ -426,6 +451,7 @@ const COLUMNAS: { label: string; columna?: Columna }[] = [
   { label: "Última compra", columna: "ultimaCompra" },
   { label: "Fecha última compra", columna: "fechaUltimaCompra" },
   { label: "Producto más comprado", columna: "productoMasComprado" },
+  { label: "Recompra estimada", columna: "recompraEstimada" },
   { label: "Días transcurridos", columna: "diasTranscurridos" },
   { label: "Setup reminder", columna: "setup" },
   { label: "Próximo reminder", columna: "proximo" },
@@ -454,6 +480,8 @@ function valorOrden(fila: FilaReminder, columna: Columna, hoy: string): ValorOrd
       return fila.ultimaVentaFecha;
     case "productoMasComprado":
       return fila.productoMasComprado?.nombre ?? null;
+    case "recompraEstimada":
+      return fila.recompraEstimada?.fecha ?? null;
     case "diasTranscurridos":
       return calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
     case "setup":
