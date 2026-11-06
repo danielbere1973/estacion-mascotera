@@ -7,6 +7,7 @@ import { SwitchStatusTodos } from "./switch-status-todos";
 import { EnviarReminders } from "./enviar-reminders";
 import { SwitchEnvioAutomatico } from "./switch-envio-automatico";
 import { clientesParaReminder } from "@/lib/reminders";
+import { crearEstimadorRecompra, type MascotaRecompra } from "@/lib/recompra";
 
 // Día calendario en Argentina (YYYY-MM-DD), para que una venta de noche no
 // caiga en el día siguiente por estar guardada en UTC.
@@ -28,6 +29,7 @@ export default async function RemindersPage() {
         clienteId: true,
         nombre: true,
         tipo: true,
+        tamanio: true,
         raza: true,
         setupReminderDias: true,
         statusReminder: true,
@@ -60,28 +62,56 @@ export default async function RemindersPage() {
     prisma.cliente.findMany({ select: { email: true } }),
     prisma.detalleVenta.findMany({
       where: { venta: { esVentaInterna: false } },
-      select: { cantidad: true, venta: { select: { clienteId: true } }, producto: { select: { id: true, nombre: true } } },
+      select: {
+        cantidad: true,
+        venta: { select: { clienteId: true, fechaVenta: true } },
+        producto: { select: { id: true, nombre: true, unidadMedida: true, contenido: true } },
+      },
     }),
   ]);
 
   // Producto más comprado por cliente (a la fecha): el de más unidades sumando todas sus
   // ventas, sin contar ventas internas. Empate: el de nombre alfabéticamente primero.
-  const unidadesPorCliente = new Map<number, Map<number, { nombre: string; unidades: number }>>();
+  type ProductoTop = { productoId: number; nombre: string; unidades: number };
+  const unidadesPorCliente = new Map<number, Map<number, ProductoTop>>();
   for (const d of detallesVendidos) {
     const porProducto = unidadesPorCliente.get(d.venta.clienteId) ?? new Map();
-    const prev = porProducto.get(d.producto.id) ?? { nombre: d.producto.nombre, unidades: 0 };
+    const prev = porProducto.get(d.producto.id) ?? { productoId: d.producto.id, nombre: d.producto.nombre, unidades: 0 };
     prev.unidades += d.cantidad;
     porProducto.set(d.producto.id, prev);
     unidadesPorCliente.set(d.venta.clienteId, porProducto);
   }
-  const productoTop = new Map<number, { nombre: string; unidades: number }>();
+  const productoTop = new Map<number, ProductoTop>();
   for (const [clienteId, porProducto] of unidadesPorCliente) {
-    let top: { nombre: string; unidades: number } | null = null;
+    let top: ProductoTop | null = null;
     for (const p of porProducto.values()) {
       if (!top || p.unidades > top.unidades || (p.unidades === top.unidades && p.nombre.localeCompare(top.nombre, "es") < 0)) top = p;
     }
     if (top) productoTop.set(clienteId, top);
   }
+
+  // Recompra estimada del producto más comprado (ver src/lib/recompra.ts).
+  const mascotasPorCliente = new Map<number, MascotaRecompra[]>();
+  for (const m of mascotas) {
+    mascotasPorCliente.set(m.clienteId, [...(mascotasPorCliente.get(m.clienteId) ?? []), { tipo: m.tipo, tamanio: m.tamanio }]);
+  }
+  const estimarRecompra = crearEstimadorRecompra(
+    detallesVendidos.map((d) => ({
+      clienteId: d.venta.clienteId,
+      productoId: d.producto.id,
+      dia: diaArgentina.format(d.venta.fechaVenta),
+      cantidad: d.cantidad,
+    })),
+    new Map(detallesVendidos.map((d) => [d.producto.id, { nombre: d.producto.nombre, unidadMedida: d.producto.unidadMedida, contenido: Number(d.producto.contenido) }])),
+    mascotasPorCliente,
+  );
+  const datosProducto = (clienteId: number) => {
+    const top = productoTop.get(clienteId);
+    return {
+      productoMasComprado: top ? { nombre: top.nombre, unidades: top.unidades } : null,
+      recompraEstimada: top ? estimarRecompra(clienteId, top.productoId) : null,
+    };
+  };
 
   const clientesPendientes = clientesSinMascota.length;
   // Mismo criterio que la columna Mail: email vacío o solo espacios cuenta como sin mail.
@@ -106,7 +136,7 @@ export default async function RemindersPage() {
       ultimoReminderFecha: m.cliente.fechaUltimoReminder ? diaArgentina.format(m.cliente.fechaUltimoReminder) : null,
       ultimaVentaId: ultimaVenta?.id ?? null,
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
-      productoMasComprado: productoTop.get(m.clienteId) ?? null,
+      ...datosProducto(m.clienteId),
       setupReminderDias: m.setupReminderDias,
       statusReminder: m.statusReminder,
       statusCliente: clientesActivos.has(m.clienteId) ? "ACTIVO" : "PAUSADO",
@@ -129,7 +159,7 @@ export default async function RemindersPage() {
       ultimoReminderFecha: c.fechaUltimoReminder ? diaArgentina.format(c.fechaUltimoReminder) : null,
       ultimaVentaId: ultimaVenta?.id ?? null,
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
-      productoMasComprado: productoTop.get(c.id) ?? null,
+      ...datosProducto(c.id),
       setupReminderDias: c.setupReminderDias,
       statusReminder: c.statusReminder,
       statusCliente: c.statusReminder,
