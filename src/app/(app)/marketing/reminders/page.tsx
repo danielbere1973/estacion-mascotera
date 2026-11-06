@@ -20,7 +20,7 @@ export default async function RemindersPage() {
   const ultimaVentaSelect = {
     ventas: { orderBy: { fechaVenta: "desc" }, take: 1, select: { id: true, fechaVenta: true } },
   } as const;
-  const [mascotas, clientesSinMascota, config, paraReminder, emailsClientes] = await Promise.all([
+  const [mascotas, clientesSinMascota, config, paraReminder, emailsClientes, detallesVendidos] = await Promise.all([
     prisma.mascota.findMany({
       orderBy: [{ cliente: { nombre: "asc" } }, { cliente: { apellido: "asc" } }, { nombre: "asc" }],
       select: {
@@ -58,7 +58,30 @@ export default async function RemindersPage() {
     prisma.configReminders.findUnique({ where: { id: 1 } }),
     clientesParaReminder(),
     prisma.cliente.findMany({ select: { email: true } }),
+    prisma.detalleVenta.findMany({
+      where: { venta: { esVentaInterna: false } },
+      select: { cantidad: true, venta: { select: { clienteId: true } }, producto: { select: { id: true, nombre: true } } },
+    }),
   ]);
+
+  // Producto más comprado por cliente (a la fecha): el de más unidades sumando todas sus
+  // ventas, sin contar ventas internas. Empate: el de nombre alfabéticamente primero.
+  const unidadesPorCliente = new Map<number, Map<number, { nombre: string; unidades: number }>>();
+  for (const d of detallesVendidos) {
+    const porProducto = unidadesPorCliente.get(d.venta.clienteId) ?? new Map();
+    const prev = porProducto.get(d.producto.id) ?? { nombre: d.producto.nombre, unidades: 0 };
+    prev.unidades += d.cantidad;
+    porProducto.set(d.producto.id, prev);
+    unidadesPorCliente.set(d.venta.clienteId, porProducto);
+  }
+  const productoTop = new Map<number, { nombre: string; unidades: number }>();
+  for (const [clienteId, porProducto] of unidadesPorCliente) {
+    let top: { nombre: string; unidades: number } | null = null;
+    for (const p of porProducto.values()) {
+      if (!top || p.unidades > top.unidades || (p.unidades === top.unidades && p.nombre.localeCompare(top.nombre, "es") < 0)) top = p;
+    }
+    if (top) productoTop.set(clienteId, top);
+  }
 
   const clientesPendientes = clientesSinMascota.length;
   // Mismo criterio que la columna Mail: email vacío o solo espacios cuenta como sin mail.
@@ -83,6 +106,7 @@ export default async function RemindersPage() {
       ultimoReminderFecha: m.cliente.fechaUltimoReminder ? diaArgentina.format(m.cliente.fechaUltimoReminder) : null,
       ultimaVentaId: ultimaVenta?.id ?? null,
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
+      productoMasComprado: productoTop.get(m.clienteId) ?? null,
       setupReminderDias: m.setupReminderDias,
       statusReminder: m.statusReminder,
       statusCliente: clientesActivos.has(m.clienteId) ? "ACTIVO" : "PAUSADO",
@@ -105,6 +129,7 @@ export default async function RemindersPage() {
       ultimoReminderFecha: c.fechaUltimoReminder ? diaArgentina.format(c.fechaUltimoReminder) : null,
       ultimaVentaId: ultimaVenta?.id ?? null,
       ultimaVentaFecha: ultimaVenta ? diaArgentina.format(ultimaVenta.fechaVenta) : null,
+      productoMasComprado: productoTop.get(c.id) ?? null,
       setupReminderDias: c.setupReminderDias,
       statusReminder: c.statusReminder,
       statusCliente: c.statusReminder,
