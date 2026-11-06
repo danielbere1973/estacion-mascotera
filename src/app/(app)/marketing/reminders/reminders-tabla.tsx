@@ -31,6 +31,7 @@ export type FilaReminder = {
   ultimoReminderFecha: string | null; // YYYY-MM-DD, último reminder enviado OK al cliente
   ultimaVentaId: number | null;
   ultimaVentaFecha: string | null; // YYYY-MM-DD
+  productoMasComprado: { nombre: string; unidades: number } | null; // a la fecha, sin ventas internas
   setupReminderDias: number;
   statusReminder: StatusReminder;
   statusCliente: StatusReminder; // Activo si alguna mascota del cliente lo está (o el cliente sin mascota)
@@ -241,6 +242,15 @@ function Fila({
 
   const fechaUltimaVenta = fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-";
 
+  const productoTop = fila.productoMasComprado ? (
+    <>
+      {fila.productoMasComprado.nombre}{" "}
+      <span className="whitespace-nowrap text-xs text-gray-400">({fila.productoMasComprado.unidades} u.)</span>
+    </>
+  ) : (
+    "-"
+  );
+
   const badgeDias = (
     <span
       className={`inline-block min-w-10 rounded-md px-2 py-1 text-center ${
@@ -329,6 +339,7 @@ function Fila({
         <p className="mt-2 text-xs text-gray-500">
           Mail: {fila.tieneEmail ? "SI" : "NO"} · Última compra {linkUltimaVenta} ({fechaUltimaVenta})
         </p>
+        <p className="mt-1 text-xs text-gray-500">Producto más comprado: {productoTop}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-100 pt-2 text-xs text-gray-600">
           <span className="flex items-center gap-1">Días {badgeDias}</span>
           <span className="flex items-center gap-1">Setup {inputSetup}</span>
@@ -348,6 +359,7 @@ function Fila({
       <td className="px-3 py-2 text-gray-600">{fila.tieneEmail ? "SI" : "NO"}</td>
       <td className="px-3 py-2 text-gray-600">{linkUltimaVenta}</td>
       <td className="px-3 py-2 text-gray-600">{fechaUltimaVenta}</td>
+      <td className="min-w-48 px-3 py-2 text-gray-600">{productoTop}</td>
       <td className="px-3 py-2">{badgeDias}</td>
       <td className="px-3 py-2">{inputSetup}</td>
       <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
@@ -398,6 +410,7 @@ type Columna =
   | "mail"
   | "ultimaCompra"
   | "fechaUltimaCompra"
+  | "productoMasComprado"
   | "diasTranscurridos"
   | "setup"
   | "proximo"
@@ -412,6 +425,7 @@ const COLUMNAS: { label: string; columna?: Columna }[] = [
   { label: "Mail", columna: "mail" },
   { label: "Última compra", columna: "ultimaCompra" },
   { label: "Fecha última compra", columna: "fechaUltimaCompra" },
+  { label: "Producto más comprado", columna: "productoMasComprado" },
   { label: "Días transcurridos", columna: "diasTranscurridos" },
   { label: "Setup reminder", columna: "setup" },
   { label: "Próximo reminder", columna: "proximo" },
@@ -438,6 +452,8 @@ function valorOrden(fila: FilaReminder, columna: Columna, hoy: string): ValorOrd
       return fila.ultimaVentaId;
     case "fechaUltimaCompra":
       return fila.ultimaVentaFecha;
+    case "productoMasComprado":
+      return fila.productoMasComprado?.nombre ?? null;
     case "diasTranscurridos":
       return calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
     case "setup":
