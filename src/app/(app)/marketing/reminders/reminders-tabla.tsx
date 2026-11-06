@@ -250,14 +250,12 @@ function Fila({
 
   const fechaUltimaVenta = fila.ultimaVentaFecha ? formatDate(aFecha(fila.ultimaVentaFecha)) : "-";
 
+  // Sugerencia Setup Reminder: cada cuántos días debería recomprar su producto más comprado.
+  // Es solo una sugerencia: no modifica el Setup reminder.
   const recompra = fila.recompraEstimada;
-  const recompraVencida = !!recompra && recompra.fecha < hoy;
-  const recompraEstimada = recompra ? (
-    <span
-      title={`${METODO_RECOMPRA[recompra.metodo].ayuda} · le dura unos ${recompra.dias} días${recompraVencida ? " · ya debería haber recomprado" : ""}`}
-      className="whitespace-nowrap"
-    >
-      <span className={recompraVencida ? "font-medium text-red-600" : ""}>{formatDate(aFecha(recompra.fecha))}</span>{" "}
+  const sugerenciaSetup = recompra ? (
+    <span title={METODO_RECOMPRA[recompra.metodo].ayuda} className="whitespace-nowrap">
+      <span className="font-medium text-gray-800">{recompra.dias}</span> días{" "}
       <span className="text-xs text-gray-400">({METODO_RECOMPRA[recompra.metodo].label})</span>
     </span>
   ) : (
@@ -362,7 +360,7 @@ function Fila({
           Mail: {fila.tieneEmail ? "SI" : "NO"} · Última compra {linkUltimaVenta} ({fechaUltimaVenta})
         </p>
         <p className="mt-1 text-xs text-gray-500">Producto más comprado: {productoTop}</p>
-        <p className="mt-1 text-xs text-gray-500">Recompra estimada: {recompraEstimada}</p>
+        <p className="mt-1 text-xs text-gray-500">Sugerencia Setup Reminder: {sugerenciaSetup}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-100 pt-2 text-xs text-gray-600">
           <span className="flex items-center gap-1">Días {badgeDias}</span>
           <span className="flex items-center gap-1">Setup {inputSetup}</span>
@@ -383,7 +381,7 @@ function Fila({
       <td className="px-3 py-2 text-gray-600">{linkUltimaVenta}</td>
       <td className="px-3 py-2 text-gray-600">{fechaUltimaVenta}</td>
       <td className="min-w-48 px-3 py-2 text-gray-600">{productoTop}</td>
-      <td className="px-3 py-2 text-gray-600">{recompraEstimada}</td>
+      <td className="px-3 py-2 text-gray-600">{sugerenciaSetup}</td>
       <td className="px-3 py-2">{badgeDias}</td>
       <td className="px-3 py-2">{inputSetup}</td>
       <td className="px-3 py-2 text-gray-600">{proximo ? formatDate(proximo) : "-"}</td>
@@ -435,7 +433,7 @@ type Columna =
   | "ultimaCompra"
   | "fechaUltimaCompra"
   | "productoMasComprado"
-  | "recompraEstimada"
+  | "sugerenciaSetup"
   | "diasTranscurridos"
   | "setup"
   | "proximo"
@@ -451,7 +449,7 @@ const COLUMNAS: { label: string; columna?: Columna }[] = [
   { label: "Última compra", columna: "ultimaCompra" },
   { label: "Fecha última compra", columna: "fechaUltimaCompra" },
   { label: "Producto más comprado", columna: "productoMasComprado" },
-  { label: "Recompra estimada", columna: "recompraEstimada" },
+  { label: "Sugerencia Setup Reminder", columna: "sugerenciaSetup" },
   { label: "Días transcurridos", columna: "diasTranscurridos" },
   { label: "Setup reminder", columna: "setup" },
   { label: "Próximo reminder", columna: "proximo" },
@@ -480,8 +478,8 @@ function valorOrden(fila: FilaReminder, columna: Columna, hoy: string): ValorOrd
       return fila.ultimaVentaFecha;
     case "productoMasComprado":
       return fila.productoMasComprado?.nombre ?? null;
-    case "recompraEstimada":
-      return fila.recompraEstimada?.fecha ?? null;
+    case "sugerenciaSetup":
+      return fila.recompraEstimada?.dias ?? null;
     case "diasTranscurridos":
       return calcularDiasTranscurridos(fila.ultimaVentaFecha, hoy);
     case "setup":
