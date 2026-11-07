@@ -97,6 +97,13 @@ export default async function DashboardPage({
       hint: "Costo de los productos comprados en el período",
       pct: null as number | null,
     },
+    {
+      label: "Ventas sin factura",
+      value: metrics.ventasNoFacturadas.cantidad,
+      hint: "Cantidad de ventas sin facturar del período",
+      pct: null as number | null,
+      esCantidad: true,
+    },
   ];
 
   const gastosData = metrics.gastosPorCategoria.map((g) => ({
@@ -142,7 +149,7 @@ export default async function DashboardPage({
                     : "text-gray-900"
                 }`}
               >
-                {formatCurrency(card.value)}
+                {"esCantidad" in card && card.esCantidad ? card.value.toLocaleString("es-AR") : formatCurrency(card.value)}
               </p>
               {card.pct !== null && (
                 <span className={`text-sm font-medium ${card.pct >= 0 ? "text-green-500" : "text-red-500"}`}>
