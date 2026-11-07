@@ -4,18 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const links = [
   { href: "/", label: "Dashboard", icon: "🏠" },
   { href: "/ventas", label: "Ventas", icon: "🛒" },
   { href: "/clientes", label: "Clientes", icon: "👥" },
+  { href: "/proveedores", label: "Proveedores", icon: "🏭" },
   { href: "/inventario", label: "Inventario", icon: "📦" },
   { href: "/consignaciones", label: "Consignaciones", icon: "🤝" },
   { href: "/gastos", label: "Gastos", icon: "💸" },
   { href: "/reportes", label: "Reportes", icon: "📊" },
+  { href: "/estadisticas", label: "Estadísticas", icon: "📈" },
   { href: "/tablero-control", label: "Tablero de Control", icon: "🎛️" },
-  { href: "/marketing", label: "Marketing", icon: "📣" },
+  { href: "/logistica", label: "Logística", icon: "🚚" },
+];
+
+const marketingLinks = [
+  { href: "/marketing", label: "Campañas de mail", icon: "✉️", exact: true },
+  { href: "/marketing/reminders", label: "Reminders", icon: "⏰" },
 ];
 
 const linksRestringido = [
@@ -23,6 +30,7 @@ const linksRestringido = [
   { href: "/ventas", label: "Ventas", icon: "🛒" },
   { href: "/inventario/compras", label: "Compras", icon: "📦" },
   { href: "/consignaciones", label: "Consignaciones", icon: "🤝" },
+  { href: "/logistica", label: "Logística", icon: "🚚" },
 ];
 
 const adminLinks = [
@@ -37,15 +45,17 @@ function NavLink({
   href,
   label,
   icon,
+  exact,
   onNavigate,
 }: {
   href: string;
   label: string;
   icon: string;
+  exact?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const active = href === "/" || exact ? pathname === href : pathname.startsWith(href);
 
   return (
     <Link
@@ -76,6 +86,7 @@ export function Sidebar({
   const [adminOpen, setAdminOpen] = useState(
     adminLinks.some((l) => pathname.startsWith(l.href))
   );
+  const [marketingOpen, setMarketingOpen] = useState(pathname.startsWith("/marketing"));
   const visibleLinks = isRestringido ? linksRestringido : links;
 
   return (
@@ -100,6 +111,35 @@ export function Sidebar({
         {visibleLinks.map((link) => (
           <NavLink key={link.href} {...link} onNavigate={onNavigate} />
         ))}
+
+        {!isRestringido && (
+          <div>
+            <button
+              onClick={() => setMarketingOpen((o) => !o)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            >
+              <span className="flex items-center gap-3">
+                <span className="text-base leading-none">📣</span>
+                Marketing
+              </span>
+              <svg
+                className={`h-3 w-3 transition-transform ${marketingOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {marketingOpen && (
+              <div className="mt-1 space-y-1 pl-4">
+                {marketingLinks.map((link) => (
+                  <NavLink key={link.href} {...link} onNavigate={onNavigate} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {isAdmin && (
           <div className="pt-3">
@@ -140,20 +180,25 @@ export function TopBar({
 }) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6">
-      <div className="flex items-center">
+      <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
           onClick={onToggleSidebar}
           aria-label="Abrir menú"
-          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 md:hidden"
+          className="-ml-2 rounded-md p-2 text-gray-500 hover:bg-gray-100 md:hidden"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        {/* En mobile el sidebar está oculto: logo y nombre van en la barra superior. */}
+        <Link href="/" className="flex min-w-0 items-center gap-2 md:hidden">
+          <Image src="/logo.png" alt="" width={28} height={28} className="shrink-0 rounded-full" />
+          <span className="truncate text-sm font-bold text-gray-900">Estación Mascotera</span>
+        </Link>
       </div>
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-500">{userName}</span>
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+        <span className="hidden text-sm text-gray-500 sm:inline">{userName}</span>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="rounded-md px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800"
@@ -182,8 +227,17 @@ export function AppShell({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Con el menú abierto en mobile, Escape lo cierra.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const cerrar = (e: KeyboardEvent) => e.key === "Escape" && setSidebarOpen(false);
+    window.addEventListener("keydown", cerrar);
+    return () => window.removeEventListener("keydown", cerrar);
+  }, [sidebarOpen]);
+
+  // h-dvh: alto real de la pantalla en el celular (h-screen queda tapado por la barra del navegador).
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 md:hidden"

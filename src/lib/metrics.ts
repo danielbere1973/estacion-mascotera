@@ -131,7 +131,11 @@ export async function getDashboardMetrics(rango: RangoFechas) {
     // Si tiene detalleVentaId (RECIBIMOS con Nueva venta): ya está en totalFacturado y costoMercaderiaVendida arriba
   }
 
-  const costosEnvioVentas = Number(ventasEnvio._sum.costoEnvio ?? 0);
+  // Venta.costoEnvio es lo que se le cobró al cliente por el envío (shipping_cost_customer de
+  // Tiendanube), no un gasto de la empresa: ese dinero entra junto con el pago de la venta y el
+  // correo se paga por fuera (como gasto variable), así que suma al facturado en vez de restar.
+  const envioCobradoVentas = Number(ventasEnvio._sum.costoEnvio ?? 0);
+  totalFacturado += envioCobradoVentas;
   const costosCobranzaVentas = Number(costosCobranzaAgg._sum.montoCalculado ?? 0);
 
   const totalComprasMercaderia =
@@ -153,12 +157,11 @@ export async function getDashboardMetrics(rango: RangoFechas) {
 
   const totalGastado = totalComprasMercaderia + totalGastos;
 
-  // Rentabilidad operativa: venta - costo de mercadería - comisiones - envío - gastos variables
-  // (los gastos variables incluyen costos directos de venta como envíos pagados por fuera de Venta.costoEnvio)
+  // Rentabilidad operativa: venta (incluye envío cobrado) - costo de mercadería - comisiones - gastos variables
+  // (los gastos variables incluyen lo que realmente se le paga al correo por los envíos)
   const rentabilidadSinFijos =
     totalFacturado -
     costoMercaderiaVendida -
-    costosEnvioVentas -
     costosCobranzaVentas -
     totalGastosVariables;
 

@@ -43,7 +43,7 @@ export function SubirArchivosHym() {
           calcular();
         }}
       >
-        <div>
+        <div className="min-w-0">
           <label className="mb-1 block text-xs font-medium text-gray-600">productos.csv</label>
           <input
             type="file"
@@ -53,7 +53,7 @@ export function SubirArchivosHym() {
             className="block text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="mb-1 block text-xs font-medium text-gray-600">Productos-Cambios_HyM.xlsx</label>
           <input
             type="file"
@@ -66,7 +66,7 @@ export function SubirArchivosHym() {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
         >
           {isPending ? "Calculando..." : "Calcular cambios"}
         </button>

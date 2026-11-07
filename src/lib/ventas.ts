@@ -46,7 +46,51 @@ export function calcularMontoCosto(
   return costo.esPorcentaje ? (base * costo.valor) / 100 : costo.valor;
 }
 
-async function ejecutarCrearVenta(tx: Prisma.TransactionClient, input: CrearVentaInput) {
+// Los combos no tienen stock propio: se venden como un producto más pero
+// representan N productos reales. Antes de tocar stock hay que "explotarlos"
+// en sus componentes, prorrateando el precio cobrado según el costo de cada
+// uno para que el margen por producto no quede falseado.
+async function explotarCombos(tx: Prisma.TransactionClient, items: ItemVentaInput[]): Promise<ItemVentaInput[]> {
+  const combosIds = items.map((i) => i.productoId);
+  const combos = await tx.producto.findMany({
+    where: { id: { in: combosIds }, esCombo: true },
+    include: { componentesCombo: { include: { producto: { select: { id: true, precioCostoUnitario: true } } } } },
+  });
+  const comboPorId = new Map(combos.map((c) => [c.id, c]));
+  if (comboPorId.size === 0) return items;
+
+  const resultado: ItemVentaInput[] = [];
+  for (const item of items) {
+    const combo = comboPorId.get(item.productoId);
+    if (!combo) {
+      resultado.push(item);
+      continue;
+    }
+    if (combo.componentesCombo.length === 0) {
+      throw new Error(`El combo "${combo.nombre}" no tiene componentes configurados.`);
+    }
+
+    const precioTotalItem = item.cantidad * item.precioVentaUnitario * (1 - (item.descuentoPorcentaje ?? 0) / 100);
+    const costoTotalCombo = combo.componentesCombo.reduce(
+      (acc, c) => acc + c.cantidad * Number(c.producto.precioCostoUnitario),
+      0
+    );
+
+    for (const componente of combo.componentesCombo) {
+      const costoComponente = componente.cantidad * Number(componente.producto.precioCostoUnitario);
+      const proporcion = costoTotalCombo > 0 ? costoComponente / costoTotalCombo : 1 / combo.componentesCombo.length;
+      resultado.push({
+        productoId: componente.productoId,
+        cantidad: componente.cantidad * item.cantidad,
+        precioVentaUnitario: (precioTotalItem * proporcion) / (componente.cantidad * item.cantidad),
+      });
+    }
+  }
+  return resultado;
+}
+
+async function ejecutarCrearVenta(tx: Prisma.TransactionClient, inputOriginal: CrearVentaInput) {
+  const input = { ...inputOriginal, items: await explotarCombos(tx, inputOriginal.items) };
   const costoEnvio = input.costoEnvio ?? 0;
   const facturado = input.facturado ?? false;
   const numeroFactura = input.numeroFactura ?? null;
@@ -233,4 +277,126 @@ async function ejecutarEliminarVenta(tx: Prisma.TransactionClient, ventaId: numb
 export async function eliminarVentaCore(ventaId: number, usuarioId: number, tx?: Prisma.TransactionClient) {
   if (tx) return ejecutarEliminarVenta(tx, ventaId, usuarioId);
   return prisma.$transaction((t) => ejecutarEliminarVenta(t, ventaId, usuarioId));
+}
+
+export function calcularTotalACobrar(detalles: { cantidad: number; precioVentaUnitario: number; descuentoPorcentaje: number }[], costoEnvio: number) {
+  const totalProductos = detalles.reduce(
+    (acc, d) => acc + d.cantidad * d.precioVentaUnitario * (1 - d.descuentoPorcentaje / 100),
+    0
+  );
+  return totalProductos + costoEnvio;
+}
+
+export type PagoVentaInput = {
+  monto: number;
+  comision?: number;
+  medioPago: string;
+  fechaPago?: Date;
+  fechaAcreditacion?: Date | null;
+  descripcion?: string | null;
+  cobradoPorId?: number | null;
+};
+
+export async function agregarPagoVentaCore(
+  ventaId: number,
+  input: PagoVentaInput,
+  usuarioId: number,
+  tx?: Prisma.TransactionClient
+) {
+  const run = async (t: Prisma.TransactionClient) => {
+    const venta = await t.venta.findUniqueOrThrow({
+      where: { id: ventaId },
+      include: { detalles: true, pagos: true },
+    });
+
+    const totalACobrar = calcularTotalACobrar(
+      venta.detalles.map((d) => ({
+        cantidad: d.cantidad,
+        precioVentaUnitario: Number(d.precioVentaUnitario),
+        descuentoPorcentaje: Number(d.descuentoPorcentaje),
+      })),
+      Number(venta.costoEnvio)
+    );
+    const totalPagado = venta.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+
+    if (input.monto <= 0) throw new Error("El monto del pago debe ser mayor a cero.");
+    if (totalPagado + input.monto > totalACobrar + 0.01) {
+      throw new Error(
+        `El pago excede el total a cobrar. Ya se registraron ${totalPagado.toFixed(2)} de ${totalACobrar.toFixed(2)}.`
+      );
+    }
+
+    const pago = await t.pagoVenta.create({
+      data: {
+        ventaId,
+        monto: input.monto,
+        comision: input.comision ?? 0,
+        medioPago: input.medioPago,
+        fechaPago: input.fechaPago ?? new Date(),
+        fechaAcreditacion: input.fechaAcreditacion ?? null,
+        descripcion: input.descripcion ?? null,
+        cobradoPorId: input.cobradoPorId ?? null,
+      },
+    });
+
+    const nuevoTotalPagado = totalPagado + input.monto;
+    await t.venta.update({
+      where: { id: ventaId },
+      data: {
+        cobrado: nuevoTotalPagado >= totalACobrar - 0.01,
+        cobradoPorId: input.cobradoPorId ?? venta.cobradoPorId,
+        fechaAcreditacion: input.fechaAcreditacion ?? venta.fechaAcreditacion,
+      },
+    });
+
+    await registrarLog(t, {
+      usuarioId,
+      accion: "ACTUALIZAR",
+      entidad: "VENTA",
+      entidadId: ventaId,
+      detalle: `Pago registrado: ${input.monto}`,
+    });
+
+    return pago;
+  };
+
+  if (tx) return run(tx);
+  return prisma.$transaction(run);
+}
+
+export async function eliminarPagoVentaCore(pagoId: number, usuarioId: number, tx?: Prisma.TransactionClient) {
+  const run = async (t: Prisma.TransactionClient) => {
+    const pago = await t.pagoVenta.findUniqueOrThrow({ where: { id: pagoId } });
+    await t.pagoVenta.delete({ where: { id: pagoId } });
+
+    const venta = await t.venta.findUniqueOrThrow({
+      where: { id: pago.ventaId },
+      include: { detalles: true, pagos: true },
+    });
+    const totalACobrar = calcularTotalACobrar(
+      venta.detalles.map((d) => ({
+        cantidad: d.cantidad,
+        precioVentaUnitario: Number(d.precioVentaUnitario),
+        descuentoPorcentaje: Number(d.descuentoPorcentaje),
+      })),
+      Number(venta.costoEnvio)
+    );
+    const totalPagado = venta.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+
+    await t.venta.update({
+      where: { id: pago.ventaId },
+      data: { cobrado: totalPagado >= totalACobrar - 0.01 && totalACobrar > 0 },
+    });
+
+    await registrarLog(t, {
+      usuarioId,
+      accion: "ACTUALIZAR",
+      entidad: "VENTA",
+      entidadId: pago.ventaId,
+      detalle: `Pago eliminado: ${pago.monto}`,
+    });
+  };
+
+  if (tx) return run(tx);
+  return prisma.$transaction(run);
 }

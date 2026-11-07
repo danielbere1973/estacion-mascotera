@@ -62,19 +62,37 @@ export function Combobox({
     return () => document.removeEventListener("mousedown", onClickOutside);
   });
 
+  // Ubica el desplegable debajo del campo, sin salirse del ancho de la pantalla.
+  function posicionar() {
+    if (!inputRef.current) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    const width = Math.min(Math.max(rect.width, 320), window.innerWidth - 16);
+    setDropdownStyle({
+      position: "fixed",
+      top: rect.bottom + 2,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+      width,
+      zIndex: 9999,
+    });
+  }
+
   function handleOpen() {
-    if (inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropdownStyle({
-        position: "fixed",
-        top: rect.bottom + 2,
-        left: rect.left,
-        width: Math.max(rect.width, 320),
-        zIndex: 9999,
-      });
-    }
+    posicionar();
     setOpen(true);
   }
+
+  // Mientras está abierto, seguir al campo: en el celular el teclado y el scroll lo mueven.
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", posicionar, true);
+    window.addEventListener("resize", posicionar);
+    window.visualViewport?.addEventListener("resize", posicionar);
+    return () => {
+      window.removeEventListener("scroll", posicionar, true);
+      window.removeEventListener("resize", posicionar);
+      window.visualViewport?.removeEventListener("resize", posicionar);
+    };
+  }, [open]);
 
   const q = normalizar(query);
   const filtrados = q

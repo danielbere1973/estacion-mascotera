@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { actualizarItemMayorista } from "../../../actions";
 
@@ -21,13 +22,16 @@ export default async function EditarItemMayoristaPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Editar item de la lista</h1>
+      <div>
+        <Link href={`/inventario/listas?proveedorId=${proveedorId ?? item.proveedorId ?? ""}`} className="text-xs text-gray-400 hover:text-gray-600">← Lista de precios</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Editar item de la lista</h1>
+      </div>
 
       <form action={actualizarItemMayorista} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
         <input type="hidden" name="id" value={item.id} />
         <input type="hidden" name="proveedorId" value={proveedorId ?? item.proveedorId ?? ""} />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">SKU del proveedor</label>
             <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-700">

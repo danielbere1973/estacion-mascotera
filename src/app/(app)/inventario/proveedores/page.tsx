@@ -20,10 +20,21 @@ export default async function ProveedoresPage() {
     },
   });
 
+  const margenDe = (prov: (typeof proveedores)[number]) => {
+    const items = prov.historialMayorista.filter((h) => h.producto);
+    const margenes = items.map((h) => {
+      const costo = Number(h.precioConDescuento ?? h.precioCostoScraped);
+      const venta = Number(h.producto!.precioVenta);
+      return costo > 0 ? ((venta - costo) / costo) * 100 : null;
+    }).filter((m): m is number => m !== null);
+    return margenes.length > 0 ? margenes.reduce((a, b) => a + b, 0) / margenes.length : null;
+  };
+
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Proveedores</h1>
+      <div>
+        <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Proveedores</h1>
       </div>
 
       {/* Formulario nuevo proveedor */}
@@ -31,21 +42,73 @@ export default async function ProveedoresPage() {
         <p className="text-sm font-medium text-gray-700">Nuevo proveedor</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <input name="nombre" required placeholder="Nombre *" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
-          <input name="contacto" placeholder="Contacto" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="contacto" placeholder="Teléfono" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="email" type="email" placeholder="Email" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="cuit" placeholder="CUIT/CUIL" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="alias" placeholder="Alias" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="cbu" inputMode="numeric" placeholder="CBU/CVU" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <input name="direccion" placeholder="Dirección" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="accountManager" placeholder="Account Manager" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <input name="horarios" placeholder="Horarios" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         </div>
-        <button type="submit" className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+        <button type="submit" className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 sm:w-auto">
           + Agregar
         </button>
       </form>
 
-      {/* Lista de proveedores */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      {/* Lista de proveedores — mobile: tarjetas */}
+      <ul className="space-y-2 md:hidden">
+        {proveedores.map((prov) => {
+          const margenProm = margenDe(prov);
+          return (
+            <li key={prov.id} className="rounded-xl border border-gray-200 bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <Link href={`/inventario/proveedores/${prov.id}`} className="min-w-0 font-medium text-blue-600">
+                  {prov.nombre}
+                </Link>
+                <span className="shrink-0 text-xs text-gray-500">
+                  {prov._count.historialMayorista} prod.
+                  {margenProm !== null && (
+                    <span className={`ml-2 font-medium ${margenProm >= 25 ? "text-green-600" : "text-orange-500"}`}>
+                      {margenProm.toFixed(1)}%
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="mt-1 space-y-0.5 text-xs text-gray-500">
+                {prov.contacto && <p>{prov.contacto}</p>}
+                {prov.direccion && <p>{prov.direccion}</p>}
+                {prov.accountManager && <p>Account Manager: {prov.accountManager}</p>}
+                {prov.horarios && <p>Horarios: {prov.horarios}</p>}
+              </div>
+              <div className="mt-2 flex justify-end gap-4 border-t border-gray-100 pt-2">
+                <Link href={`/inventario/proveedores/${prov.id}/editar`} className="text-xs text-blue-600">
+                  Editar
+                </Link>
+                <form action={eliminarProveedor}>
+                  <input type="hidden" name="id" value={prov.id} />
+                  <ConfirmSubmitButton
+                    confirmMessage={`¿Eliminar "${prov.nombre}"?`}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    Eliminar
+                  </ConfirmSubmitButton>
+                </form>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
               <th className="px-4 py-2">Proveedor</th>
-              <th className="px-4 py-2">Contacto</th>
+              <th className="px-4 py-2">Teléfono</th>
+              <th className="px-4 py-2">Dirección</th>
+              <th className="px-4 py-2">Account Manager</th>
+              <th className="px-4 py-2">Horarios</th>
               <th className="px-4 py-2 text-right">Productos</th>
               <th className="px-4 py-2 text-right">Margen promedio</th>
               <th className="px-4 py-2"></th>
@@ -53,15 +116,7 @@ export default async function ProveedoresPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {proveedores.map((prov) => {
-              const items = prov.historialMayorista.filter((h) => h.producto);
-              const margenes = items.map((h) => {
-                const costo = Number(h.precioConDescuento ?? h.precioCostoScraped);
-                const venta = Number(h.producto!.precioVenta);
-                return costo > 0 ? ((venta - costo) / costo) * 100 : null;
-              }).filter((m): m is number => m !== null);
-              const margenProm = margenes.length > 0
-                ? margenes.reduce((a, b) => a + b, 0) / margenes.length
-                : null;
+              const margenProm = margenDe(prov);
 
               return (
                 <tr key={prov.id} className="hover:bg-gray-50">
@@ -71,6 +126,9 @@ export default async function ProveedoresPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-gray-500">{prov.contacto ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-500">{prov.direccion ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-500">{prov.accountManager ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-500">{prov.horarios ?? "—"}</td>
                   <td className="px-4 py-3 text-right text-gray-700">{prov._count.historialMayorista}</td>
                   <td className="px-4 py-3 text-right">
                     {margenProm !== null

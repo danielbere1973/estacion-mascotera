@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { corregirEncoding, parsearCSV, parsearPrecio } from "@/lib/csv";
+import { calcularMargenPorPeso, calificaParaMargenPorPeso } from "@/lib/margen-productos";
 
 // Lógica compartida para importar una lista de precios de mayorista (CSV o
 // .xlsx) y actualizar HistorialStockMayorista + costos de Producto (cuando el
@@ -150,7 +151,7 @@ export async function importarCostosMayoristaCore(
       sku: true,
       codigoHym: true,
       productoId: true,
-      producto: { select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true } },
+      producto: { select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true, unidadMedida: true, contenido: true } },
     },
   });
   const productosPorSku = new Map(
@@ -172,7 +173,7 @@ export async function importarCostosMayoristaCore(
       ? (
           await prisma.producto.findMany({
             where: { skuInterno: { in: skusInternoManualesUnicos } },
-            select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true },
+            select: { id: true, skuInterno: true, nombre: true, margenPorcentaje: true, unidadMedida: true, contenido: true },
           })
         ).map((p) => [p.skuInterno, p])
       : []
@@ -239,7 +240,11 @@ export async function importarCostosMayoristaCore(
   for (const [sku, fila] of filasPorSku) {
     const nombre = String(fila["Nombre"] ?? "").trim();
     const precioCosto = parsearPrecio(fila["Precio Lista"]);
-    const precioConDescuento = parsearPrecio(fila["Precio c/dto"]);
+    // Cuando HYM no informa descuento para un producto, la columna viene vacía.
+    // Guardamos null (no 0) para que la UI pueda hacer `precioConDescuento ?? precioCostoScraped`
+    // y caer al precio de lista — si guardáramos 0 el "??" no lo detecta como ausente.
+    const precioConDescuentoTexto = String(fila["Precio c/dto"] ?? "").trim();
+    const precioConDescuento = precioConDescuentoTexto ? parsearPrecio(precioConDescuentoTexto) : null;
     const tamanios = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim() || null;
     const estadoStockMayorista = String(fila["Estado de stock"] ?? "").trim() || null;
     const tipoProducto = String(fila["Tipo"] ?? fila["Categoria"] ?? "").trim() || null;
@@ -266,10 +271,18 @@ export async function importarCostosMayoristaCore(
 
     if (producto) {
       if (importandoHym) {
-        const precioVenta = precioCosto * (1 + Number(producto.margenPorcentaje) / 100);
+        const califica = calificaParaMargenPorPeso({
+          nombre: producto.nombre,
+          unidadMedida: producto.unidadMedida,
+          contenido: Number(producto.contenido),
+        });
+        const margenActualizado = califica
+          ? calcularMargenPorPeso({ nombre: producto.nombre, unidadMedida: producto.unidadMedida, contenido: Number(producto.contenido), costo: precioCosto })
+          : Number(producto.margenPorcentaje);
+        const precioVenta = precioCosto * (1 + margenActualizado / 100);
         await prisma.producto.update({
           where: { id: producto.id },
-          data: { precioCostoUnitario: precioCosto, precioVenta },
+          data: { precioCostoUnitario: precioCosto, margenPorcentaje: margenActualizado, precioVenta },
         });
       }
       actualizados++;
@@ -288,6 +301,9 @@ export async function importarCostosMayoristaCore(
     } else if (importandoHym) {
       const nombreCompleto = [nombre, tamanios].filter(Boolean).join(" · ") || sku;
       const tamanioParseado = tamanios ? parsearTamanio(tamanios) : null;
+      const unidadMedidaNueva = (tamanioParseado?.unidad ?? "KILOGRAMOS") as "KILOGRAMOS" | "GRAMOS" | "LITROS" | "MILILITROS" | "UNIDAD";
+      const contenidoNuevo = tamanioParseado?.contenido ?? 1;
+      const margenNuevo = calcularMargenPorPeso({ nombre: nombreCompleto, unidadMedida: unidadMedidaNueva, contenido: contenidoNuevo, costo: precioCosto });
       producto = await prisma.$transaction(async (tx) => {
         const skuInternoAuto = await siguienteSkuInterno(tx);
         return tx.producto.create({
@@ -297,11 +313,11 @@ export async function importarCostosMayoristaCore(
             marca: tipoProducto ?? "-",
             categoria: tipoProducto ?? "Sin categorizar",
             presentacion: "BOLSA_CERRADA",
-            unidadMedida: (tamanioParseado?.unidad ?? "KILOGRAMOS") as "KILOGRAMOS" | "GRAMOS" | "LITROS" | "MILILITROS" | "UNIDAD",
-            contenido: tamanioParseado?.contenido ?? 1,
-            margenPorcentaje: 30,
+            unidadMedida: unidadMedidaNueva,
+            contenido: contenidoNuevo,
+            margenPorcentaje: margenNuevo,
             precioCostoUnitario: precioCosto,
-            precioVenta: precioCosto * 1.3,
+            precioVenta: precioCosto * (1 + margenNuevo / 100),
             stockActual: 0,
           },
         });

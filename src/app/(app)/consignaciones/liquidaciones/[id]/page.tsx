@@ -42,7 +42,7 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <Link href="/consignaciones/liquidaciones" className="text-xs text-gray-400 hover:text-gray-600">← Liquidaciones</Link>
           <h1 className="text-xl font-semibold text-gray-900 mt-1">Liquidación #{liq.id} — {liq.socio.nombre}</h1>
@@ -50,7 +50,7 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
             Período: {new Date(liq.fechaDesde).toLocaleDateString("es-AR")} → {new Date(liq.fechaHasta).toLocaleDateString("es-AR")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             href={`/consignaciones/liquidaciones/${liq.id}/imprimir`}
             target="_blank"
@@ -88,7 +88,7 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
       {totalACobrarnos > 0 && (
         <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
           <h2 className="text-sm font-semibold text-gray-700">Entregamos (ellos vendieron nuestros productos)</h2>
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between gap-3 text-sm">
             <span className="text-gray-500">Total a cobrar (comisión + costo)</span>
             <span className="font-medium text-green-700">{fmt(totalACobrarnos)}</span>
           </div>
@@ -111,7 +111,7 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
       {totalACobrarles > 0 && (
         <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
           <h2 className="text-sm font-semibold text-gray-700">Recibimos (nosotros vendimos sus productos)</h2>
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between gap-3 text-sm">
             <span className="text-gray-500">Total a pagar (costo + 1/3 ganancia)</span>
             <span className="font-medium text-red-600">{fmt(totalACobrarles)}</span>
           </div>
@@ -161,19 +161,19 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
             const montoLiq = partedueno * v.cantidad;
             return (
               <div key={v.id} className="px-4 py-3 text-sm">
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="flex justify-between items-start gap-3">
+                  <div className="min-w-0">
                     <span className="font-medium text-gray-900">
                       {v.detalle.producto?.nombre ?? v.detalle.descripcion ?? `Item #${v.detalle.id}`}
                     </span>
                     {v.detalle.descripcion && v.detalle.producto?.nombre && (
                       <span className="text-gray-400 ml-1 text-xs">({v.detalle.descripcion})</span>
                     )}
-                    <span className="text-gray-400 ml-2 text-xs">
+                    <span className="block text-gray-400 text-xs md:ml-2 md:inline">
                       {new Date(v.fecha).toLocaleDateString("es-AR")} · {v.cantidad} u. · Consig. #{v.detalle.consignacionId}
                     </span>
                   </div>
-                  <span className={`font-semibold ${esEntregamos ? "text-green-700" : "text-red-600"}`}>
+                  <span className={`shrink-0 font-semibold ${esEntregamos ? "text-green-700" : "text-red-600"}`}>
                     {esEntregamos ? "+" : "-"}{fmt(montoLiq)}
                   </span>
                 </div>
@@ -206,15 +206,15 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
                 ? `${liq.socio.nombre} nos pagó`
                 : `Nosotros le pagamos a ${liq.socio.nombre}`;
               return (
-                <div key={p.id} className="flex justify-between items-center px-4 py-2.5 text-sm">
-                  <div>
+                <div key={p.id} className="flex justify-between items-center gap-3 px-4 py-2.5 text-sm">
+                  <div className="min-w-0">
                     <span className="text-gray-900">{quien}</span>
-                    <span className="text-gray-400 ml-2 text-xs">
+                    <span className="block text-gray-400 text-xs md:ml-2 md:inline">
                       {new Date(p.fecha).toLocaleDateString("es-AR")} · Consig. #{p.consignacionId}
                       {p.notas && ` · ${p.notas}`}
                     </span>
                   </div>
-                  <span className={`font-medium ${esEntregamos ? "text-green-700" : "text-red-600"}`}>
+                  <span className={`shrink-0 font-medium ${esEntregamos ? "text-green-700" : "text-red-600"}`}>
                     {esEntregamos ? "+" : "-"}{fmt(Number(p.monto))}
                   </span>
                 </div>

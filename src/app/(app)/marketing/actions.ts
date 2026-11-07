@@ -2,13 +2,7 @@
 
 import { put } from "@vercel/blob";
 import { requireAdmin } from "@/lib/permissions";
-
-// Resend solo permite enviar "from" un dominio verificado.
-const FROM_ADDRESS = "Estación Mascotera <no-reply@estacionmascotera.com.ar>";
-
-// Remitente fijo: recibe la copia de confirmación y es el "Reply-To" de
-// todas las campañas. No es configurable desde el formulario a propósito.
-const REMITENTE_FIJO = "contacto@estacionmascotera.com.ar";
+import { FROM_ADDRESS, REMITENTE_FIJO } from "@/lib/mail";
 
 export async function subirImagenMail(formData: FormData): Promise<{ url?: string; error?: string }> {
   await requireAdmin();

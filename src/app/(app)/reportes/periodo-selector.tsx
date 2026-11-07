@@ -11,6 +11,7 @@ const TIPOS_REPORTE = [
   { value: "compras", label: "Compras" },
   { value: "gastos", label: "Gastos" },
   { value: "inventario", label: "Inventario" },
+  { value: "producto-historial", label: "Producto — Historial de compras y ventas" },
 ];
 
 export function PeriodoSelector({ tipo }: { tipo: string }) {
@@ -19,6 +20,7 @@ export function PeriodoSelector({ tipo }: { tipo: string }) {
   const periodo = params.get("periodo") ?? "mes";
   const desde = params.get("desde") ?? "";
   const hasta = params.get("hasta") ?? "";
+  const producto = params.get("producto") ?? "";
 
   function navegar(overrides: Record<string, string>) {
     const sp = new URLSearchParams({
@@ -26,12 +28,16 @@ export function PeriodoSelector({ tipo }: { tipo: string }) {
       periodo,
       ...(desde ? { desde } : {}),
       ...(hasta ? { hasta } : {}),
+      ...(producto ? { producto } : {}),
       ...overrides,
     });
     // limpiar desde/hasta si cambia el periodo a uno predefinido
     if (overrides.periodo && overrides.periodo !== "libre") {
       sp.delete("desde");
       sp.delete("hasta");
+    }
+    if (overrides.tipo && overrides.tipo !== "producto-historial") {
+      sp.delete("producto");
     }
     router.push(`/reportes?${sp.toString()}`);
   }
@@ -65,11 +71,39 @@ export function PeriodoSelector({ tipo }: { tipo: string }) {
         </select>
       </div>
 
-      {tipo !== "inventario" && (
+      {tipo === "producto-historial" && (
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            navegar({ producto: fd.get("producto") as string });
+          }}
+        >
+          <div className="space-y-0.5">
+            <label className="block text-xs text-gray-500">Buscar por SKU o nombre</label>
+            <input
+              name="producto"
+              type="text"
+              defaultValue={producto}
+              placeholder="Ej: AA24 o Old Prince"
+              className="w-56 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white sm:py-1.5"
+          >
+            Buscar
+          </button>
+        </form>
+      )}
+
+      {tipo !== "inventario" && tipo !== "producto-historial" && (
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-500">Período</label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {btnPeriodo("dia", "Hoy")}
               {btnPeriodo("semana", "Esta semana")}
               {btnPeriodo("mes", "Este mes")}
@@ -77,7 +111,7 @@ export function PeriodoSelector({ tipo }: { tipo: string }) {
           </div>
 
           <form
-            className="flex items-end gap-2"
+            className="grid w-full grid-cols-2 items-end gap-2 sm:flex sm:w-auto"
             onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
@@ -90,7 +124,7 @@ export function PeriodoSelector({ tipo }: { tipo: string }) {
                 name="desde"
                 type="date"
                 defaultValue={desde}
-                className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full min-w-36 rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-40"
               />
             </div>
             <div className="space-y-0.5">
@@ -99,12 +133,12 @@ export function PeriodoSelector({ tipo }: { tipo: string }) {
                 name="hasta"
                 type="date"
                 defaultValue={hasta}
-                className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full min-w-36 rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-40"
               />
             </div>
             <button
               type="submit"
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+              className={`col-span-2 rounded-md px-3 py-2 text-sm font-medium sm:py-1.5 ${
                 periodo === "libre"
                   ? "bg-blue-600 text-white"
                   : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
-import { crearVentaCore, eliminarVentaCore, calcularMontoCosto } from "@/lib/ventas";
+import { crearVentaCore, eliminarVentaCore, calcularMontoCosto, calcularTotalACobrar, agregarPagoVentaCore, eliminarPagoVentaCore } from "@/lib/ventas";
 import {
   registrarPendientesCompra,
   moverOCrearTarjetaCompraMayorista,
@@ -14,6 +14,14 @@ import {
 import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { CanalVenta } from "@prisma/client";
+
+// Los IDs de venta pueden ser 0 (la venta #0 existe), así que no alcanza con `!id`.
+function parseVentaId(valor: FormDataEntryValue | null): number | null {
+  const texto = valor?.toString().trim();
+  if (!texto) return null;
+  const n = Number(texto);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
 
 function parseCostos(formData: FormData) {
   const conceptos = formData.getAll("costoConcepto").map((v) => v.toString().trim());
@@ -119,6 +127,16 @@ export async function crearVenta(formData: FormData) {
       tx
     );
 
+    if (cobrado) {
+      const totalACobrar = calcularTotalACobrar(items, costoEnvio);
+      await agregarPagoVentaCore(
+        venta.ventaId,
+        { monto: totalACobrar, medioPago, fechaAcreditacion, cobradoPorId },
+        Number(session.user.id),
+        tx
+      );
+    }
+
     const { huboPendienteHym, sinMapeoHym, conMapeoHym } = await registrarPendientesCompra(tx, venta.productosStockNegativo);
 
     const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
@@ -180,8 +198,8 @@ export async function crearVenta(formData: FormData) {
 export async function actualizarVenta(formData: FormData) {
   const session = await requireAdmin();
 
-  const id = Number(formData.get("id"));
-  if (!id) throw new Error("Venta inválida.");
+  const id = parseVentaId(formData.get("id"));
+  if (id === null) throw new Error("Venta inválida.");
 
   const canalVenta = formData.get("canalVenta")?.toString() as CanalVenta;
   const medioPago = formData.get("medioPago")?.toString().trim();
@@ -192,12 +210,10 @@ export async function actualizarVenta(formData: FormData) {
   const numeroFactura = formData.get("numeroFactura")?.toString().trim() || null;
   const fechaVentaStr = formData.get("fechaVenta")?.toString().trim();
   const fechaVenta = fechaVentaStr ? new Date(fechaVentaStr) : undefined;
-  const fechaAcreditacionRaw = formData.get("fechaAcreditacion")?.toString().trim() || null;
-  const fechaAcreditacion = fechaAcreditacionRaw ? new Date(fechaAcreditacionRaw) : null;
-  const cobrado = formData.get("cobrado") === "on";
-  const cobradoPorId = cobrado && formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
 
   if (!canalVenta || !medioPago) throw new Error("Faltan datos de la venta.");
+
+  const clienteIdNuevo = Number(formData.get("clienteId")) || null;
 
   const detalleIdsRaw = formData.getAll("detalleId").map((v) => v.toString());
   const productoIdsRaw = formData.getAll("productoId").map((v) => v.toString());
@@ -208,7 +224,9 @@ export async function actualizarVenta(formData: FormData) {
 
   const costos = parseCostos(formData);
 
-  await prisma.$transaction(async (tx) => {
+  const productosStockNegativo: { productoId: number; nombre: string; stockActual: number; faltante: number }[] = [];
+
+  const resultado = await prisma.$transaction(async (tx) => {
     const detallesActuales = await tx.detalleVenta.findMany({
       where: { ventaId: id },
       include: { ventaConsignacion: true },
@@ -278,14 +296,20 @@ export async function actualizarVenta(formData: FormData) {
         }
 
         if (deltaCantidad !== 0) {
-          const producto = await tx.producto.findUniqueOrThrow({ where: { id: actual.productoId } });
-          if (deltaCantidad > producto.stockActual) {
-            throw new Error(`No hay suficiente stock de "${producto.nombre}" (disponible: ${producto.stockActual}).`);
-          }
-          await tx.producto.update({
+          const productoAntes = await tx.producto.findUniqueOrThrow({ where: { id: actual.productoId } });
+          const productoActualizado = await tx.producto.update({
             where: { id: actual.productoId },
             data: { stockActual: { decrement: deltaCantidad } },
           });
+          if (productoActualizado.stockActual < 0 && productoAntes.stockActual >= 0) {
+            const faltante = Math.min(deltaCantidad, Math.abs(productoActualizado.stockActual));
+            productosStockNegativo.push({
+              productoId: productoActualizado.id,
+              nombre: productoActualizado.nombre,
+              stockActual: productoActualizado.stockActual,
+              faltante,
+            });
+          }
         }
 
         await tx.detalleVenta.update({
@@ -300,9 +324,6 @@ export async function actualizarVenta(formData: FormData) {
         if (!productoId) continue;
 
         const producto = await tx.producto.findUniqueOrThrow({ where: { id: productoId } });
-        if (cantidad > producto.stockActual) {
-          throw new Error(`No hay suficiente stock de "${producto.nombre}" (disponible: ${producto.stockActual}).`);
-        }
 
         const detalleConsignacionId = detalleConsignacionIdsRaw[i] ? Number(detalleConsignacionIdsRaw[i]) : null;
         if (detalleConsignacionId) {
@@ -317,10 +338,19 @@ export async function actualizarVenta(formData: FormData) {
           data: { ventaId: id, productoId, cantidad, precioVentaUnitario: precio, descuentoPorcentaje: descuento, precioCostoUnitario: producto.precioCostoUnitario },
         });
 
-        await tx.producto.update({
+        const productoActualizado = await tx.producto.update({
           where: { id: productoId },
           data: { stockActual: { decrement: cantidad } },
         });
+        if (productoActualizado.stockActual < 0 && producto.stockActual >= 0) {
+          const faltante = Math.min(cantidad, Math.abs(productoActualizado.stockActual));
+          productosStockNegativo.push({
+            productoId: productoActualizado.id,
+            nombre: productoActualizado.nombre,
+            stockActual: productoActualizado.stockActual,
+            faltante,
+          });
+        }
 
         if (detalleConsignacionId) {
           await tx.ventaConsignacion.create({
@@ -366,9 +396,28 @@ export async function actualizarVenta(formData: FormData) {
       });
     }
 
+    // Cambio de cliente: se valida que exista y se arrastra a las tarjetas del tablero de esta venta.
+    const { clienteId: clienteIdAnterior } = await tx.venta.findUniqueOrThrow({ where: { id }, select: { clienteId: true } });
+    let detalleCambioCliente: string | undefined;
+    if (clienteIdNuevo && clienteIdNuevo !== clienteIdAnterior) {
+      const [anterior, nuevo] = await Promise.all([
+        tx.cliente.findUniqueOrThrow({ where: { id: clienteIdAnterior }, select: { nombre: true, apellido: true } }),
+        tx.cliente.findUnique({ where: { id: clienteIdNuevo }, select: { nombre: true, apellido: true } }),
+      ]);
+      if (!nuevo) throw new Error("El cliente seleccionado no existe.");
+      await tx.tarjetaTablero.updateMany({
+        where: { ventaId: id, clienteId: clienteIdAnterior },
+        data: { clienteId: clienteIdNuevo },
+      });
+      detalleCambioCliente = `Cliente cambiado: ${anterior.nombre} ${anterior.apellido} → ${nuevo.nombre} ${nuevo.apellido}`;
+    }
+
     await tx.venta.update({
       where: { id },
-      data: { canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, descripcion, numeroFactura, fechaVenta, fechaAcreditacion, cobrado, cobradoPorId },
+      data: {
+        canalVenta, medioPago, costoEnvio, facturado, esVentaInterna, descripcion, numeroFactura, fechaVenta,
+        ...(detalleCambioCliente && clienteIdNuevo ? { clienteId: clienteIdNuevo } : {}),
+      },
     });
 
     await registrarLog(tx, {
@@ -376,24 +425,96 @@ export async function actualizarVenta(formData: FormData) {
       accion: "ACTUALIZAR",
       entidad: "VENTA",
       entidadId: id,
+      ...(detalleCambioCliente ? { detalle: detalleCambioCliente } : {}),
     });
+
+    const { huboPendienteHym, sinMapeoHym, conMapeoHym } = await registrarPendientesCompra(tx, productosStockNegativo);
+
+    if (huboPendienteHym) {
+      const venta = await tx.venta.findUniqueOrThrow({ where: { id }, include: { cliente: true } });
+      await moverOCrearTarjetaCompraMayorista(tx, {
+        ventaId: id,
+        clienteId: venta.clienteId,
+        titulo: `Venta a ${venta.cliente.nombre} ${venta.cliente.apellido}`,
+      });
+    }
+
+    return { huboPendienteHym, sinMapeoHym, conMapeoHym };
   });
+
+  const avisoStockManual = resultado.huboPendienteHym
+    ? `\n\n⚠️ ${resultado.conMapeoHym.join(", ")} se quedó sin stock — ya arrancó la compra automática a HYM, te aviso cuando esté confirmada.`
+    : "";
+  if (resultado.huboPendienteHym) {
+    await sendTelegramMessage(`🧾 Venta #${id} editada${avisoStockManual}`);
+    ejecutarCorteCompraHym().catch((error) =>
+      console.error("actualizarVenta: error disparando corte de compras HYM inmediato", error)
+    );
+  }
+  if (resultado.sinMapeoHym.length > 0) {
+    await sendTelegramMessage(
+      `⚠️ ${resultado.sinMapeoHym.join(", ")} se quedó sin stock y no tiene proveedor mayorista cargado — hay que reponerlo a mano.`
+    );
+  }
 
   revalidatePath("/ventas");
   revalidatePath("/inventario");
   revalidatePath("/");
+  revalidatePath("/tablero-control");
   redirect("/ventas");
 }
 
 export async function eliminarVenta(formData: FormData) {
   const session = await requireAdmin();
 
-  const id = Number(formData.get("id"));
-  if (!id) throw new Error("Venta inválida.");
+  const id = parseVentaId(formData.get("id"));
+  if (id === null) throw new Error("Venta inválida.");
 
   await eliminarVentaCore(id, Number(session.user.id));
 
   revalidatePath("/ventas");
   revalidatePath("/inventario");
   revalidatePath("/");
+}
+
+export async function agregarPagoVenta(formData: FormData) {
+  const session = await requireAdmin();
+
+  const ventaId = parseVentaId(formData.get("ventaId"));
+  if (ventaId === null) throw new Error("Venta inválida.");
+
+  const monto = Number(formData.get("monto"));
+  const comision = Number(formData.get("comision") || 0);
+  const medioPago = formData.get("medioPago")?.toString().trim();
+  const fechaPagoRaw = formData.get("fechaPago")?.toString().trim();
+  const fechaPago = fechaPagoRaw ? new Date(fechaPagoRaw) : new Date();
+  const fechaAcreditacionRaw = formData.get("fechaAcreditacion")?.toString().trim() || null;
+  const fechaAcreditacion = fechaAcreditacionRaw ? new Date(fechaAcreditacionRaw) : null;
+  const descripcion = formData.get("descripcion")?.toString().trim() || null;
+  const cobradoPorId = formData.get("cobradoPorId") ? Number(formData.get("cobradoPorId")) : null;
+
+  if (!monto || monto <= 0) throw new Error("Falta el monto del pago.");
+  if (!medioPago) throw new Error("Falta el medio de pago.");
+
+  await agregarPagoVentaCore(
+    ventaId,
+    { monto, comision, medioPago, fechaPago, fechaAcreditacion, descripcion, cobradoPorId },
+    Number(session.user.id)
+  );
+
+  revalidatePath("/ventas");
+  revalidatePath(`/ventas/${ventaId}/editar`);
+}
+
+export async function eliminarPagoVenta(formData: FormData) {
+  const session = await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  const ventaId = parseVentaId(formData.get("ventaId"));
+  if (!id) throw new Error("Pago inválido.");
+
+  await eliminarPagoVentaCore(id, Number(session.user.id));
+
+  revalidatePath("/ventas");
+  if (ventaId !== null) revalidatePath(`/ventas/${ventaId}/editar`);
 }

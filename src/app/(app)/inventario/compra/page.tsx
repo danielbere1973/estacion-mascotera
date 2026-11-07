@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { crearCompra, proximoSkuInterno } from "../actions";
 import { CompraForm } from "./compra-form";
@@ -63,7 +64,10 @@ export default async function NuevaCompraPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Registrar compra</h1>
+      <div>
+        <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Registrar compra</h1>
+      </div>
       <CompraForm
         proveedores={proveedores}
         productos={productos}

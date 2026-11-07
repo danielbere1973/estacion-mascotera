@@ -8,25 +8,28 @@ datasource db {
 }
 
 model Usuario {
-  id                   Int            @id @default(autoincrement())
+  id                   Int                    @id @default(autoincrement())
   nombre               String
   apellido             String
-  email                String         @unique
+  email                String                 @unique
   passwordHash         String
-  activo               Boolean        @default(true)
-  rol                  RolUsuario     @default(ADMIN)
-  createdAt            DateTime       @default(now())
+  activo               Boolean                @default(true)
+  rol                  RolUsuario             @default(ADMIN)
+  createdAt            DateTime               @default(now())
   proveedorRestrictoId Int?
-  comprasPagadas       Compra[]       @relation("CompraPagadaPor")
+  comprasPagadas       Compra[]               @relation("CompraPagadaPor")
   compras              Compra[]
-  gastosPagados        Gasto[]        @relation("GastoPagadoPor")
+  gastosPagados        Gasto[]                @relation("GastoPagadoPor")
   gastos               Gasto[]
   logsActividad        LogActividad[]
-  proveedorRestricto   Proveedor?     @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
-  ventasCobradas       Venta[]        @relation("VentaCobradaPor")
+  logsMarketing        LogMarketing[]
+  proveedorRestricto   Proveedor?             @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
+  ventasCobradas       Venta[]                @relation("VentaCobradaPor")
   ventas               Venta[]
-  ventasVendidas       Venta[]        @relation("VentaVendidaPor")
+  ventasVendidas       Venta[]                @relation("VentaVendidaPor")
   tarjetasAsignadas    TarjetaTablero[]
+  pagosVentaCobrados   PagoVenta[]            @relation("PagoVentaCobradoPor")
+  seguimientos         SeguimientoUbicacion[]
 }
 
 model TipoProducto {
@@ -35,45 +38,60 @@ model TipoProducto {
 }
 
 model Producto {
-  id                   Int                         @id @default(autoincrement())
-  skuInterno           String                      @unique
+  id                   Int                           @id @default(autoincrement())
+  skuInterno           String                        @unique
   nombre               String
   nombreTiendanube     String?
   marca                String
   categoria            String
   presentacion         Presentacion
-  unidadMedida         UnidadMedida                @default(UNIDAD)
-  contenido            Decimal                     @default(1)
-  stockActual          Int                         @default(0)
-  precioCostoUnitario  Decimal                     @default(0)
-  margenPorcentaje     Decimal                     @default(30)
-  precioVenta          Decimal                     @default(0)
-  createdAt            DateTime                    @default(now())
-  updatedAt            DateTime                    @updatedAt
-  stockEnConsignacion  Int                         @default(0)
-  activo               Boolean                     @default(true)
+  unidadMedida         UnidadMedida                  @default(UNIDAD)
+  contenido            Decimal                       @default(1)
+  stockActual          Int                           @default(0)
+  precioCostoUnitario  Decimal                       @default(0)
+  margenPorcentaje     Decimal                       @default(30)
+  precioVenta          Decimal                       @default(0)
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  stockEnConsignacion  Int                           @default(0)
+  activo               Boolean                       @default(true)
+  esCombo              Boolean                       @default(false)
   compras              Compra[]
   detallesConsignacion DetalleConsignacion[]
   detalleVentas        DetalleVenta[]
   historialStock       HistorialStockMayorista[]
   ordenesDropshipping  OrdenDropshipping[]
-  clientesRecurrentes  ClienteProductoRecurrente[] @relation("ClienteProductoRecurrenteProducto")
+  clientesRecurrentes  ClienteProductoRecurrente[]   @relation("ClienteProductoRecurrenteProducto")
   recordatorios        RecordatorioReposicion[]
   pendientesCompra     PendienteCompraMayorista[]
   categoriasTiendanube ProductoCategoriaTiendanube[]
+  componentesCombo     ComboComponente[]             @relation("ComboComponenteCombo")
+  usadoEnCombos        ComboComponente[]             @relation("ComboComponenteProducto")
 
   @@index([categoria])
 }
 
+model ComboComponente {
+  id         Int      @id @default(autoincrement())
+  comboId    Int
+  productoId Int
+  cantidad   Int      @default(1)
+  combo      Producto @relation("ComboComponenteCombo", fields: [comboId], references: [id], onDelete: Cascade)
+  producto   Producto @relation("ComboComponenteProducto", fields: [productoId], references: [id])
+
+  @@unique([comboId, productoId])
+  @@index([productoId])
+}
+
 model CategoriaTiendanube {
-  id        Int                            @id
+  id        Int                           @id
   nombre    String
   parentId  Int?
-  parent    CategoriaTiendanube?           @relation("CategoriaTiendanubeJerarquia", fields: [parentId], references: [id])
-  hijas     CategoriaTiendanube[]          @relation("CategoriaTiendanubeJerarquia")
-  visible   Boolean                        @default(true)
+  parent    CategoriaTiendanube?          @relation("CategoriaTiendanubeJerarquia", fields: [parentId], references: [id])
+  hijas     CategoriaTiendanube[]         @relation("CategoriaTiendanubeJerarquia")
+  visible   Boolean                       @default(true)
   productos ProductoCategoriaTiendanube[]
-  updatedAt DateTime                       @updatedAt
+  updatedAt DateTime                      @updatedAt
 
   @@index([parentId])
 }
@@ -89,36 +107,42 @@ model ProductoCategoriaTiendanube {
 }
 
 model Proveedor {
-  id                   Int                       @id @default(autoincrement())
+  id                   Int                        @id @default(autoincrement())
   nombre               String
   direccion            String?
   contacto             String?
+  email                String?
+  cuit                 String? // CUIT o CUIL
+  alias                String?
+  cbu                  String? // CBU o CVU
+  accountManager       String?
+  horarios             String?
   compras              Compra[]
   historialMayorista   HistorialStockMayorista[]
   sociosConsignacion   SocioConsignacion[]
-  usuariosRestringidos Usuario[]                 @relation("UsuarioProveedorRestricto")
+  usuariosRestringidos Usuario[]                  @relation("UsuarioProveedorRestricto")
   pendientesCompra     PendienteCompraMayorista[]
 }
 
 model Compra {
-  id                  Int       @id @default(autoincrement())
+  id                  Int                        @id @default(autoincrement())
   proveedorId         Int
   productoId          Int
   cantidad            Int
   precioCostoUnitario Decimal
-  descuentoPorcentaje Decimal   @default(0)
-  costoEnvio          Decimal?  @default(0)
+  descuentoPorcentaje Decimal                    @default(0)
+  costoEnvio          Decimal?                   @default(0)
   numeroPedido        String?
-  facturado           Boolean   @default(false)
+  facturado           Boolean                    @default(false)
   numeroFactura       String?
-  fechaCompra         DateTime  @default(now())
+  fechaCompra         DateTime                   @default(now())
   usuarioId           Int
-  pagado              Boolean   @default(false)
+  pagado              Boolean                    @default(false)
   pagadoPorId         Int?
-  pagadoPor           Usuario?  @relation("CompraPagadaPor", fields: [pagadoPorId], references: [id])
-  producto            Producto  @relation(fields: [productoId], references: [id])
-  proveedor           Proveedor @relation(fields: [proveedorId], references: [id])
-  usuario             Usuario   @relation(fields: [usuarioId], references: [id])
+  pagadoPor           Usuario?                   @relation("CompraPagadaPor", fields: [pagadoPorId], references: [id])
+  producto            Producto                   @relation(fields: [productoId], references: [id])
+  proveedor           Proveedor                  @relation(fields: [proveedorId], references: [id])
+  usuario             Usuario                    @relation(fields: [usuarioId], references: [id])
   pendientesCompra    PendienteCompraMayorista[]
 
   @@index([fechaCompra])
@@ -134,25 +158,33 @@ model Cliente {
   email                String?
   cuit                 String?
   dni                  String?
+  alias                String?
+  cbu                  String? // CBU o CVU
+  setupReminderDias    Int                         @default(30)
+  statusReminder       StatusReminder              @default(ACTIVO)
+  fechaUltimoReminder  DateTime? // último mail de reminder enviado OK
   mascotas             Mascota[]
   ordenesDropshipping  OrdenDropshipping[]
   productosRecurrentes ClienteProductoRecurrente[]
   recordatorios        RecordatorioReposicion[]
   ventas               Venta[]
   tarjetasTablero      TarjetaTablero[]
+  seguimientos         SeguimientoUbicacion[]
 }
 
 model Mascota {
-  id                    Int            @id @default(autoincrement())
+  id                    Int             @id @default(autoincrement())
   clienteId             Int
   tipo                  TipoMascota
   nombre                String
-  edad                  String
-  tamanio               TamanioMascota
+  edad                  String? // opcional: las mascotas creadas desde Reminders no lo tienen
+  tamanio               TamanioMascota?
   raza                  String?
   condicionesEspeciales String?
-  creadoAt              DateTime       @default(now())
-  cliente               Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  setupReminderDias     Int             @default(30)
+  statusReminder        StatusReminder  @default(ACTIVO)
+  creadoAt              DateTime        @default(now())
+  cliente               Cliente         @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@index([clienteId])
 }
@@ -191,32 +223,49 @@ model RecordatorioReposicion {
 }
 
 model Venta {
-  id                Int            @id @default(autoincrement())
+  id                Int              @id @default(autoincrement())
   clienteId         Int
   canalVenta        CanalVenta
   medioPago         String
-  costoEnvio        Decimal        @default(0)
-  facturado         Boolean        @default(false)
+  costoEnvio        Decimal          @default(0)
+  facturado         Boolean          @default(false)
   numeroFactura     String?
   fechaAcreditacion DateTime?
-  fechaVenta        DateTime       @default(now())
-  esVentaInterna    Boolean        @default(false)
+  fechaVenta        DateTime         @default(now())
+  esVentaInterna    Boolean          @default(false)
   descripcion       String?
   usuarioId         Int
   vendidoPorId      Int?
-  cobrado           Boolean        @default(false)
+  cobrado           Boolean          @default(false)
   cobradoPorId      Int?
-  tiendanubeOrderId Int?           @unique
+  tiendanubeOrderId Int?             @unique
   costos            CostoVenta[]
   detalles          DetalleVenta[]
-  cliente           Cliente        @relation(fields: [clienteId], references: [id])
-  cobradoPor        Usuario?       @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
-  usuario           Usuario        @relation(fields: [usuarioId], references: [id])
-  vendidoPor        Usuario?       @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
+  pagos             PagoVenta[]
+  cliente           Cliente          @relation(fields: [clienteId], references: [id])
+  cobradoPor        Usuario?         @relation("VentaCobradaPor", fields: [cobradoPorId], references: [id])
+  usuario           Usuario          @relation(fields: [usuarioId], references: [id])
+  vendidoPor        Usuario?         @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
   tarjetasTablero   TarjetaTablero[]
 
   @@index([fechaVenta])
   @@index([clienteId])
+}
+
+model PagoVenta {
+  id                Int       @id @default(autoincrement())
+  ventaId           Int
+  monto             Decimal
+  comision          Decimal   @default(0)
+  medioPago         String
+  fechaPago         DateTime  @default(now())
+  fechaAcreditacion DateTime?
+  descripcion       String?
+  cobradoPorId      Int?
+  venta             Venta     @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  cobradoPor        Usuario?  @relation("PagoVentaCobradoPor", fields: [cobradoPorId], references: [id])
+
+  @@index([ventaId])
 }
 
 model CostoVenta {
@@ -309,17 +358,17 @@ model HistorialStockMayorista {
 }
 
 model SincronizacionHym {
-  id             Int      @id @default(autoincrement())
-  fecha          DateTime @default(now())
-  origen         String // "automatico" (scraper) o "manual" (pantalla mayoristas-hym)
-  exitosos       Int
-  erroresCount   Int
-  totalFilasCsv  Int
-  resumenJson    Json // ResultadoCalculoHym["resumen"]
-  cambiosJson    Json // FilaCambioHym[] efectivamente aplicadas (incluye no-ok con detalle)
-  erroresJson    Json // { sku, status, detalle }[]
-  sinResolverJson Json? // FilaSinResolver[] — productos del CSV HYM que no se pudieron mapear
-  excelActualizado Boolean @default(false)
+  id               Int      @id @default(autoincrement())
+  fecha            DateTime @default(now())
+  origen           String // "automatico" (scraper) o "manual" (pantalla mayoristas-hym)
+  exitosos         Int
+  erroresCount     Int
+  totalFilasCsv    Int
+  resumenJson      Json // ResultadoCalculoHym["resumen"]
+  cambiosJson      Json // FilaCambioHym[] efectivamente aplicadas (incluye no-ok con detalle)
+  erroresJson      Json // { sku, status, detalle }[]
+  sinResolverJson  Json? // FilaSinResolver[] — productos del CSV HYM que no se pudieron mapear
+  excelActualizado Boolean  @default(false)
 
   @@index([fecha])
 }
@@ -447,22 +496,43 @@ model OrdenDropshipping {
 }
 
 model PendienteCompraMayorista {
-  id            Int                    @id @default(autoincrement())
+  id            Int                   @id @default(autoincrement())
   productoId    Int
   proveedorId   Int
   cantidad      Int
-  estado        EstadoPendienteCompra  @default(PENDIENTE)
+  estado        EstadoPendienteCompra @default(PENDIENTE)
   jobId         String?
   errorMotivo   String?
   compraId      Int?
-  creadoAt      DateTime               @default(now())
-  actualizadoAt DateTime               @updatedAt
-  producto      Producto               @relation(fields: [productoId], references: [id])
-  proveedor     Proveedor              @relation(fields: [proveedorId], references: [id])
-  compra        Compra?                @relation(fields: [compraId], references: [id])
+  creadoAt      DateTime              @default(now())
+  actualizadoAt DateTime              @updatedAt
+  producto      Producto              @relation(fields: [productoId], references: [id])
+  proveedor     Proveedor             @relation(fields: [proveedorId], references: [id])
+  compra        Compra?               @relation(fields: [compraId], references: [id])
 
   @@index([estado])
   @@index([jobId])
+}
+
+// Event log de Marketing → Reminders: qué hizo cada usuario y con qué resultado.
+model LogMarketing {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @default(now())
+  usuarioId Int? // null = envío automático (cron)
+  accion    String
+  detalle   String?
+  resultado String // "OK" o "Error: <mensaje>"
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([fecha])
+}
+
+// Configuración general de Marketing → Reminders (una sola fila, id = 1).
+model ConfigReminders {
+  id              Int             @id @default(1)
+  switchStatus    StatusReminder? // último clic del botón Switch (null = nunca se usó)
+  envioAutomatico Boolean         @default(true) // switch "Reminder Automático": el cron diario envía solo si está en On
+  updatedAt       DateTime        @updatedAt
 }
 
 model TiendanubeConfig {
@@ -472,6 +542,14 @@ model TiendanubeConfig {
   scope       String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Carritos abandonados de Tiendanube ya avisados por Telegram, para no repetir el aviso
+// en cada corrida del polling (Tiendanube no tiene webhook para esto).
+model CarritoAbandonadoNotificado {
+  id           Int      @id @default(autoincrement())
+  checkoutId   BigInt   @unique
+  notificadoEn DateTime @default(now())
 }
 
 enum RolUsuario {
@@ -598,4 +676,31 @@ model TarjetaTablero {
   @@index([usuarioAsignadoId])
   @@index([ventaId])
   @@index([clienteId])
+}
+
+// Ubicación en vivo compartida con un cliente desde Logística. Se guarda solo
+// la última posición (sin historial del recorrido); el cliente la ve en
+// /seguimiento/<token> hasta venceAt o hasta que se finaliza a mano.
+model SeguimientoUbicacion {
+  id           Int       @id @default(autoincrement())
+  token        String    @unique
+  clienteId    Int
+  usuarioId    Int
+  latitud      Float?
+  longitud     Float?
+  precision    Float?
+  ubicacionAt  DateTime?
+  venceAt      DateTime
+  finalizadoAt DateTime?
+  createdAt    DateTime  @default(now())
+  cliente      Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  usuario      Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+  @@index([usuarioId])
+}
+
+enum StatusReminder {
+  ACTIVO
+  PAUSADO
 }

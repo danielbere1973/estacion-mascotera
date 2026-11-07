@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { actualizarVenta } from "../../actions";
+import { actualizarVenta, agregarPagoVenta, eliminarPagoVenta } from "../../actions";
 import { EditarVentaItems } from "./editar-venta-items";
 import { CostosVenta } from "../../costos-venta";
 import { FacturadoField } from "@/components/facturado-field";
-import { CobradoField } from "@/components/cobrado-field";
+import { PagosVenta } from "@/components/pagos-venta";
+import { calcularTotalACobrar } from "@/lib/ventas";
 
 export default async function EditarVentaPage({
   params,
@@ -13,13 +14,14 @@ export default async function EditarVentaPage({
 }) {
   const { id } = await params;
 
-  const [venta, productos, itemsConsignados, usuarios] = await Promise.all([
+  const [venta, productos, itemsConsignados, usuarios, mediosPago, clientes] = await Promise.all([
     prisma.venta.findUnique({
       where: { id: Number(id) },
       include: {
         cliente: true,
         detalles: { include: { producto: { select: { skuInterno: true, nombre: true } } } },
         costos: true,
+        pagos: { include: { cobradoPor: { select: { nombre: true, apellido: true } } }, orderBy: { fechaPago: "asc" } },
       },
     }),
     prisma.producto.findMany({
@@ -37,6 +39,14 @@ export default async function EditarVentaPage({
     prisma.usuario.findMany({
       where: { activo: true },
       orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+      select: { id: true, nombre: true, apellido: true },
+    }),
+    prisma.medioPago.findMany({
+      where: { activo: true },
+      orderBy: { nombre: "asc" },
+    }),
+    prisma.cliente.findMany({
+      orderBy: [{ nombre: "asc" }, { apellido: "asc" }],
       select: { id: true, nombre: true, apellido: true },
     }),
   ]);
@@ -84,6 +94,26 @@ export default async function EditarVentaPage({
     incluyeEnvio: c.incluyeEnvio,
   }));
 
+  const totalACobrar = calcularTotalACobrar(
+    venta.detalles.map((d) => ({
+      cantidad: d.cantidad,
+      precioVentaUnitario: Number(d.precioVentaUnitario),
+      descuentoPorcentaje: Number(d.descuentoPorcentaje),
+    })),
+    Number(venta.costoEnvio)
+  );
+
+  const pagosPlain = venta.pagos.map((p) => ({
+    id: p.id,
+    monto: p.monto.toString(),
+    comision: p.comision.toString(),
+    medioPago: p.medioPago,
+    fechaPago: p.fechaPago,
+    fechaAcreditacion: p.fechaAcreditacion,
+    descripcion: p.descripcion,
+    cobradoPor: p.cobradoPor,
+  }));
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Editar venta</h1>
@@ -93,9 +123,18 @@ export default async function EditarVentaPage({
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Cliente</label>
-          <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-            {venta.cliente.nombre} {venta.cliente.apellido}
-          </p>
+          <select
+            name="clienteId"
+            required
+            defaultValue={venta.clienteId}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          >
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} {c.apellido}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -126,13 +165,19 @@ export default async function EditarVentaPage({
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Medio de pago</label>
-            <input
+            <select
               name="medioPago"
               required
               defaultValue={venta.medioPago}
-              placeholder="Transferencia, Efectivo, Mercado Pago..."
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+            >
+              {!mediosPago.some((m) => m.nombre === venta.medioPago) && (
+                <option value={venta.medioPago}>{venta.medioPago}</option>
+              )}
+              {mediosPago.map((m) => (
+                <option key={m.id} value={m.nombre}>{m.nombre}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -172,26 +217,8 @@ export default async function EditarVentaPage({
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <FacturadoField defaultFacturado={venta.facturado} defaultNumero={venta.numeroFactura ?? ""} />
-          </div>
-
-          <div className="flex flex-col gap-2 justify-end">
-            <CobradoField
-              usuarios={usuarios}
-              defaultCobrado={venta.cobrado}
-              defaultCobradoPorId={venta.cobradoPorId ? String(venta.cobradoPorId) : ""}
-            />
-          </div>
-
-          <div className="space-y-1 sm:col-span-2">
-            <label className="text-sm font-medium text-gray-700">Fecha de acreditación (opcional)</label>
-            <input
-              type="date"
-              name="fechaAcreditacion"
-              defaultValue={venta.fechaAcreditacion ? new Date(venta.fechaAcreditacion).toISOString().split("T")[0] : ""}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
           </div>
         </div>
 
@@ -204,6 +231,16 @@ export default async function EditarVentaPage({
           Guardar cambios
         </button>
       </form>
+
+      <PagosVenta
+        ventaId={venta.id}
+        pagos={pagosPlain}
+        totalACobrar={totalACobrar}
+        usuarios={usuarios}
+        mediosPago={mediosPago}
+        agregarPagoVenta={agregarPagoVenta}
+        eliminarPagoVenta={eliminarPagoVenta}
+      />
     </div>
   );
 }

@@ -5,6 +5,41 @@ import { CATEGORIAS_GASTO_SUGERIDAS } from "@/lib/metrics";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { crearGasto, eliminarGasto } from "./actions";
 
+const TIPOS_GASTO: Record<string, { label: string; cls: string }> = {
+  FIJO:        { label: "Fijo",        cls: "bg-gray-100 text-gray-600" },
+  VARIABLE:    { label: "Variable",    cls: "bg-blue-50 text-blue-600" },
+  MARKETING:   { label: "Marketing",   cls: "bg-purple-50 text-purple-600" },
+  EXCEPCIONAL: { label: "Excepcional", cls: "bg-orange-50 text-orange-600" },
+};
+
+function TipoGastoBadge({ tipoGasto, esFijo }: { tipoGasto: string | null; esFijo: boolean }) {
+  const tipo = tipoGasto ?? (esFijo ? "FIJO" : "VARIABLE");
+  const { label, cls } = TIPOS_GASTO[tipo] ?? TIPOS_GASTO.VARIABLE;
+  return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
+}
+
+function AccionesGasto({ id }: { id: number }) {
+  return (
+    <div className="flex justify-end gap-2">
+      <Link
+        href={`/gastos/${id}/editar`}
+        className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+      >
+        Editar
+      </Link>
+      <form action={eliminarGasto}>
+        <input type="hidden" name="id" value={id} />
+        <ConfirmSubmitButton
+          confirmMessage="¿Eliminar este gasto?"
+          className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+        >
+          Eliminar
+        </ConfirmSubmitButton>
+      </form>
+    </div>
+  );
+}
+
 export default async function GastosPage() {
   const [gastos, usuariosActivos] = await Promise.all([
     prisma.gasto.findMany({
@@ -117,7 +152,39 @@ export default async function GastosPage() {
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      {/* Mobile: tarjetas */}
+      <ul className="space-y-2 md:hidden">
+        {gastos.map((g) => (
+          <li key={g.id} className="rounded-xl border border-gray-200 bg-white p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium text-sm text-gray-900">{g.categoriaGasto}</p>
+                <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  {formatDate(g.fechaGasto)}
+                  <TipoGastoBadge tipoGasto={g.tipoGasto} esFijo={g.esFijo} />
+                </p>
+              </div>
+              <p className="shrink-0 text-sm font-semibold text-gray-900">
+                {formatCurrency(g.monto.toString())}
+              </p>
+            </div>
+            {g.descripcion && <p className="mt-2 text-sm text-gray-600">{g.descripcion}</p>}
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-100 pt-2">
+              <p className="min-w-0 text-xs text-gray-400">
+                Pagó: {g.pagadoPor?.nombre ?? "-"} · Cargó: {g.usuario?.nombre ?? "-"}
+              </p>
+              <div className="shrink-0">
+                <AccionesGasto id={g.id} />
+              </div>
+            </div>
+          </li>
+        ))}
+        {gastos.length === 0 && (
+          <li className="py-6 text-center text-sm text-gray-400">No hay gastos registrados.</li>
+        )}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
@@ -139,17 +206,7 @@ export default async function GastosPage() {
                   {g.categoriaGasto}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2">
-                  {(() => {
-                    const tipo = g.tipoGasto ?? (g.esFijo ? "FIJO" : "VARIABLE");
-                    const cfg: Record<string, { label: string; cls: string }> = {
-                      FIJO:        { label: "Fijo",        cls: "bg-gray-100 text-gray-600" },
-                      VARIABLE:    { label: "Variable",    cls: "bg-blue-50 text-blue-600" },
-                      MARKETING:   { label: "Marketing",   cls: "bg-purple-50 text-purple-600" },
-                      EXCEPCIONAL: { label: "Excepcional", cls: "bg-orange-50 text-orange-600" },
-                    };
-                    const { label, cls } = cfg[tipo] ?? cfg.VARIABLE;
-                    return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
-                  })()}
+                  <TipoGastoBadge tipoGasto={g.tipoGasto} esFijo={g.esFijo} />
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
                   {formatCurrency(g.monto.toString())}
@@ -162,23 +219,7 @@ export default async function GastosPage() {
                   {g.pagadoPor?.nombre ?? "-"}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Link
-                      href={`/gastos/${g.id}/editar`}
-                      className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                    >
-                      Editar
-                    </Link>
-                    <form action={eliminarGasto}>
-                      <input type="hidden" name="id" value={g.id} />
-                      <ConfirmSubmitButton
-                        confirmMessage="¿Eliminar este gasto?"
-                        className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                      >
-                        Eliminar
-                      </ConfirmSubmitButton>
-                    </form>
-                  </div>
+                  <AccionesGasto id={g.id} />
                 </td>
               </tr>
             ))}

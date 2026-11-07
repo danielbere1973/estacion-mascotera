@@ -34,8 +34,11 @@ export default async function VinculacionesPage({
 
   return (
     <div className="space-y-4 w-full">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-gray-900">Vinculaciones lista → catálogo</h1>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div>
+          <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+          <h1 className="text-xl font-semibold text-gray-900 mt-1">Vinculaciones lista → catálogo</h1>
+        </div>
         <div className="text-sm text-gray-500">
           <span className="font-medium text-green-700">{vinculados.length} vinculados</span>
           {" · "}
@@ -74,8 +77,40 @@ export default async function VinculacionesPage({
         </div>
       )}
 
+      {/* Mobile: tarjetas */}
       {historial.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <ul className="space-y-2 md:hidden">
+          {historial.map((h) => (
+            <li
+              key={h.id}
+              className={`rounded-xl border p-3 text-sm ${h.productoId ? "border-gray-200 bg-white" : "border-orange-200 bg-orange-50"}`}
+            >
+              <p className="text-gray-700">{h.nombre ?? "—"}{h.tamanios ? ` · ${h.tamanios}` : ""}</p>
+              <p className="mt-0.5 text-xs text-gray-500">
+                {h.proveedor?.nombre} · <span className="font-mono">{h.sku}</span>
+              </p>
+              <div className="mt-2 flex items-start justify-between gap-2 border-t border-gray-100 pt-2">
+                {h.producto ? (
+                  <Link href={`/inventario/productos/${h.producto.id}/editar`} className="min-w-0 text-xs">
+                    <span className="font-medium text-blue-700">→ {h.producto.nombre}</span>
+                    <span className="ml-1 font-mono text-gray-400">{h.producto.skuInterno}</span>
+                  </Link>
+                ) : (
+                  <span className="text-xs font-medium text-orange-500">Sin vincular</span>
+                )}
+                {h.producto && (
+                  <div className="shrink-0">
+                    <DesvincularBtn historialId={h.id} />
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {historial.length > 0 && (
+        <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
           <table className="w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase text-gray-500">
               <tr>

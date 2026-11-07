@@ -33,7 +33,7 @@ export function ClienteSelector({ clientes }: { clientes: Cliente[] }) {
       </select>
 
       {esNuevo && (
-        <div className="grid grid-cols-1 gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 rounded-md border border-gray-200 p-3 sm:grid-cols-2 md:bg-gray-50">
           <input
             name="clienteNombre"
             placeholder="Nombre"
@@ -54,6 +54,7 @@ export function ClienteSelector({ clientes }: { clientes: Cliente[] }) {
           />
           <input
             name="clienteTelefono"
+            type="tel"
             placeholder="Teléfono"
             required
             className="rounded-md border border-gray-300 px-3 py-2 text-sm"

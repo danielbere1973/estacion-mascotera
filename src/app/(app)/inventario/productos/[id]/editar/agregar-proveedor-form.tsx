@@ -164,7 +164,7 @@ export function AgregarProveedorForm({
       <button
         type="submit"
         disabled={!proveedorId || (modoManual ? !skuManual : tieneListaImportada && !skuSeleccionado)}
-        className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed sm:w-auto sm:py-1.5 sm:text-xs"
       >
         Agregar proveedor
       </button>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { crearProducto, proximoSkuInterno } from "../../actions";
 
@@ -10,7 +11,10 @@ export default async function NuevoProductoPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Nuevo producto</h1>
+      <div>
+        <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Nuevo producto</h1>
+      </div>
 
       <form action={crearProducto} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

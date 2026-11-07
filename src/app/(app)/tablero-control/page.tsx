@@ -31,7 +31,7 @@ export default async function TableroControlPage() {
   const [columnas, tarjetas, usuarios, ventas, clientes] = await Promise.all([
     getOCrearColumnas(),
     prisma.tarjetaTablero.findMany({
-      orderBy: { orden: "asc" },
+      orderBy: { id: "asc" },
       select: {
         id: true,
         titulo: true,

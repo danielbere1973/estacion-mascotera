@@ -10,7 +10,7 @@ import {
 import { moverTarjetasComprMayoristaADespacho } from "@/lib/tablero";
 import { armarPreviewCorteHym, ejecutarCorteCompraHym, type ItemPreviewCorteHym } from "@/lib/corte-compras-hym";
 import { resolverPendienteSinStock, resolverPendienteManual } from "@/lib/compras-mayoristas";
-import { armarNivelRaiz, armarNivelCategoria, armarListaClientes } from "@/lib/categorias-telegram";
+import { armarNivelRaiz, armarNivelCategoria, armarListaClientes, armarInfoProveedores } from "@/lib/categorias-telegram";
 import { transcribirVozTelegram } from "@/lib/transcripcion";
 import { ejecutarComandoVoz } from "@/lib/comandos-voz";
 
@@ -300,6 +300,18 @@ async function manejarCallback(
       await sendTelegramMessage(nivel.texto, { chatId, botones: nivel.botones });
     }
     return "Clientes.";
+  }
+
+  if (accion === "prov_info") {
+    const categoriaId = Number(params[0]);
+    if (!categoriaId || Number.isNaN(categoriaId)) return "Callback inválido.";
+    const nivel = await armarInfoProveedores(categoriaId);
+    if (messageId) {
+      await editTelegramMessage(chatId, messageId, nivel.texto, nivel.botones);
+    } else {
+      await sendTelegramMessage(nivel.texto, { chatId, botones: nivel.botones });
+    }
+    return "Información de proveedores.";
   }
 
   if (accion === "sin_stock") {

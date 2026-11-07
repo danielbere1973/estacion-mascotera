@@ -38,7 +38,7 @@ type DetalleVenta = {
   } | null;
 };
 
-type VentaRow = {
+export type VentaRow = {
   id: number;
   fechaVenta: Date;
   canalVenta: string;
@@ -46,7 +46,6 @@ type VentaRow = {
   costoEnvio: string;
   facturado: boolean;
   numeroFactura: string | null;
-  cobrado: boolean;
   cliente: {
     nombre: string;
     apellido: string;
@@ -55,17 +54,11 @@ type VentaRow = {
   };
   detalles: DetalleVenta[];
   costos: { montoCalculado: string }[];
+  pagos: { monto: string }[];
 };
 
-export function VentaExpandibleRow({
-  venta,
-  esRestringido,
-}: {
-  venta: VentaRow;
-  esRestringido: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-
+// Totales de una venta (también se usan para ordenar la tabla de Ventas).
+export function calcularTotalesVenta(venta: VentaRow) {
   const total = venta.detalles.reduce(
     (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario),
     0
@@ -87,12 +80,169 @@ export function VentaExpandibleRow({
   }, 0);
   const costosCobranza = venta.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0);
   const totalAbonado = total - descuento + Number(venta.costoEnvio);
-  const ganancia = total - descuento - costoMercaderia - Number(venta.costoEnvio) - costosCobranza;
+  // venta.costoEnvio es lo cobrado al cliente por el envío (entra junto con el pago de la
+  // venta), no un gasto propio: suma a la ganancia. Lo que la empresa paga al correo se carga
+  // aparte como CostoVenta (concepto "Envío") y ya se resta vía costosCobranza.
+  const ganancia = total - descuento - costoMercaderia + Number(venta.costoEnvio) - costosCobranza;
   const pctGanancia = totalAbonado > 0 ? (ganancia / totalAbonado) * 100 : null;
   const pctSobreCosto = costoMercaderia > 0 ? (ganancia / costoMercaderia) * 100 : null;
+  return { total, descuento, costoMercaderia, costosCobranza, totalAbonado, ganancia, pctGanancia, pctSobreCosto };
+}
 
-  const docLabel = venta.cliente.cuit ? "CUIT" : venta.cliente.dni ? "DNI" : null;
-  const docValue = venta.cliente.cuit ?? venta.cliente.dni ?? null;
+// Estado de cobro según lo pagado contra el total abonado.
+function estadoPagoVenta(venta: VentaRow, totalAbonado: number) {
+  const totalPagado = venta.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+  const estado =
+    totalPagado <= 0 ? "Pendiente de pago" : totalPagado >= totalAbonado - 0.01 ? "Cobrado" : "Parcialmente pagado";
+  const clase =
+    estado === "Cobrado"
+      ? "bg-green-100 text-green-700"
+      : estado === "Parcialmente pagado"
+        ? "bg-blue-100 text-blue-700"
+        : "bg-amber-100 text-amber-700";
+  return { estado, clase };
+}
+
+function documentoCliente(venta: VentaRow) {
+  return {
+    docLabel: venta.cliente.cuit ? "CUIT" : venta.cliente.dni ? "DNI" : null,
+    docValue: venta.cliente.cuit ?? venta.cliente.dni ?? null,
+  };
+}
+
+function AccionesVenta({ ventaId, className }: { ventaId: number; className: string }) {
+  return (
+    <>
+      <Link href={`/ventas/${ventaId}/editar`} className={`${className} text-blue-600 hover:bg-blue-50`}>
+        Editar
+      </Link>
+      <form action={eliminarVenta} className="contents">
+        <input type="hidden" name="id" value={ventaId} />
+        <ConfirmSubmitButton
+          confirmMessage="¿Eliminar esta venta? Se devolverá el stock de los productos vendidos."
+          className={`${className} text-red-500 hover:bg-red-50`}
+        >
+          Eliminar
+        </ConfirmSubmitButton>
+      </form>
+    </>
+  );
+}
+
+// Versión mobile de la fila: tarjeta con los datos principales; al tocarla muestra el detalle.
+export function VentaCard({ venta, esRestringido }: { venta: VentaRow; esRestringido: boolean }) {
+  const [open, setOpen] = useState(false);
+  const { descuento, costosCobranza, totalAbonado, ganancia, pctGanancia } = calcularTotalesVenta(venta);
+  const { estado, clase } = estadoPagoVenta(venta, totalAbonado);
+  const { docLabel, docValue } = documentoCliente(venta);
+
+  return (
+    <li className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="block w-full p-3 text-left">
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-semibold text-gray-900">
+            {venta.cliente.nombre} {venta.cliente.apellido}
+          </p>
+          <span className="shrink-0 text-sm text-gray-500">
+            <span className="tabular-nums text-gray-400">#{venta.id}</span> · {fmtDate(venta.fechaVenta)}
+          </span>
+        </div>
+        <div className="mt-1 flex items-baseline justify-between gap-2">
+          <span className="text-lg font-bold text-blue-600">{fmt(totalAbonado)}</span>
+          {!esRestringido && (
+            <span className={`text-sm font-semibold ${ganancia >= 0 ? "text-green-600" : "text-red-500"}`}>
+              Gan. {fmt(ganancia)}
+              {pctGanancia !== null && (
+                <span className="ml-1 text-xs font-normal opacity-70">{pctGanancia.toFixed(1)}%</span>
+              )}
+            </span>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {venta.facturado ? (
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              Facturado{venta.numeroFactura ? ` · ${venta.numeroFactura}` : ""}
+            </span>
+          ) : (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Sin facturar</span>
+          )}
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${clase}`}>{estado}</span>
+          <span className="ml-auto text-xs text-blue-600">{open ? "Ocultar ▲" : "Ver detalle ▼"}</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-100 px-3 pb-3 pt-2 text-sm">
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Canal</dt>
+              <dd className="text-gray-800">{CANAL_LABELS[venta.canalVenta] ?? venta.canalVenta}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Medio de pago</dt>
+              <dd className="text-gray-800">{venta.medioPago}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{docLabel ?? "Doc."}</dt>
+              <dd className="font-mono text-gray-800">{docValue ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Descuento</dt>
+              <dd className="text-gray-800">{descuento > 0 ? `− ${fmt(descuento)}` : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Envío + costos</dt>
+              <dd className="text-gray-800">{fmt(Number(venta.costoEnvio) + costosCobranza)}</dd>
+            </div>
+          </dl>
+
+          <ul className="mt-3 divide-y divide-gray-100 rounded-lg bg-gray-50">
+            {venta.detalles.map((d) => {
+              const precioUnit = Number(d.precioVentaUnitario);
+              const subtotal = d.cantidad * precioUnit * (1 - Number(d.descuentoPorcentaje) / 100);
+              return (
+                <li key={d.id} className="flex items-start justify-between gap-2 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-gray-800">{d.producto.nombre}</p>
+                    <p className="text-xs text-gray-500">
+                      {d.cantidad} × {fmt(precioUnit)}
+                      {d.producto.skuInterno ? ` · ${d.producto.skuInterno}` : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold text-gray-800">{fmt(subtotal)}</span>
+                </li>
+              );
+            })}
+          </ul>
+
+          {!esRestringido && (
+            <div className="mt-3 flex gap-2">
+              <AccionesVenta
+                ventaId={venta.id}
+                className="flex-1 rounded-md bg-gray-100 py-2 text-center text-sm font-medium"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+export function VentaExpandibleRow({
+  venta,
+  esRestringido,
+}: {
+  venta: VentaRow;
+  esRestringido: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const { total, descuento, costosCobranza, totalAbonado, ganancia, pctGanancia, pctSobreCosto } =
+    calcularTotalesVenta(venta);
+
+  const { estado: estadoPago, clase: estadoPagoClase } = estadoPagoVenta(venta, totalAbonado);
+  const { docLabel, docValue } = documentoCliente(venta);
 
   return (
     <>
@@ -109,6 +259,7 @@ export function VentaExpandibleRow({
             +
           </button>
         </td>
+        <td className="whitespace-nowrap px-3 py-2 text-sm tabular-nums text-gray-500">#{venta.id}</td>
         <td className="whitespace-nowrap px-3 py-2 text-gray-500 text-sm">
           {fmtDate(venta.fechaVenta)}
         </td>
@@ -144,21 +295,15 @@ export function VentaExpandibleRow({
           ) : (
             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">No</span>
           )}
-          {venta.cobrado ? (
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-              Cobrado
-            </span>
-          ) : (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-              Pendiente de pago
-            </span>
-          )}
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${estadoPagoClase}`}>
+            {estadoPago}
+          </span>
         </td>
       </tr>
 
       {open && (
         <tr>
-          <td colSpan={esRestringido ? 6 : 7} className="px-4 pb-3 pt-0 bg-blue-50">
+          <td colSpan={esRestringido ? 7 : 8} className="px-4 pb-3 pt-0 bg-blue-50">
             <div className="rounded-lg border border-blue-100 bg-white overflow-hidden">
 
               {/* Fila de datos secundarios */}
@@ -225,21 +370,10 @@ export function VentaExpandibleRow({
               {/* Acciones */}
               {!esRestringido && (
                 <div className="flex gap-2 border-t border-gray-100 bg-gray-50 px-3 py-2">
-                  <Link
-                    href={`/ventas/${venta.id}/editar`}
-                    className="rounded-md border border-gray-200 px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-                  >
-                    Editar
-                  </Link>
-                  <form action={eliminarVenta}>
-                    <input type="hidden" name="id" value={venta.id} />
-                    <ConfirmSubmitButton
-                      confirmMessage="¿Eliminar esta venta? Se devolverá el stock de los productos vendidos."
-                      className="rounded-md border border-gray-200 px-3 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                    >
-                      Eliminar
-                    </ConfirmSubmitButton>
-                  </form>
+                  <AccionesVenta
+                    ventaId={venta.id}
+                    className="rounded-md border border-gray-200 px-3 py-1 text-xs font-medium"
+                  />
                 </div>
               )}
             </div>

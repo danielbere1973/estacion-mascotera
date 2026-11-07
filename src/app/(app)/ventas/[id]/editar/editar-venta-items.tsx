@@ -195,18 +195,17 @@ export function EditarVentaItems({
         const esNuevo = !row.detalleId;
         const producto = productos.find((p) => String(p.id) === row.productoId);
         const consignado = producto?.consignados.find((c) => String(c.detalleConsignacionId) === row.detalleConsignacionId);
-        const maxCantidad = esNuevo
-          ? consignado
-            ? Math.min(consignado.disponible, producto!.stockActual)
-            : (producto?.stockActual ?? Infinity)
-          : Infinity; // ítems existentes: no limitar en el browser, el servidor valida el delta
+        const maxCantidad = consignado ? consignado.disponible : Infinity; // stock de productos normales no limita; el servidor valida
 
         return (
-          <div key={row.key} className="flex flex-wrap items-center gap-2">
+          <div
+            key={row.key}
+            className="grid grid-cols-2 items-end gap-2 rounded-lg p-2 ring-1 ring-gray-200 sm:flex sm:flex-wrap sm:items-center sm:p-0 sm:ring-0"
+          >
             <input type="hidden" name="detalleId" value={row.detalleId} />
 
             {esNuevo ? (
-              <div className="min-w-[180px] flex-1">
+              <div className="col-span-2 min-w-[180px] flex-1">
                 <Combobox
                   options={opciones}
                   value={row.productoId}
@@ -216,7 +215,9 @@ export function EditarVentaItems({
                 />
               </div>
             ) : (
-              <span className="min-w-[180px] flex-1 text-sm text-gray-700">{row.productoLabel}</span>
+              <span className="col-span-2 min-w-[180px] flex-1 text-sm font-medium text-gray-700 sm:font-normal">
+                {row.productoLabel}
+              </span>
             )}
             <input type="hidden" name="productoId" value={row.productoId} />
             <input type="hidden" name="detalleConsignacionId" value={row.detalleConsignacionId} />
@@ -231,7 +232,7 @@ export function EditarVentaItems({
                 required
                 value={row.cantidad}
                 onChange={(e) => onCantidadChange(row.key, e.target.value, row, maxCantidad)}
-                className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-16"
                 placeholder="Cant."
               />
             </div>
@@ -246,7 +247,7 @@ export function EditarVentaItems({
                 required
                 value={row.precio}
                 onChange={(e) => onPrecioChange(row.key, e.target.value, row)}
-                className="w-28 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-28"
                 placeholder="Precio"
               />
             </div>
@@ -259,7 +260,7 @@ export function EditarVentaItems({
                 step="0.01"
                 value={row.descuentoMonto}
                 onChange={(e) => onDescuentoMontoChange(row.key, e.target.value, row)}
-                className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-20"
                 placeholder="Dto. $"
                 title="Descuento en pesos"
               />
@@ -275,7 +276,7 @@ export function EditarVentaItems({
                 step="0.01"
                 value={row.descuento}
                 onChange={(e) => onDescuentoPctChange(row.key, e.target.value, row)}
-                className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-20"
                 placeholder="Dto. %"
                 title="Descuento %"
               />
@@ -284,13 +285,14 @@ export function EditarVentaItems({
             <button
               type="button"
               onClick={() => removeRow(row.key)}
-              className="rounded-md px-2 py-1.5 text-sm text-red-500 hover:bg-red-50"
+              className="col-span-2 justify-self-end rounded-md px-2 py-1.5 text-sm text-red-500 hover:bg-red-50"
+              aria-label="Quitar producto"
             >
-              ✕
+              <span className="sm:hidden">Quitar </span>✕
             </button>
 
             {esNuevo && producto && producto.consignados.length > 0 && (
-              <div className="basis-full space-y-0.5">
+              <div className="col-span-2 basis-full space-y-0.5">
                 <label className="block text-xs text-gray-400">Origen</label>
                 <select
                   value={row.detalleConsignacionId}
@@ -308,14 +310,14 @@ export function EditarVentaItems({
             )}
 
             {esNuevo && producto && (
-              <span className="basis-full text-xs text-gray-400">
+              <span className="col-span-2 basis-full text-xs text-gray-400">
                 {consignado
                   ? `Producto consignado por ${consignado.socioNombre} · disponible: ${consignado.disponible} · stock propio: ${producto.stockActual}`
                   : `Stock disponible: ${producto.stockActual}`}
               </span>
             )}
             {!esNuevo && row.stockBase > 0 && (
-              <span className="basis-full text-xs text-gray-400">Stock disponible: {row.stockBase}</span>
+              <span className="col-span-2 basis-full text-xs text-gray-400">Stock disponible: {row.stockBase}</span>
             )}
           </div>
         );

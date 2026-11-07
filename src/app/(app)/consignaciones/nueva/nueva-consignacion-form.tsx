@@ -77,7 +77,7 @@ export function NuevaConsignacionForm({
 
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Dirección *</label>
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-2 md:flex-row md:gap-4">
           {(["ENTREGAMOS", "RECIBIMOS"] as const).map((d) => (
             <label key={d} className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="radio" name="direccion" value={d} checked={direccion === d} onChange={() => {
@@ -106,7 +106,7 @@ export function NuevaConsignacionForm({
 
         {items.map((item, i) => (
           <div key={i} className="grid grid-cols-12 gap-2 items-end rounded-lg bg-gray-50 p-3">
-            <div className="col-span-7 space-y-1">
+            <div className="col-span-12 md:col-span-7 space-y-1">
               <label className="text-xs text-gray-500">Producto del catálogo</label>
               <select
                 value={item.esNuevo ? "__nuevo__" : item.productoId}
@@ -135,7 +135,7 @@ export function NuevaConsignacionForm({
               <input type="hidden" name="itemProductoId" value={item.esNuevo ? "" : item.productoId} />
             </div>
             {!item.esNuevo && (
-              <div className="col-span-1 space-y-1">
+              <div className="col-span-12 md:col-span-1 space-y-1">
                 <label className="text-xs text-gray-500">Descripción</label>
                 <input
                   name="itemDescripcion"
@@ -147,7 +147,7 @@ export function NuevaConsignacionForm({
               </div>
             )}
             {item.esNuevo && <input type="hidden" name="itemDescripcion" value="" />}
-            <div className="col-span-1 space-y-1">
+            <div className="col-span-4 md:col-span-1 space-y-1">
               <label className="text-xs text-gray-500">Cant.</label>
               <input
                 name="itemCantidad"
@@ -159,7 +159,7 @@ export function NuevaConsignacionForm({
                 className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
               />
             </div>
-            <div className="col-span-2 space-y-1">
+            <div className="col-span-4 md:col-span-2 space-y-1">
               <label className="text-xs text-gray-500">Costo real</label>
               <input
                 name="itemCosto"
@@ -171,7 +171,7 @@ export function NuevaConsignacionForm({
                 className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
               />
             </div>
-            <div className="col-span-2 space-y-1">
+            <div className="col-span-4 md:col-span-2 space-y-1">
               <label className="text-xs text-gray-500">Precio piso</label>
               <input
                 name="itemPiso"
@@ -186,7 +186,7 @@ export function NuevaConsignacionForm({
             {item.esNuevo && (
               <div className="col-span-12 grid grid-cols-12 gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
                 <p className="col-span-12 text-xs font-medium text-blue-700">Datos del producto nuevo (se va a crear en Inventario)</p>
-                <div className="col-span-3 space-y-1">
+                <div className="col-span-12 md:col-span-3 space-y-1">
                   <label className="text-xs text-gray-500">SKU</label>
                   <input
                     name="itemNuevoSku"
@@ -196,7 +196,7 @@ export function NuevaConsignacionForm({
                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
                   />
                 </div>
-                <div className="col-span-4 space-y-1">
+                <div className="col-span-12 md:col-span-4 space-y-1">
                   <label className="text-xs text-gray-500">Nombre</label>
                   <input
                     name="itemNuevoNombre"
@@ -206,7 +206,7 @@ export function NuevaConsignacionForm({
                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
                   />
                 </div>
-                <div className="col-span-3 space-y-1">
+                <div className="col-span-6 md:col-span-3 space-y-1">
                   <label className="text-xs text-gray-500">Marca</label>
                   <input
                     name="itemNuevoMarca"
@@ -216,7 +216,7 @@ export function NuevaConsignacionForm({
                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
                   />
                 </div>
-                <div className="col-span-2 space-y-1">
+                <div className="col-span-6 md:col-span-2 space-y-1">
                   <label className="text-xs text-gray-500">Categoría</label>
                   <select
                     name="itemNuevoCategoria"
@@ -229,7 +229,7 @@ export function NuevaConsignacionForm({
                     {tipos.map((t) => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
                   </select>
                 </div>
-                <div className="col-span-3 space-y-1">
+                <div className="col-span-6 md:col-span-3 space-y-1">
                   <label className="text-xs text-gray-500">Presentación</label>
                   <select
                     name="itemNuevoPresentacion"
@@ -244,7 +244,7 @@ export function NuevaConsignacionForm({
                     <option value="INDIVIDUAL">Individual</option>
                   </select>
                 </div>
-                <div className="col-span-3 space-y-1">
+                <div className="col-span-6 md:col-span-3 space-y-1">
                   <label className="text-xs text-gray-500">Unidad de medida</label>
                   <select
                     name="itemNuevoUnidadMedida"
@@ -259,7 +259,7 @@ export function NuevaConsignacionForm({
                     <option value="UNIDAD">Unidad</option>
                   </select>
                 </div>
-                <div className="col-span-2 space-y-1">
+                <div className="col-span-6 md:col-span-2 space-y-1">
                   <label className="text-xs text-gray-500">Contenido</label>
                   <input
                     name="itemNuevoContenido"
@@ -271,7 +271,7 @@ export function NuevaConsignacionForm({
                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs"
                   />
                 </div>
-                <div className="col-span-4 space-y-1">
+                <div className="col-span-6 md:col-span-4 space-y-1">
                   <label className="text-xs text-gray-500">Proveedor</label>
                   {socioSeleccionado?.proveedorId ? (
                     <>

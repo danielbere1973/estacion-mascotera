@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { NuevaConsignacionForm } from "./nueva-consignacion-form";
 
@@ -28,7 +29,10 @@ export default async function NuevaConsignacionPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Nueva consignación</h1>
+      <div>
+        <Link href="/consignaciones" className="text-xs text-gray-400 hover:text-gray-600">← Consignaciones</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Nueva consignación</h1>
+      </div>
       <NuevaConsignacionForm socios={socios} productos={productos} proveedores={proveedores} tipos={tipos} />
     </div>
   );

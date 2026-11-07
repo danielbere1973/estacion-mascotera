@@ -46,7 +46,7 @@ function MultiSelect({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+        className="flex w-full items-center justify-between gap-1.5 rounded-md border border-gray-300 bg-gray-100 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 md:w-auto md:justify-start md:bg-white"
       >
         <span>{label}</span>
         {selected.length > 0 && (
@@ -103,6 +103,12 @@ export function FiltrosVentas({
   const router = useRouter();
   const [canales, setCanales] = useState<string[]>(defaultCanales);
   const [pagos, setPagos] = useState<string[]>(defaultPagos);
+  // En mobile los filtros arrancan plegados.
+  const [abiertoMobile, setAbiertoMobile] = useState(false);
+  const activos =
+    [defaultDesde, defaultHasta, defaultClienteId, defaultFacturado].filter(Boolean).length +
+    defaultCanales.length +
+    defaultPagos.length;
 
   const canalesOpciones = (["TIENDANUBE", "WHATSAPP", "TELEFONO"] as const).map((c) => ({
     value: c,
@@ -130,27 +136,48 @@ export function FiltrosVentas({
     canales.forEach((c) => params.append("canal", c));
     pagos.forEach((p) => params.append("pago", p));
     router.push(`/ventas?${params.toString()}`);
+    setAbiertoMobile(false);
   }
+
+  // Fondo gris en mobile: en iPhone el borde de los campos no siempre se ve.
+  const campo = "rounded-md border border-gray-300 bg-gray-100 px-2 py-1.5 text-sm md:bg-white";
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-3 text-sm space-y-3">
-      <div className="flex flex-wrap gap-2 items-center">
+      <button
+        type="button"
+        onClick={() => setAbiertoMobile((a) => !a)}
+        className="flex w-full items-center justify-between font-medium text-gray-700 md:hidden"
+      >
+        <span>
+          Filtros
+          {activos > 0 && (
+            <span className="ml-2 rounded-full bg-blue-600 px-1.5 py-0.5 text-xs text-white">{activos}</span>
+          )}
+        </span>
+        <span className="text-xs text-blue-600">{abiertoMobile ? "Ocultar ▲" : "Mostrar ▼"}</span>
+      </button>
+      <div
+        className={`${abiertoMobile ? "grid" : "hidden"} grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center`}
+      >
         <input
           type="date"
           name="desde"
+          aria-label="Desde"
           defaultValue={defaultDesde}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+          className={`${campo} min-w-0`}
         />
         <input
           type="date"
           name="hasta"
+          aria-label="Hasta"
           defaultValue={defaultHasta}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+          className={`${campo} min-w-0`}
         />
         <select
           name="clienteId"
           defaultValue={defaultClienteId ?? ""}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+          className={`${campo} col-span-2`}
         >
           <option value="">Todos los clientes</option>
           {clientes.map((c) => (
@@ -162,7 +189,7 @@ export function FiltrosVentas({
         <select
           name="facturado"
           defaultValue={defaultFacturado ?? ""}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+          className={`${campo} col-span-2`}
         >
           <option value="">Facturado: todos</option>
           <option value="si">Facturado: sí</option>
@@ -186,7 +213,7 @@ export function FiltrosVentas({
 
         <button
           type="submit"
-          className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-900"
+          className="col-span-2 rounded-md bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-900 md:py-1.5"
         >
           Filtrar
         </button>

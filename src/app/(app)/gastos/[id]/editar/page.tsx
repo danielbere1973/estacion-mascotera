@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { CATEGORIAS_GASTO_SUGERIDAS } from "@/lib/metrics";
 import { actualizarGasto } from "../../actions";
@@ -25,7 +26,10 @@ export default async function EditarGastoPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Editar gasto</h1>
+      <div>
+        <Link href="/gastos" className="text-xs text-gray-400 hover:text-gray-600">← Gastos</Link>
+        <h1 className="text-xl font-semibold text-gray-900 mt-1">Editar gasto</h1>
+      </div>
 
       <form
         action={actualizarGasto}

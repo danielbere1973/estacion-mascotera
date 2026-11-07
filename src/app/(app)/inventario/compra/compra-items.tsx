@@ -91,9 +91,10 @@ export function CompraItems({
 
   return (
     <div className="space-y-2">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-gray-500">
+      {/* En mobile la tabla se apila: cada producto es una tarjeta con Cant / Precio / Dto en una fila. */}
+      <div className="md:overflow-x-auto">
+        <table className="block w-full text-sm md:table">
+          <thead className="hidden text-left text-xs uppercase text-gray-500 md:table-header-group">
             <tr>
               <th className="pb-1 pr-2 font-medium">Producto (lista proveedor)</th>
               <th className="pb-1 pr-2 font-medium w-20">Cant.</th>
@@ -103,10 +104,10 @@ export function CompraItems({
               <th className="pb-1 w-8"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="block space-y-2 md:table-row-group md:space-y-0 md:divide-y md:divide-gray-100">
             {rows.map((row) => (
-              <tr key={row.id} className="align-top">
-                <td className="py-1.5 pr-2">
+              <tr key={row.id} className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-2 align-top md:table-row md:bg-transparent md:p-0">
+                <td className="col-span-3 block py-1.5 md:table-cell md:pr-2">
                   {items.length > 0 && !row.modoManual ? (
                     <div className="space-y-1">
                       <Combobox
@@ -209,7 +210,8 @@ export function CompraItems({
                   <input type="hidden" name="itemUnidadMedida" value={row.unidadMedida} />
                   <input type="hidden" name="itemContenido" value={row.contenido} />
                 </td>
-                <td className="py-1.5 pr-2">
+                <td className="block md:table-cell md:py-1.5 md:pr-2">
+                  <label className="text-xs text-gray-500 md:hidden">Cant.</label>
                   <input
                     type="number"
                     min={1}
@@ -220,7 +222,8 @@ export function CompraItems({
                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                   />
                 </td>
-                <td className="py-1.5 pr-2">
+                <td className="block md:table-cell md:py-1.5 md:pr-2">
+                  <label className="text-xs text-gray-500 md:hidden">Precio lista</label>
                   <input
                     type="number"
                     min={0}
@@ -233,7 +236,8 @@ export function CompraItems({
                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                   />
                 </td>
-                <td className="py-1.5 pr-2">
+                <td className="block md:table-cell md:py-1.5 md:pr-2">
+                  <label className="text-xs text-gray-500 md:hidden">Dto %</label>
                   <input
                     type="number"
                     min={0}
@@ -245,19 +249,20 @@ export function CompraItems({
                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                   />
                 </td>
-                <td className="py-1.5 pr-2 tabular-nums text-gray-700 pt-2.5 text-sm">
+                <td className="col-span-2 block text-sm tabular-nums text-gray-700 md:table-cell md:py-1.5 md:pr-2 md:pt-2.5">
+                  <span className="text-xs text-gray-500 md:hidden">Costo final: </span>
                   {costoFinal(row.precio, row.descuento) > 0
                     ? formatCurrency(costoFinal(row.precio, row.descuento))
                     : "—"}
                 </td>
-                <td className="py-1.5">
+                <td className="block text-right md:table-cell md:py-1.5 md:text-left">
                   {rows.length > 1 && (
                     <button
                       type="button"
                       onClick={() => quitarFila(row.id)}
                       className="text-red-400 hover:text-red-600 px-1"
                     >
-                      ✕
+                      <span className="text-xs md:hidden">Quitar </span>✕
                     </button>
                   )}
                 </td>

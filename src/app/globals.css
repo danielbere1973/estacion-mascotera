@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* La app es solo en modo claro: así los celulares en modo oscuro no oscurecen fondos ni campos. */
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,15 +14,41 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* En el celular, campos con letra de 16px: con menos, Safari de iPhone hace zoom al tocarlos. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* En el celular, campos con fondo gris: en iPhone el borde de los campos no siempre se ve.
+   Va en la capa base para que un bg-* puesto en el campo lo pise. */
+@layer base {
+  @media (max-width: 767px) {
+    input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="range"], [type="file"]),
+    select,
+    textarea {
+      background-color: var(--color-gray-100);
+    }
+
+    /* Safari de iPhone le da a los campos de fecha un ancho mínimo propio y se salen del
+       formulario: sin apariencia nativa respetan el ancho (w-full) como el resto. */
+    input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"]) {
+      -webkit-appearance: none;
+      appearance: none;
+      min-width: 0;
+      min-height: 2.5rem;
+    }
+    input::-webkit-date-and-time-value {
+      text-align: left;
+    }
+  }
 }

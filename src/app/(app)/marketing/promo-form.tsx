@@ -55,8 +55,8 @@ export function PromoForm({ clientes }: { clientes: Cliente[] }) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 sm:flex-row sm:items-stretch">
+    <div className="flex flex-col gap-3 sm:min-h-0 sm:flex-1">
+      <div className="flex flex-col gap-4 sm:min-h-0 sm:flex-1 sm:flex-row sm:items-stretch">
         <SeleccionClientes
           clientes={clientes}
           seleccionados={seleccionados}
@@ -73,7 +73,7 @@ export function PromoForm({ clientes }: { clientes: Cliente[] }) {
           </span>
         </p>
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
           {mensaje && (
             <p className={`text-sm ${mensaje.tipo === "error" ? "text-red-600" : "text-green-700"}`}>
               {mensaje.texto}
@@ -83,7 +83,7 @@ export function PromoForm({ clientes }: { clientes: Cliente[] }) {
             type="button"
             onClick={enviar}
             disabled={pending}
-            className="rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
           >
             {pending ? "Enviando..." : "Enviar"}
           </button>

@@ -146,7 +146,7 @@ export async function editarColumna(id: number, nombre: string) {
 export async function obtenerProductosVenta(ventaId: number) {
   await requireAuth();
 
-  if (!ventaId) return [];
+  if (!Number.isInteger(ventaId) || ventaId < 0) return [];
 
   const detalles = await prisma.detalleVenta.findMany({
     where: { ventaId },

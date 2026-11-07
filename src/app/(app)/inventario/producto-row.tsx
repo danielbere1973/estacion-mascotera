@@ -12,7 +12,7 @@ type HistorialItem = {
   proveedor: { nombre: string } | null;
 };
 
-type Producto = {
+export type ProductoListado = {
   id: number;
   skuInterno: string;
   nombre: string;
@@ -25,7 +25,58 @@ type Producto = {
 
 const STOCK_BAJO_UMBRAL = 5;
 
-export function ProductoRow({ p }: { p: Producto }) {
+// Costo a mostrar: el de cada proveedor (con descuento si hay) o, sin proveedores, el del producto.
+function costoDe(h: HistorialItem) {
+  return h.precioConDescuento ?? h.precioCostoScraped;
+}
+
+// Mobile: tarjeta que abre la edición del producto.
+export function ProductoCard({ p }: { p: ProductoListado }) {
+  const bajoStock = p.stockActual <= STOCK_BAJO_UMBRAL && p.stockActual > 0;
+  const sinStock = p.stockActual === 0;
+
+  return (
+    <li>
+      <Link
+        href={`/inventario/productos/${p.id}/editar`}
+        className={`block rounded-xl border p-3 ${
+          bajoStock ? "border-red-200 bg-red-50" : sinStock ? "border-gray-200 bg-gray-50 opacity-60" : "border-gray-200 bg-white"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900">{p.nombre}</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {p.marca} · <span className="font-mono">{p.skuInterno}</span>
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-sm font-semibold text-gray-900">{formatCurrency(p.precioVenta.toString())}</p>
+            <p className={`text-xs font-medium ${bajoStock ? "text-red-600" : sinStock ? "text-gray-400" : "text-gray-600"}`}>
+              Stock: {p.stockActual}{bajoStock && " ⚠"}
+            </p>
+          </div>
+        </div>
+        {p.historialStock.length === 0 ? (
+          <p className="mt-2 text-xs text-gray-500">Costo: {formatCurrency(p.precioCostoUnitario.toString())}</p>
+        ) : (
+          <ul className="mt-2 space-y-0.5 border-t border-gray-100 pt-2 text-xs">
+            {p.historialStock.map((h) => (
+              <li key={h.id} className="flex justify-between gap-2">
+                <span className="min-w-0 text-gray-600">
+                  {h.proveedor?.nombre ?? "—"} <span className="font-mono text-gray-400">{h.sku}</span>
+                </span>
+                <span className="shrink-0 text-gray-500">{formatCurrency(costoDe(h).toString())}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Link>
+    </li>
+  );
+}
+
+export function ProductoRow({ p }: { p: ProductoListado }) {
   const [expandido, setExpandido] = useState(false);
   const multiProveedor = p.historialStock.length > 1;
   const bajoStock = p.stockActual <= STOCK_BAJO_UMBRAL && p.stockActual > 0;

@@ -32,15 +32,15 @@ export default async function ConsignacionesPage() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-gray-900">Consignaciones</h1>
         {!esRestringido && (
           <div className="flex gap-2">
-            <Link href="/consignaciones/socios" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+            <Link href="/consignaciones/socios" className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
               Socios
             </Link>
-            <Link href="/consignaciones/nueva" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-              + Nueva consignación
+            <Link href="/consignaciones/nueva" className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 md:px-4">
+              + Nueva<span className="hidden md:inline"> consignación</span>
             </Link>
           </div>
         )}
@@ -88,8 +88,8 @@ export default async function ConsignacionesPage() {
             return (
               <Link key={socio.id} href={href}
                 className="rounded-xl border border-gray-200 bg-white p-4 hover:border-blue-200 hover:shadow-sm transition-all block">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
                     <h2 className="font-semibold text-gray-900">{socio.nombre}</h2>
                     {socio.contacto && <p className="text-xs text-gray-400 mt-0.5">{socio.contacto}</p>}
                   </div>
@@ -112,7 +112,7 @@ export default async function ConsignacionesPage() {
                 {consignacionesConResumen.length > 0 && (
                   <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-3">
                     {consignacionesConResumen.map((c) => (
-                      <div key={c.id} className="flex items-center justify-between text-xs">
+                      <div key={c.id} className="flex items-center justify-between gap-2 text-xs">
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
                           c.direccion === "ENTREGAMOS"
                             ? "bg-blue-50 text-blue-700"
@@ -120,7 +120,7 @@ export default async function ConsignacionesPage() {
                         }`}>
                           {c.direccion === "ENTREGAMOS" ? "Entregamos" : "Recibimos"}
                         </span>
-                        <span className="text-gray-500">
+                        <span className="text-right text-gray-500">
                           {c.productos} {c.productos === 1 ? "producto" : "productos"} · {c.unidades} {c.unidades === 1 ? "unidad vendida" : "unidades vendidas"}
                         </span>
                       </div>
@@ -128,7 +128,7 @@ export default async function ConsignacionesPage() {
                   </div>
                 )}
 
-                <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
                   <span>{socio.consignaciones.length} consignación{socio.consignaciones.length !== 1 ? "es" : ""} abierta{socio.consignaciones.length !== 1 ? "s" : ""}</span>
                   {!esRestringido && liquidacionPendiente && (
                     <span className="text-amber-600 font-medium">⚠ Liquidación pendiente</span>
@@ -141,12 +141,9 @@ export default async function ConsignacionesPage() {
       )}
 
       {!esRestringido && (
-        <div className="flex gap-4">
+        <div>
           <Link href="/consignaciones/liquidaciones" className="text-sm text-blue-600 hover:underline">
             Ver todas las liquidaciones →
-          </Link>
-          <Link href="/consignaciones/dropshipping" className="text-sm text-blue-600 hover:underline">
-            Dropshipping →
           </Link>
         </div>
       )}
