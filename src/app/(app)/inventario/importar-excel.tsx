@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { importarExcel } from "./actions";
 import { ProveedorSelector } from "./proveedor-selector";
 
@@ -27,11 +28,13 @@ export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
   const [resultado, setResultado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reasignaciones, setReasignaciones] = useState<PosibleCodigoReasignado[]>([]);
+  const [mostrarLinkVinculaciones, setMostrarLinkVinculaciones] = useState(false);
 
   function procesarArchivo(file: File) {
     setError(null);
     setResultado(null);
     setReasignaciones([]);
+    setMostrarLinkVinculaciones(false);
 
     if (!formRef.current) return;
     const formData = new FormData(formRef.current);
@@ -45,13 +48,22 @@ export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
     startTransition(async () => {
       try {
         const res = await importarExcel(formData);
+        const esKf = "sinPrecio" in res;
         const partes = [
           `Procesados ${res.total} productos`,
           `${res.actualizados} actualizados`,
         ];
-        if (res.nuevos > 0) partes.push(`${res.nuevos} nuevos creados en el catálogo`);
+        if (res.nuevos > 0) {
+          partes.push(
+            esKf
+              ? `${res.nuevos} nuevos en la lista (sin vincular a un producto todavía)`
+              : `${res.nuevos} nuevos creados en el catálogo`
+          );
+        }
+        if (esKf && res.sinPrecio > 0) partes.push(`${res.sinPrecio} sin precio en la lista`);
         setResultado(partes.join(" · "));
-        setReasignaciones(res.posiblesReasignaciones ?? []);
+        setReasignaciones("posiblesReasignaciones" in res ? res.posiblesReasignaciones : []);
+        setMostrarLinkVinculaciones(esKf && res.nuevos > 0);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error al procesar el archivo.");
       }
@@ -103,6 +115,14 @@ export function ImportarExcel({ proveedores }: { proveedores: Proveedor[] }) {
       </div>
 
       {resultado && <p className="text-sm text-green-600">{resultado}</p>}
+      {mostrarLinkVinculaciones && (
+        <p className="text-sm text-blue-700">
+          Hay ítems nuevos sin vincular a un producto.{" "}
+          <Link href="/inventario/vinculaciones?sin=1" className="underline">
+            Revisar en Vinculaciones →
+          </Link>
+        </p>
+      )}
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {reasignaciones.length > 0 && (
