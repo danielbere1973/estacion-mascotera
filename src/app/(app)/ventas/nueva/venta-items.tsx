@@ -39,11 +39,38 @@ type Row = {
   detalleConsignacionId: string;
 };
 
-export function VentaItems({ productos, proveedores }: { productos: Producto[]; proveedores: Proveedor[] }) {
-  const [rows, setRows] = useState<Row[]>([
-    { key: 0, productoId: "", cantidad: "1", precio: "", descuento: "0", descuentoMonto: "0", detalleConsignacionId: "" },
-  ]);
-  const [nextKey, setNextKey] = useState(1);
+export type FilaInicial = {
+  productoId: string;
+  cantidad: string;
+};
+
+export function VentaItems({
+  productos,
+  proveedores,
+  filasIniciales,
+}: {
+  productos: Producto[];
+  proveedores: Proveedor[];
+  filasIniciales?: FilaInicial[];
+}) {
+  const filasDeArranque: Row[] =
+    filasIniciales && filasIniciales.length > 0
+      ? filasIniciales.map((f, i) => {
+          const producto = productos.find((p) => String(p.id) === f.productoId);
+          return {
+            key: i,
+            productoId: f.productoId,
+            cantidad: f.cantidad,
+            precio: producto ? producto.precioVenta : "",
+            descuento: "0",
+            descuentoMonto: "0",
+            detalleConsignacionId: "",
+          };
+        })
+      : [{ key: 0, productoId: "", cantidad: "1", precio: "", descuento: "0", descuentoMonto: "0", detalleConsignacionId: "" }];
+
+  const [rows, setRows] = useState<Row[]>(filasDeArranque);
+  const [nextKey, setNextKey] = useState(filasDeArranque.length);
   const [filtroProveedorId, setFiltroProveedorId] = useState("");
   const [soloConStock, setSoloConStock] = useState(false);
   const [costoEnvio, setCostoEnvio] = useState(0);

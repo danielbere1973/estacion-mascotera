@@ -116,6 +116,9 @@ function AccionesVenta({ ventaId, className }: { ventaId: number; className: str
       <Link href={`/ventas/${ventaId}/editar`} className={`${className} text-blue-600 hover:bg-blue-50`}>
         Editar
       </Link>
+      <Link href={`/ventas/nueva?repetir=${ventaId}`} className={`${className} text-emerald-600 hover:bg-emerald-50`}>
+        Repetir Venta
+      </Link>
       <form action={eliminarVenta} className="contents">
         <input type="hidden" name="id" value={ventaId} />
         <ConfirmSubmitButton
