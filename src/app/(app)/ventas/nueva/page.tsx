@@ -6,8 +6,14 @@ import { FacturadoField } from "@/components/facturado-field";
 import { CobradoField } from "@/components/cobrado-field";
 import { CostosVenta } from "../costos-venta";
 
-export default async function NuevaVentaPage() {
-  const [clientes, productos, proveedores, comprasPorProducto, usuarios, mediosPago, itemsConsignados] = await Promise.all([
+export default async function NuevaVentaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ repetir?: string }>;
+}) {
+  const { repetir } = await searchParams;
+
+  const [clientes, productos, proveedores, comprasPorProducto, usuarios, mediosPago, itemsConsignados, ventaARepetir] = await Promise.all([
     prisma.cliente.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       where: { activo: true },
@@ -39,6 +45,12 @@ export default async function NuevaVentaPage() {
       },
       include: { consignacion: { include: { socio: true } } },
     }),
+    repetir
+      ? prisma.venta.findUnique({
+          where: { id: Number(repetir) },
+          select: { detalles: { select: { productoId: true, cantidad: true } } },
+        })
+      : null,
   ]);
 
   const proveedorIdsPorProducto = new Map<number, number[]>();
@@ -71,6 +83,11 @@ export default async function NuevaVentaPage() {
     precioVenta: p.precioVenta.toString(),
     proveedorIds: proveedorIdsPorProducto.get(p.id) ?? [],
     consignados: consignadosPorProducto.get(p.id) ?? [],
+  }));
+
+  const filasIniciales = ventaARepetir?.detalles.map((d) => ({
+    productoId: String(d.productoId),
+    cantidad: String(d.cantidad),
   }));
 
   return (
@@ -143,7 +160,7 @@ export default async function NuevaVentaPage() {
           </div>
         </div>
 
-        <VentaItems productos={productosPlain} proveedores={proveedores} />
+        <VentaItems productos={productosPlain} proveedores={proveedores} filasIniciales={filasIniciales} />
 
         <CostosVenta />
 
