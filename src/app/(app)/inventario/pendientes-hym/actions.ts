@@ -8,7 +8,7 @@ export async function resolverPendienteManualAction(
   _prev: { error: string | null },
   formData: FormData
 ): Promise<{ error: string | null }> {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
   const pendienteId = Number(formData.get("pendienteId"));
   if (!pendienteId) return { error: "Datos inválidos." };
 

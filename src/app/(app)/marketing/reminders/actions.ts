@@ -71,7 +71,7 @@ async function actualizarReminder(
 }
 
 export async function actualizarSetupReminder(destino: DestinoReminder, id: number, dias: string) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   const usuarioId = Number(session.user.id);
   const accion = "Cambio de Setup reminder";
   const actual = await leerDestino(destino, id);
@@ -93,7 +93,7 @@ export async function actualizarSetupReminder(destino: DestinoReminder, id: numb
 }
 
 export async function actualizarStatusReminder(destino: DestinoReminder, id: number, status: string) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   const usuarioId = Number(session.user.id);
   const accion = "Cambio de Status";
   const actual = await leerDestino(destino, id);
@@ -123,7 +123,7 @@ const CAMPO_LABEL: Record<CampoMascota, string> = { nombre: "Mascota", tipo: "Ti
 const TIPO_LABEL: Record<TipoMascota, string> = { PERRO: "Perro", GATO: "Gato" };
 
 export async function actualizarDatoMascota(id: number, campo: CampoMascota, valor: string) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   const usuarioId = Number(session.user.id);
   const accion = `Cambio de ${CAMPO_LABEL[campo]}`;
   const actual = await prisma.mascota.findUnique({
@@ -184,7 +184,7 @@ export async function actualizarDatoMascota(id: number, campo: CampoMascota, val
 // Clientes sin mascota: al completar Mascota y Tipo en Reminders se crea la mascota
 // (Edad y Tamaño quedan vacíos). Hereda el Setup y Status que tenía el cliente.
 export async function crearMascotaDesdeReminders(clienteId: number, nombre: string, tipo: string, raza: string) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   const usuarioId = Number(session.user.id);
   const accion = "Alta de mascota";
   const cliente = await prisma.cliente.findUnique({
@@ -224,7 +224,7 @@ export async function crearMascotaDesdeReminders(clienteId: number, nombre: stri
 }
 
 export async function actualizarStatusReminderTodos(status: string) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   const usuarioId = Number(session.user.id);
   if (!Object.values(StatusReminder).includes(status as StatusReminder)) {
     await registrarEvento(usuarioId, "Switch", `"${status}"`, "Error: status inválido");
@@ -255,7 +255,7 @@ export async function actualizarStatusReminderTodos(status: string) {
 
 // Switch "Reminder Automático": prende o apaga el envío diario del cron (/api/cron/reminders).
 export async function actualizarEnvioAutomatico(activo: boolean) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   const usuarioId = Number(session.user.id);
   const estado = activo ? "On" : "Off";
   try {
@@ -275,7 +275,7 @@ export async function actualizarEnvioAutomatico(activo: boolean) {
 // Force Mail: envía el reminder a un cliente sin aplicar ninguna regla (Status, Setup ni
 // envíos previos). Queda en el Event log y cuenta como reminder enviado.
 export async function enviarReminderForzado(clienteId: number): Promise<{ error?: string }> {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   const usuarioId = Number(session.user.id);
   const accion = "Envío de reminder (Force Mail)";
   const c = await prisma.cliente.findUnique({
@@ -311,7 +311,7 @@ export async function enviarReminderForzado(clienteId: number): Promise<{ error?
 
 // Envío manual (botón "Enviar reminders"); el automático diario lo hace /api/cron/reminders.
 export async function enviarReminders(): Promise<ResultadoEnvioReminders> {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   const resultado = await ejecutarEnvioReminders(Number(session.user.id));
   revalidatePath("/marketing/reminders");
   return resultado;

@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 
 export async function crearUsoInterno(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("VENTAS");
 
   const productoId = Number(formData.get("productoId"));
   const cantidad = Number(formData.get("cantidad"));

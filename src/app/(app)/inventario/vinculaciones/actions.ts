@@ -8,7 +8,7 @@ export async function desvincularItem(
   _prev: { error: string | null },
   formData: FormData
 ): Promise<{ error: string | null }> {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
   const historialId = Number(formData.get("historialId"));
   if (!historialId) return { error: "Datos inválidos." };
 

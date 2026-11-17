@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 
 export async function crearTipoProducto(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
 
   const nombre = formData.get("nombre")?.toString().trim();
   if (!nombre) throw new Error("El nombre es obligatorio.");
@@ -15,7 +15,7 @@ export async function crearTipoProducto(formData: FormData) {
 }
 
 export async function eliminarTipoProducto(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Tipo inválido.");

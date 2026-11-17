@@ -9,12 +9,12 @@ import { moverTarjetaCore } from "@/lib/tablero";
 import { PALETA_COLORES } from "./columnas";
 
 export async function previsualizarCorteHym() {
-  await requireAdmin();
+  await requireAdmin("TABLERO_CONTROL");
   return armarPreviewCorteHym();
 }
 
 export async function forzarCorteCompraHym(excluirLineaIds: number[] = []) {
-  await requireAdmin();
+  await requireAdmin("TABLERO_CONTROL");
   const resultado = await ejecutarCorteCompraHym(excluirLineaIds);
   revalidatePath("/tablero-control");
   return resultado;
@@ -25,13 +25,13 @@ export async function forzarCorteCompraHym(excluirLineaIds: number[] = []) {
 // apareciendo en los siguientes). Solo tiene sentido sobre pendientes que
 // todavía no se pidieron (PENDIENTE o EN_PROCESO trabado).
 export async function eliminarPendienteCompraMayorista(lineaId: number) {
-  await requireAdmin();
+  await requireAdmin("TABLERO_CONTROL");
   await prisma.pendienteCompraMayorista.delete({ where: { id: lineaId } });
   revalidatePath("/tablero-control");
 }
 
 export async function crearTarjeta(formData: FormData) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
 
   const titulo = String(formData.get("titulo") ?? "").trim();
   const notas = String(formData.get("notas") ?? "").trim();
@@ -63,13 +63,13 @@ export async function crearTarjeta(formData: FormData) {
 }
 
 export async function moverTarjeta(id: number, columnaId: number) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
   await moverTarjetaCore(id, columnaId);
   revalidatePath("/tablero-control");
 }
 
 export async function eliminarTarjeta(formData: FormData) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
 
   const id = Number(formData.get("id"));
   if (!id) return;
@@ -80,7 +80,7 @@ export async function eliminarTarjeta(formData: FormData) {
 }
 
 export async function crearColumna(formData: FormData) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   if (!nombre) return;
@@ -112,7 +112,7 @@ export async function crearColumna(formData: FormData) {
 }
 
 export async function reordenarColumnas(idsEnOrden: number[]) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
 
   await prisma.$transaction(
     idsEnOrden.map((id, index) =>
@@ -124,7 +124,7 @@ export async function reordenarColumnas(idsEnOrden: number[]) {
 }
 
 export async function eliminarColumna(id: number) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
 
   // onDelete: Cascade en el schema borra también las tarjetas de esa columna.
   await prisma.columnaTablero.delete({ where: { id } });
@@ -133,7 +133,7 @@ export async function eliminarColumna(id: number) {
 }
 
 export async function editarColumna(id: number, nombre: string) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
 
   const nombreLimpio = nombre.trim();
   if (!nombreLimpio) return;
@@ -144,7 +144,7 @@ export async function editarColumna(id: number, nombre: string) {
 }
 
 export async function obtenerProductosVenta(ventaId: number) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
 
   if (!Number.isInteger(ventaId) || ventaId < 0) return [];
 
@@ -173,7 +173,7 @@ export async function obtenerProductosVenta(ventaId: number) {
 }
 
 export async function editarTarjeta(formData: FormData) {
-  await requireAuth();
+  await requireAuth("TABLERO_CONTROL");
 
   const id = Number(formData.get("id"));
   const titulo = String(formData.get("titulo") ?? "").trim();

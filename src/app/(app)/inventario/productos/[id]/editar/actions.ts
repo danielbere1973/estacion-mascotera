@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 
 export async function agregarProveedorProducto(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
 
   const productoId = Number(formData.get("productoId"));
   const proveedorId = Number(formData.get("proveedorId"));
@@ -33,7 +33,7 @@ export async function agregarProveedorProducto(formData: FormData) {
 }
 
 export async function quitarProveedorProducto(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
 
   const historialId = Number(formData.get("historialId"));
   const productoId = Number(formData.get("productoId"));

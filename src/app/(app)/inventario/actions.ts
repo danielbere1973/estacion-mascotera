@@ -11,7 +11,7 @@ import { importarCostosKfCore } from "@/lib/importar-costos-kf";
 import { Presentacion, UnidadMedida, TipoProductoMayorista } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const proveedorIdRaw = formData.get("proveedorId")?.toString();
   const esProveedorNuevo = proveedorIdRaw === "nuevo";
@@ -142,7 +142,7 @@ export async function crearCompra(formData: FormData) {
 }
 
 export async function actualizarItemMayorista(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Item inválido.");
@@ -187,7 +187,7 @@ export async function actualizarItemMayorista(formData: FormData) {
 
 
 export async function eliminarItemMayorista(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const proveedorId = Number(formData.get("proveedorId"));
   const sku = formData.get("sku")?.toString();
@@ -202,7 +202,7 @@ export async function eliminarItemMayorista(formData: FormData) {
 }
 
 export async function actualizarCompra(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Compra inválida.");
@@ -337,7 +337,7 @@ export async function actualizarCompra(formData: FormData) {
 }
 
 export async function eliminarCompra(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Compra inválida.");
@@ -366,7 +366,7 @@ export async function eliminarCompra(formData: FormData) {
 }
 
 export async function eliminarProducto(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Producto inválido.");
@@ -435,7 +435,7 @@ async function siguienteSkuInterno(tx: Parameters<Parameters<typeof prisma.$tran
 }
 
 export async function crearProducto(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim();
@@ -488,7 +488,7 @@ export async function crearProducto(formData: FormData) {
 }
 
 export async function reactivarProducto(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Producto inválido.");
   await prisma.producto.update({ where: { id }, data: { activo: true } });
@@ -496,7 +496,7 @@ export async function reactivarProducto(formData: FormData) {
 }
 
 export async function actualizarProducto(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Producto inválido.");
@@ -543,7 +543,7 @@ export async function actualizarProducto(formData: FormData) {
 }
 
 export async function crearProductoDesdeListaMayorista(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const listaItemId = Number(formData.get("listaItemId"));
   const proveedorId = Number(formData.get("proveedorId"));
@@ -621,7 +621,7 @@ function normalizarNombre(s: string): string {
 }
 
 export async function importarExcel(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) throw new Error("Subí un archivo .xlsx o .csv");
@@ -665,7 +665,7 @@ export async function importarExcel(formData: FormData) {
 }
 
 export async function crearCombo(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const nombre = formData.get("nombre")?.toString().trim();
   const marca = formData.get("marca")?.toString().trim() || "Combo";
@@ -729,7 +729,7 @@ export async function crearCombo(formData: FormData) {
 }
 
 export async function actualizarCombo(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("INVENTARIO");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Combo inválido.");

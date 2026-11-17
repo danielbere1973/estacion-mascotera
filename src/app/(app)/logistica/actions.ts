@@ -20,7 +20,7 @@ function posicionValida(p: Posicion) {
 // Arranca un seguimiento nuevo para el cliente. Si el mismo usuario tenía otro
 // activo se finaliza: un celular manda una sola ubicación a la vez.
 export async function iniciarSeguimiento(clienteId: number, posicion: Posicion) {
-  const session = await requireAuth();
+  const session = await requireAuth("LOGISTICA");
   const usuarioId = Number(session.user.id);
   if (!posicionValida(posicion)) throw new Error("Ubicación inválida.");
 
@@ -58,7 +58,7 @@ export async function iniciarSeguimiento(clienteId: number, posicion: Posicion) 
 // Devuelve false si el seguimiento ya no está activo (venció o lo finalizaron
 // desde otro lado), para que el celular deje de mandar posiciones.
 export async function actualizarUbicacion(token: string, posicion: Posicion) {
-  const session = await requireAuth();
+  const session = await requireAuth("LOGISTICA");
   if (!posicionValida(posicion)) return true;
   const { count } = await prisma.seguimientoUbicacion.updateMany({
     where: {
@@ -80,7 +80,7 @@ export async function actualizarUbicacion(token: string, posicion: Posicion) {
 // Seguimientos activos de todo el equipo, para la lista y el mapa general de
 // Logística (solo usuarios logueados; el cliente nunca ve esto).
 export async function listarSeguimientosActivos() {
-  await requireAuth();
+  await requireAuth("LOGISTICA");
   return prisma.seguimientoUbicacion.findMany({
     where: { finalizadoAt: null, venceAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
@@ -100,7 +100,7 @@ export async function listarSeguimientosActivos() {
 }
 
 export async function finalizarSeguimiento(id: number) {
-  await requireAuth();
+  await requireAuth("LOGISTICA");
   await prisma.seguimientoUbicacion.updateMany({
     where: { id, finalizadoAt: null },
     data: { finalizadoAt: new Date() },

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 
 export async function crearProveedor(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
   const nombre = formData.get("nombre")?.toString().trim();
   const contacto = formData.get("contacto")?.toString().trim() || null;
   const direccion = formData.get("direccion")?.toString().trim() || null;
@@ -23,7 +23,7 @@ export async function crearProveedor(formData: FormData) {
 }
 
 export async function actualizarProveedor(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
   const id = Number(formData.get("id"));
   const nombre = formData.get("nombre")?.toString().trim();
   const contacto = formData.get("contacto")?.toString().trim() || null;
@@ -43,7 +43,7 @@ export async function actualizarProveedor(formData: FormData) {
 }
 
 export async function eliminarProveedor(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("INVENTARIO");
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Proveedor inválido.");
   const tiene = await prisma.historialStockMayorista.count({ where: { proveedorId: id } });

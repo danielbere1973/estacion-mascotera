@@ -8,7 +8,7 @@ import { registrarLog } from "@/lib/log";
 import { TipoGasto } from "@prisma/client";
 
 export async function crearGasto(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("GASTOS");
 
   const categoriaGasto = formData.get("categoriaGasto")?.toString().trim();
   const monto = Number(formData.get("monto"));
@@ -49,7 +49,7 @@ export async function crearGasto(formData: FormData) {
 }
 
 export async function actualizarGasto(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("GASTOS");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Gasto inválido.");
@@ -94,7 +94,7 @@ export async function actualizarGasto(formData: FormData) {
 }
 
 export async function eliminarGasto(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("GASTOS");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Gasto inválido.");
