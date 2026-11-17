@@ -38,35 +38,36 @@ model TipoProducto {
 }
 
 model Producto {
-  id                   Int                           @id @default(autoincrement())
-  skuInterno           String                        @unique
-  nombre               String
-  nombreTiendanube     String?
-  marca                String
-  categoria            String
-  presentacion         Presentacion
-  unidadMedida         UnidadMedida                  @default(UNIDAD)
-  contenido            Decimal                       @default(1)
-  stockActual          Int                           @default(0)
-  precioCostoUnitario  Decimal                       @default(0)
-  margenPorcentaje     Decimal                       @default(30)
-  precioVenta          Decimal                       @default(0)
-  createdAt            DateTime                      @default(now())
-  updatedAt            DateTime                      @updatedAt
-  stockEnConsignacion  Int                           @default(0)
-  activo               Boolean                       @default(true)
-  esCombo              Boolean                       @default(false)
-  compras              Compra[]
-  detallesConsignacion DetalleConsignacion[]
-  detalleVentas        DetalleVenta[]
-  historialStock       HistorialStockMayorista[]
-  ordenesDropshipping  OrdenDropshipping[]
-  clientesRecurrentes  ClienteProductoRecurrente[]   @relation("ClienteProductoRecurrenteProducto")
-  recordatorios        RecordatorioReposicion[]
-  pendientesCompra     PendienteCompraMayorista[]
-  categoriasTiendanube ProductoCategoriaTiendanube[]
-  componentesCombo     ComboComponente[]             @relation("ComboComponenteCombo")
-  usadoEnCombos        ComboComponente[]             @relation("ComboComponenteProducto")
+  id                    Int                           @id @default(autoincrement())
+  skuInterno            String                        @unique
+  nombre                String
+  nombreTiendanube      String?
+  marca                 String
+  categoria             String
+  presentacion          Presentacion
+  unidadMedida          UnidadMedida                  @default(UNIDAD)
+  contenido             Decimal                       @default(1)
+  stockActual           Int                           @default(0)
+  precioCostoUnitario   Decimal                       @default(0)
+  margenPorcentaje      Decimal                       @default(30)
+  precioVenta           Decimal                       @default(0)
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  stockEnConsignacion   Int                           @default(0)
+  activo                Boolean                       @default(true)
+  esCombo               Boolean                       @default(false)
+  tipoProductoMayorista TipoProductoMayorista?
+  compras               Compra[]
+  detallesConsignacion  DetalleConsignacion[]
+  detalleVentas         DetalleVenta[]
+  historialStock        HistorialStockMayorista[]
+  ordenesDropshipping   OrdenDropshipping[]
+  clientesRecurrentes   ClienteProductoRecurrente[]   @relation("ClienteProductoRecurrenteProducto")
+  recordatorios         RecordatorioReposicion[]
+  pendientesCompra      PendienteCompraMayorista[]
+  categoriasTiendanube  ProductoCategoriaTiendanube[]
+  componentesCombo      ComboComponente[]             @relation("ComboComponenteCombo")
+  usadoEnCombos         ComboComponente[]             @relation("ComboComponenteProducto")
 
   @@index([categoria])
 }
@@ -104,6 +105,17 @@ model ProductoCategoriaTiendanube {
 
   @@id([productoId, categoriaId])
   @@index([categoriaId])
+}
+
+model MargenMayorista {
+  id               Int                   @id @default(autoincrement())
+  tipoProducto     TipoProductoMayorista @unique
+  margenPorcentaje Decimal               @default(20)
+  // Solo se usa en ALIMENTO_SECO: margen distinto para bolsas grandes (ver umbralKgTramo2).
+  // En el resto de los tipos queda null y se ignora.
+  margenPorcentajeTramo2 Decimal?
+  umbralKgTramo2         Decimal?
+  updatedAt        DateTime              @updatedAt
 }
 
 model Proveedor {
@@ -620,6 +632,15 @@ enum TamanioMascota {
   MEDIANO
   GRANDE
   GIGANTE
+}
+
+enum TipoProductoMayorista {
+  ALIMENTO_SECO
+  ALIMENTO_HUMEDO
+  SNACK
+  PIEDRAS
+  ACCESORIOS
+  OTROS
 }
 
 enum CategoriaGasto {

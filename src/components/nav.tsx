@@ -25,6 +25,12 @@ const marketingLinks = [
   { href: "/marketing/reminders", label: "Reminders", icon: "⏰" },
 ];
 
+const mayoristaLinks = [
+  { href: "/inventario/mayoristas-tipo", label: "Tipo mayorista", icon: "🏷️" },
+  { href: "/inventario/mayoristas-margenes", label: "Márgenes mayoristas", icon: "➗" },
+  { href: "/inventario/mayoristas-catalogo", label: "Catálogo mayorista", icon: "📖" },
+];
+
 const linksRestringido = [
   { href: "/", label: "Dashboard", icon: "🏠" },
   { href: "/ventas", label: "Ventas", icon: "🛒" },
@@ -87,6 +93,9 @@ export function Sidebar({
     adminLinks.some((l) => pathname.startsWith(l.href))
   );
   const [marketingOpen, setMarketingOpen] = useState(pathname.startsWith("/marketing"));
+  const [mayoristaOpen, setMayoristaOpen] = useState(
+    mayoristaLinks.some((l) => pathname.startsWith(l.href))
+  );
   const visibleLinks = isRestringido ? linksRestringido : links;
 
   return (
@@ -134,6 +143,35 @@ export function Sidebar({
             {marketingOpen && (
               <div className="mt-1 space-y-1 pl-4">
                 {marketingLinks.map((link) => (
+                  <NavLink key={link.href} {...link} onNavigate={onNavigate} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isRestringido && (
+          <div>
+            <button
+              onClick={() => setMayoristaOpen((o) => !o)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            >
+              <span className="flex items-center gap-3">
+                <span className="text-base leading-none">🏪</span>
+                Mayorista
+              </span>
+              <svg
+                className={`h-3 w-3 transition-transform ${mayoristaOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {mayoristaOpen && (
+              <div className="mt-1 space-y-1 pl-4">
+                {mayoristaLinks.map((link) => (
                   <NavLink key={link.href} {...link} onNavigate={onNavigate} />
                 ))}
               </div>
