@@ -8,7 +8,7 @@ import { registrarLog } from "@/lib/log";
 import { crearCompraCore } from "@/lib/compras";
 import { importarCostosMayoristaCore } from "@/lib/importar-costos-mayorista";
 import { importarCostosKfCore } from "@/lib/importar-costos-kf";
-import { Presentacion, UnidadMedida } from "@prisma/client";
+import { Presentacion, UnidadMedida, TipoProductoMayorista } from "@prisma/client";
 
 export async function crearCompra(formData: FormData) {
   const session = await requireAdmin();
@@ -509,6 +509,10 @@ export async function actualizarProducto(formData: FormData) {
   const contenido = Number(formData.get("contenido"));
   const margenPorcentaje = Number(formData.get("margenPorcentaje"));
   const precioCostoUnitario = Number(formData.get("precioCostoUnitario"));
+  const tipoProductoMayoristaRaw = formData.get("tipoProductoMayorista")?.toString();
+  const tipoProductoMayorista = tipoProductoMayoristaRaw
+    ? (tipoProductoMayoristaRaw as TipoProductoMayorista)
+    : null;
 
   if (!nombre || !marca || !categoria || !presentacion || !unidadMedida) {
     throw new Error("Faltan datos del producto.");
@@ -521,7 +525,7 @@ export async function actualizarProducto(formData: FormData) {
   await prisma.$transaction(async (tx) => {
     const prod = await tx.producto.update({
       where: { id },
-      data: { nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta },
+      data: { nombre, marca, categoria, presentacion, unidadMedida, contenido, margenPorcentaje, precioCostoUnitario, precioVenta, tipoProductoMayorista },
     });
 
     await registrarLog(tx, {

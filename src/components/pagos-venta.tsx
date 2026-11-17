@@ -43,6 +43,8 @@ export function PagosVenta({
   eliminarPagoVenta: (formData: FormData) => Promise<void>;
 }) {
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [montoForm, setMontoForm] = useState(0);
+  const [comisionForm, setComisionForm] = useState(0);
 
   const totalPagado = pagos.reduce((acc, p) => acc + Number(p.monto), 0);
   const saldoPendiente = Math.max(totalACobrar - totalPagado, 0);
@@ -149,7 +151,11 @@ export function PagosVenta({
           {!mostrarForm ? (
             <button
               type="button"
-              onClick={() => setMostrarForm(true)}
+              onClick={() => {
+                setMontoForm(saldoPendiente);
+                setComisionForm(0);
+                setMostrarForm(true);
+              }}
               className="rounded-md border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
             >
               + Agregar pago
@@ -173,7 +179,8 @@ export function PagosVenta({
                     step="0.01"
                     max={saldoPendiente}
                     required
-                    defaultValue={saldoPendiente.toFixed(2)}
+                    value={montoForm}
+                    onChange={(e) => setMontoForm(Number(e.target.value))}
                     className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
                   />
                 </div>
@@ -184,9 +191,16 @@ export function PagosVenta({
                     name="comision"
                     min={0}
                     step="0.01"
-                    defaultValue={0}
+                    value={comisionForm}
+                    onChange={(e) => setComisionForm(Number(e.target.value))}
                     className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
                   />
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-gray-500">Neto a recibir</label>
+                  <p className="rounded-md bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-800">
+                    {fmt(Math.max(montoForm - comisionForm, 0))}
+                  </p>
                 </div>
                 <div className="space-y-0.5">
                   <label className="text-[10px] font-medium text-gray-500">Medio de pago</label>

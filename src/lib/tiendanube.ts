@@ -11,11 +11,17 @@ export type VarianteTN = {
   sku: string | null;
 };
 
+export type ImagenTN = {
+  id: number;
+  src: string;
+};
+
 export type ProductoTN = {
   id: number;
   name: { es?: string };
   variants: VarianteTN[];
   categories: { id: number; name: { es?: string } }[];
+  images?: ImagenTN[];
 };
 
 async function tiendanubeFetch<T>(storeId: string, accessToken: string, path: string): Promise<T> {
@@ -44,4 +50,19 @@ export async function traerProductosTiendanube(storeId: string, accessToken: str
     page++;
   }
   return productos;
+}
+
+// Foto principal por skuInterno (primera imagen de la primera variante que matchea ese SKU).
+export async function traerFotosPorSkuTiendanube(storeId: string, accessToken: string): Promise<Map<string, string>> {
+  const productos = await traerProductosTiendanube(storeId, accessToken);
+  const fotoPorSku = new Map<string, string>();
+  for (const producto of productos) {
+    const foto = producto.images?.[0]?.src;
+    if (!foto) continue;
+    for (const variante of producto.variants) {
+      const sku = variante.sku?.trim().toUpperCase();
+      if (sku && !fotoPorSku.has(sku)) fotoPorSku.set(sku, foto);
+    }
+  }
+  return fotoPorSku;
 }

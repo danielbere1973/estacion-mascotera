@@ -122,6 +122,19 @@ export default async function EditarProductoPage({
             <label className="text-sm font-medium text-gray-700">Margen sobre costo (%)</label>
             <input name="margenPorcentaje" type="number" step="0.01" min={0} defaultValue={producto.margenPorcentaje.toString()} required className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
           </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Tipo (mayorista)</label>
+            <select name="tipoProductoMayorista" defaultValue={producto.tipoProductoMayorista ?? ""} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              <option value="">— Sin asignar —</option>
+              <option value="ALIMENTO_SECO">Alimento seco</option>
+              <option value="ALIMENTO_HUMEDO">Alimento húmedo</option>
+              <option value="SNACK">Snack</option>
+              <option value="PIEDRAS">Piedras</option>
+              <option value="ACCESORIOS">Accesorios</option>
+              <option value="OTROS">Otros</option>
+            </select>
+          </div>
         </div>
 
         <button type="submit" className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
