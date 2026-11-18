@@ -56,7 +56,7 @@ export function CamposDireccion({ valores = {}, inputClassName }: { valores?: Va
           <input name="piso" defaultValue={valores.piso ?? ""} className={inputClassName} />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Dpto</label>
+          <label className="text-sm font-medium text-gray-700">Dpto/Unidad</label>
           <input name="dpto" defaultValue={valores.dpto ?? ""} className={inputClassName} />
         </div>
       </div>
