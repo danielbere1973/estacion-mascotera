@@ -7,7 +7,7 @@ export default async function ClientesPage() {
 
   const clientes = await prisma.cliente.findMany({
     orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
-    include: { _count: { select: { ventas: true } } },
+    include: { _count: { select: { ventas: true, miembrosFamilia: true } } },
   });
 
   return (
