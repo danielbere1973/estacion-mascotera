@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
 import { AltaClienteModal } from "./alta-cliente-modal";
-import { direccionCompleta, linkWaze } from "@/lib/direccion";
+import { direccionCompleta, linkWaze, segundaDireccion } from "@/lib/direccion";
 
 type Cliente = {
   id: number;
@@ -18,6 +18,12 @@ type Cliente = {
   dpto: string | null;
   localidad: string | null;
   cp: string | null;
+  direccion2: string | null;
+  altura2: string | null;
+  piso2: string | null;
+  dpto2: string | null;
+  localidad2: string | null;
+  cp2: string | null;
   familiaId: number | null;
   _count: { ventas: number; miembrosFamilia: number };
 };
@@ -58,7 +64,12 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
 
   const conFamilia = useMemo(() => {
     const porId = new Map(clientes.map((c) => [c.id, c]));
-    return clientes.map((c) => ({ ...c, familia: nombreFamilia(c, porId), direccionTexto: direccionCompleta(c) }));
+    return clientes.map((c) => ({
+      ...c,
+      familia: nombreFamilia(c, porId),
+      direccionTexto: direccionCompleta(c),
+      direccion2Texto: direccionCompleta(segundaDireccion(c)),
+    }));
   }, [clientes]);
 
   const filtrados = useMemo(() => {
@@ -68,7 +79,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
     return conFamilia.filter(
       (c) =>
         normalizar(`${c.nombre} ${c.apellido} ${c.familia ?? ""}`).includes(q) &&
-        normalizar(c.direccionTexto).includes(qDir),
+        normalizar(`${c.direccionTexto} ${c.direccion2Texto}`).includes(qDir),
     );
   }, [conFamilia, busqueda, busquedaDireccion]);
   const hayBusqueda = Boolean(busqueda.trim() || busquedaDireccion.trim());

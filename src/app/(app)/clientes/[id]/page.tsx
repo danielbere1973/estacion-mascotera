@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { perfilAcceso } from "@/lib/permissions";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { direccionCompleta } from "@/lib/direccion";
+import { direccionCompleta, segundaDireccion } from "@/lib/direccion";
 
 export default async function ClienteHistorialPage({
   params,
@@ -73,6 +73,9 @@ export default async function ClienteHistorialPage({
             <span className="break-words">{cliente.telefono}</span>
             {cliente.email && <span className="break-all">{cliente.email}</span>}
             <span className="break-words">{direccionCompleta(cliente)}</span>
+            {direccionCompleta(segundaDireccion(cliente)) && (
+              <span className="break-words">Dirección #2: {direccionCompleta(segundaDireccion(cliente))}</span>
+            )}
           </div>
         </div>
         {!soloLectura && (
