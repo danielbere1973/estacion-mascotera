@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { TipoProductoMayorista } from "@prisma/client";
 
 export async function actualizarTipoProductoMayorista(formData: FormData) {
-  await requireAdmin("MAYORISTA");
+  await requireAdmin("MAYORISTA_TIPO");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Producto inválido.");
@@ -23,7 +23,7 @@ export async function actualizarTipoProductoMayorista(formData: FormData) {
 }
 
 export async function actualizarTipoProductoMayoristaMasivo(formData: FormData) {
-  await requireAdmin("MAYORISTA");
+  await requireAdmin("MAYORISTA_TIPO");
 
   const ids = formData.getAll("productoIds").map((v) => Number(v)).filter(Boolean);
   if (ids.length === 0) throw new Error("No hay productos seleccionados.");

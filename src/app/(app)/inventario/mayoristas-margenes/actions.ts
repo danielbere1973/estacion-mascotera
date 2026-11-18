@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { TipoProductoMayorista } from "@prisma/client";
 
 export async function actualizarMargenMayorista(formData: FormData) {
-  await requireAdmin("MAYORISTA");
+  await requireAdmin("MAYORISTA_MARGENES");
 
   const tipoProducto = formData.get("tipoProducto")?.toString() as TipoProductoMayorista;
   const margenPorcentaje = Number(formData.get("margenPorcentaje"));
