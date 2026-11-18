@@ -6,6 +6,18 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { TipoMascota, TamanioMascota } from "@prisma/client";
 
+// Devuelve el referente de la familia elegida en el combo: si el cliente elegido ya
+// pertenece a otra familia, se usa el referente de esa familia (los grupos quedan planos).
+async function resolverFamilia(formData: FormData, clienteId?: number): Promise<number | null> {
+  const elegido = Number(formData.get("familiaId"));
+  if (!elegido) return null;
+  const c = await prisma.cliente.findUnique({ where: { id: elegido }, select: { id: true, familiaId: true } });
+  if (!c) return null;
+  const referente = c.familiaId ?? c.id;
+  // Elegirse a sí mismo (o a su propia familia) = es el referente: no apunta a nadie.
+  return referente === clienteId ? null : referente;
+}
+
 export async function crearCliente(formData: FormData) {
   await requireAdmin("CLIENTES");
 
@@ -23,8 +35,10 @@ export async function crearCliente(formData: FormData) {
     throw new Error("Faltan datos obligatorios.");
   }
 
+  const familiaId = await resolverFamilia(formData);
+
   await prisma.cliente.create({
-    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu },
+    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId },
   });
 
   revalidatePath("/clientes");
@@ -51,10 +65,18 @@ export async function actualizarCliente(formData: FormData) {
     throw new Error("Faltan datos obligatorios.");
   }
 
-  await prisma.cliente.update({
-    where: { id },
-    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu },
-  });
+  const familiaId = await resolverFamilia(formData, id);
+
+  await prisma.$transaction([
+    // Si este cliente era referente de otra familia y se suma a una nueva, sus miembros lo siguen.
+    ...(familiaId
+      ? [prisma.cliente.updateMany({ where: { familiaId: id }, data: { familiaId } })]
+      : []),
+    prisma.cliente.update({
+      where: { id },
+      data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId },
+    }),
+  ]);
 
   revalidatePath("/clientes");
   revalidatePath("/ventas");

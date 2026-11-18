@@ -20,8 +20,11 @@ export default async function EditarClientePage({
   const { id } = await params;
   const clienteId = Number(id);
 
-  const [cliente, mascotas, productosRecurrentes, productosComprados] = await Promise.all([
-    prisma.cliente.findUnique({ where: { id: clienteId } }),
+  const [cliente, mascotas, productosRecurrentes, productosComprados, clientesFamilia] = await Promise.all([
+    prisma.cliente.findUnique({
+      where: { id: clienteId },
+      include: { _count: { select: { miembrosFamilia: true } } },
+    }),
     prisma.mascota.findMany({ where: { clienteId }, orderBy: { creadoAt: "asc" } }),
     prisma.clienteProductoRecurrente.findMany({
       where: { clienteId },
@@ -36,9 +39,16 @@ export default async function EditarClientePage({
       select: { id: true, nombre: true, marca: true },
       orderBy: [{ marca: "asc" }, { nombre: "asc" }],
     }),
+    prisma.cliente.findMany({
+      select: { id: true, nombre: true, apellido: true },
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    }),
   ]);
 
   if (!cliente) notFound();
+
+  // Familia actual: la del referente; si este cliente es el referente, se muestra él mismo.
+  const familiaActual = cliente.familiaId ?? (cliente._count.miembrosFamilia > 0 ? cliente.id : "");
 
   const productosYaAgregados = new Set(productosRecurrentes.map((r) => r.productoId));
   const productosDisponibles = productosComprados.filter((p) => !productosYaAgregados.has(p.id));
@@ -141,6 +151,22 @@ export default async function EditarClientePage({
               placeholder="22 dígitos"
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
             />
+          </div>
+
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-sm font-medium text-gray-700">Familia (opcional)</label>
+            <select
+              name="familiaId"
+              defaultValue={familiaActual}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">Sin familia</option>
+              {clientesFamilia.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.apellido}, {c.nombre}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

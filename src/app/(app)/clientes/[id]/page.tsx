@@ -26,6 +26,14 @@ export default async function ClienteHistorialPage({
 
   if (!cliente) notFound();
 
+  // Miembros de la familia: el referente y todos los que apuntan a él (sin este cliente).
+  const referenteId = cliente.familiaId ?? clienteId;
+  const familia = await prisma.cliente.findMany({
+    where: { OR: [{ id: referenteId }, { familiaId: referenteId }], NOT: { id: clienteId } },
+    select: { id: true, nombre: true, apellido: true },
+    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+  });
+
   const ventas = await prisma.venta.findMany({
     where: { clienteId },
     include: {
@@ -75,6 +83,24 @@ export default async function ClienteHistorialPage({
           </Link>
         )}
       </div>
+
+      {/* Familia */}
+      {familia.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+          <h2 className="text-sm font-semibold text-gray-800">Familia</h2>
+          <div className="flex flex-wrap gap-2">
+            {familia.map((f) => (
+              <Link
+                key={f.id}
+                href={`/clientes/${f.id}`}
+                className="rounded-full border border-purple-100 bg-purple-50 px-3 py-1 text-xs text-purple-700 hover:bg-purple-100"
+              >
+                {f.apellido}, {f.nombre}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Mascotas */}
       {cliente.mascotas.length > 0 && (

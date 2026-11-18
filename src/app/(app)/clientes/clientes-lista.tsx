@@ -12,15 +12,24 @@ type Cliente = {
   telefono: string;
   email: string | null;
   direccion: string;
-  _count: { ventas: number };
+  familiaId: number | null;
+  _count: { ventas: number; miembrosFamilia: number };
 };
 
-type Columna = "nombre" | "telefono" | "email" | "direccion" | "ventas";
+type Columna = "nombre" | "familia" | "telefono" | "email" | "direccion" | "ventas";
 
-function valorOrden(c: Cliente, columna: Columna): ValorOrden {
+// Nombre de la familia a la que pertenece el cliente (la del referente), o null si no tiene.
+function nombreFamilia(c: Cliente, porId: Map<number, Cliente>): string | null {
+  const ref = c.familiaId ? porId.get(c.familiaId) : c._count.miembrosFamilia > 0 ? c : undefined;
+  return ref ? `${ref.apellido}, ${ref.nombre}` : null;
+}
+
+function valorOrden(c: Cliente & { familia: string | null }, columna: Columna): ValorOrden {
   switch (columna) {
     case "nombre":
       return `${c.apellido}, ${c.nombre}`;
+    case "familia":
+      return c.familia;
     case "telefono":
       return c.telefono || null;
     case "email":
@@ -35,11 +44,16 @@ function valorOrden(c: Cliente, columna: Columna): ValorOrden {
 export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; soloLectura: boolean }) {
   const [busqueda, setBusqueda] = useState("");
 
+  const conFamilia = useMemo(() => {
+    const porId = new Map(clientes.map((c) => [c.id, c]));
+    return clientes.map((c) => ({ ...c, familia: nombreFamilia(c, porId) }));
+  }, [clientes]);
+
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return clientes;
-    return clientes.filter((c) => `${c.nombre} ${c.apellido}`.toLowerCase().includes(q));
-  }, [clientes, busqueda]);
+    if (!q) return conFamilia;
+    return conFamilia.filter((c) => `${c.nombre} ${c.apellido} ${c.familia ?? ""}`.toLowerCase().includes(q));
+  }, [conFamilia, busqueda]);
   const { ordenadas, orden, ordenar } = useOrden(filtrados, valorOrden);
 
   return (
@@ -49,7 +63,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
         <div className="flex items-center justify-between gap-2">
           <h1 className="whitespace-nowrap text-xl font-semibold text-gray-900">Clientes: {clientes.length}</h1>
           <div className="flex items-center gap-2 md:hidden">
-            {!soloLectura && <AltaClienteModal />}
+            {!soloLectura && <AltaClienteModal clientes={clientes} />}
             <LinkReposiciones />
           </div>
         </div>
@@ -63,7 +77,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
             className="w-full rounded-md border border-gray-300 bg-gray-200 px-3 py-2 text-sm md:w-auto md:bg-white"
           />
           <div className="hidden items-center gap-2 md:flex">
-            {!soloLectura && <AltaClienteModal />}
+            {!soloLectura && <AltaClienteModal clientes={clientes} />}
             <LinkReposiciones />
           </div>
         </div>
@@ -82,6 +96,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
               </span>
             </div>
             <div className="mt-1 space-y-0.5 text-sm text-gray-600">
+              {c.familia && <p className="text-xs text-purple-700">👪 Familia {c.familia}</p>}
               {c.telefono && (
                 <a href={`tel:${c.telefono}`} className="block text-blue-600">
                   📞 {c.telefono}
@@ -134,6 +149,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
               <ThOrdenable label="Nombre" columna="nombre" orden={orden} onOrdenar={ordenar} />
+              <ThOrdenable label="Familia" columna="familia" orden={orden} onOrdenar={ordenar} />
               <ThOrdenable label="Teléfono" columna="telefono" orden={orden} onOrdenar={ordenar} />
               <ThOrdenable label="Email" columna="email" orden={orden} onOrdenar={ordenar} />
               <ThOrdenable label="Dirección" columna="direccion" orden={orden} onOrdenar={ordenar} />
@@ -153,6 +169,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
                 <td className="px-3 py-2 font-medium">
                   {c.apellido}, {c.nombre}
                 </td>
+                <td className="px-3 py-2 text-gray-600">{c.familia ?? "-"}</td>
                 <td className="px-3 py-2 text-gray-600">{c.telefono}</td>
                 <td className="px-3 py-2 text-gray-600">{c.email ?? "-"}</td>
                 <td className="px-3 py-2 text-gray-600">{c.direccion}</td>
@@ -179,7 +196,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
             ))}
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={7} className="px-3 py-6 text-center text-gray-400">
                   {busqueda
                     ? "No se encontraron clientes para esa búsqueda."
                     : "No hay clientes cargados todavía."}

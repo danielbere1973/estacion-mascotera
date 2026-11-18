@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { crearCliente } from "./actions";
 
-export function AltaClienteModal() {
+type OpcionCliente = { id: number; nombre: string; apellido: string };
+
+export function AltaClienteModal({ clientes }: { clientes: OpcionCliente[] }) {
   const [abierto, setAbierto] = useState(false);
 
   return (
@@ -117,6 +119,22 @@ export function AltaClienteModal() {
                     placeholder="22 dígitos"
                     className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white font-mono"
                   />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-sm font-medium text-gray-700">Familia (opcional)</label>
+                  <select
+                    name="familiaId"
+                    defaultValue=""
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
+                  >
+                    <option value="">Sin familia</option>
+                    {clientes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.apellido}, {c.nombre}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

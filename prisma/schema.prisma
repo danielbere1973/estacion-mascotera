@@ -181,6 +181,11 @@ model Cliente {
   setupReminderDias    Int                         @default(30)
   statusReminder       StatusReminder              @default(ACTIVO)
   fechaUltimoReminder  DateTime? // último mail de reminder enviado OK
+  // Familia: apunta al cliente "referente" de la familia. Todos los miembros apuntan al
+  // mismo referente (el referente queda en null), así varios clientes comparten familia.
+  familiaId            Int?
+  familia              Cliente?                    @relation("FamiliaCliente", fields: [familiaId], references: [id], onDelete: SetNull)
+  miembrosFamilia      Cliente[]                   @relation("FamiliaCliente")
   mascotas             Mascota[]
   ordenesDropshipping  OrdenDropshipping[]
   productosRecurrentes ClienteProductoRecurrente[]
@@ -188,6 +193,8 @@ model Cliente {
   ventas               Venta[]
   tarjetasTablero      TarjetaTablero[]
   seguimientos         SeguimientoUbicacion[]
+
+  @@index([familiaId])
 }
 
 model Mascota {
