@@ -10,7 +10,6 @@ export const authConfig = {
       if (user) {
         token.id = user.id;
         token.rol = user.rol;
-        token.proveedorRestrictoId = user.proveedorRestrictoId;
       }
       return token;
     },
@@ -18,7 +17,6 @@ export const authConfig = {
       if (session.user && token.id) {
         session.user.id = token.id as string;
         session.user.rol = token.rol ?? "ADMIN";
-        session.user.proveedorRestrictoId = token.proveedorRestrictoId ?? null;
       }
       return session;
     },

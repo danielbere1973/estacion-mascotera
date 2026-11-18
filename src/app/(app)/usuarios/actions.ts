@@ -9,6 +9,14 @@ import { registrarLog } from "@/lib/log";
 import { RolUsuario } from "@prisma/client";
 import { modulosDelFormulario } from "@/lib/modulos";
 
+// Proveedores tildados en "Restricción de acceso a Proveedores" (vacío = sin restricción).
+function proveedoresDelFormulario(formData: FormData): number[] {
+  return formData
+    .getAll("proveedores")
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0);
+}
+
 export async function crearUsuario(formData: FormData) {
   const session = await requireAdmin();
 
@@ -17,7 +25,7 @@ export async function crearUsuario(formData: FormData) {
   const email = formData.get("email")?.toString().trim().toLowerCase();
   const password = formData.get("password")?.toString();
   const rol = formData.get("rol")?.toString() as RolUsuario;
-  const proveedorRestrictoIdStr = formData.get("proveedorRestrictoId")?.toString();
+  const proveedores = proveedoresDelFormulario(formData);
   const activo = formData.get("activo") === "on";
   const modulos = modulosDelFormulario(formData);
 
@@ -25,14 +33,8 @@ export async function crearUsuario(formData: FormData) {
     throw new Error("Faltan datos del usuario.");
   }
   if (password.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
-  if (rol !== "ADMIN" && rol !== "LECTOR_RESTRINGIDO") throw new Error("Rol inválido.");
+  if (rol !== "ADMIN" && rol !== "SOLO_LECTURA") throw new Error("Rol inválido.");
 
-  const proveedorRestrictoId =
-    rol === "LECTOR_RESTRINGIDO" && proveedorRestrictoIdStr ? Number(proveedorRestrictoIdStr) : null;
-
-  if (rol === "LECTOR_RESTRINGIDO" && !proveedorRestrictoId) {
-    throw new Error("Seleccioná el proveedor al que queda restringido este usuario.");
-  }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -46,7 +48,7 @@ export async function crearUsuario(formData: FormData) {
         rol,
         activo,
         modulos,
-        proveedorRestrictoId,
+        proveedoresAcceso: { connect: proveedores.map((id) => ({ id })) },
       },
     });
 
@@ -74,19 +76,13 @@ export async function actualizarUsuario(formData: FormData) {
   const email = formData.get("email")?.toString().trim().toLowerCase();
   const password = formData.get("password")?.toString();
   const rol = formData.get("rol")?.toString() as RolUsuario;
-  const proveedorRestrictoIdStr = formData.get("proveedorRestrictoId")?.toString();
+  const proveedores = proveedoresDelFormulario(formData);
   const activo = formData.get("activo") === "on";
   const modulos = modulosDelFormulario(formData);
 
   if (!nombre || !apellido || !email) throw new Error("Faltan datos del usuario.");
-  if (rol !== "ADMIN" && rol !== "LECTOR_RESTRINGIDO") throw new Error("Rol inválido.");
+  if (rol !== "ADMIN" && rol !== "SOLO_LECTURA") throw new Error("Rol inválido.");
 
-  const proveedorRestrictoId =
-    rol === "LECTOR_RESTRINGIDO" && proveedorRestrictoIdStr ? Number(proveedorRestrictoIdStr) : null;
-
-  if (rol === "LECTOR_RESTRINGIDO" && !proveedorRestrictoId) {
-    throw new Error("Seleccioná el proveedor al que queda restringido este usuario.");
-  }
 
   const data: Parameters<typeof prisma.usuario.update>[0]["data"] = {
     nombre,
@@ -95,7 +91,9 @@ export async function actualizarUsuario(formData: FormData) {
     rol,
     activo,
     modulos,
-    proveedorRestrictoId,
+    proveedoresAcceso: { set: proveedores.map((id) => ({ id })) },
+    // Campo viejo de cuando la restricción era un solo proveedor: se limpia al guardar.
+    proveedorRestrictoId: null,
   };
 
   if (password) {

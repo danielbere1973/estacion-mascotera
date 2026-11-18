@@ -1,19 +1,18 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { perfilAcceso } from "@/lib/permissions";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
 export default async function ConsignacionesPage() {
-  const session = await auth();
-  const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
-  const proveedorRestrictoId = session?.user?.proveedorRestrictoId;
+  // esRestringido: vista del proveedor (sus socios, sin saldos ni liquidaciones).
+  const { soloLectura, proveedores } = await perfilAcceso();
+  const esRestringido = proveedores !== null;
+  const sinEdicion = soloLectura || esRestringido;
 
   const socios = await prisma.socioConsignacion.findMany({
-    where: esRestringido && proveedorRestrictoId
-      ? { proveedorId: proveedorRestrictoId }
-      : undefined,
+    where: proveedores ? { proveedorId: { in: proveedores } } : undefined,
     include: {
       consignaciones: {
         where: { estado: "ABIERTA" },
@@ -49,7 +48,7 @@ export default async function ConsignacionesPage() {
       {socios.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center text-gray-400">
           <p className="mb-3">No hay socios comerciales cargados.</p>
-          {!esRestringido && (
+          {!sinEdicion && (
             <Link href="/consignaciones/socios/nuevo" className="text-blue-600 hover:underline text-sm">
               Agregar primer socio →
             </Link>

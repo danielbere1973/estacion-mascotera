@@ -1,23 +1,26 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { auth } from "@/auth";
+import { perfilAcceso } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { actualizarUsuario } from "../../actions";
 import { ModulosCampo } from "../../modulos-campo";
+import { ProveedoresCampo } from "../../proveedores-campo";
 
 export default async function EditarUsuarioPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (session?.user?.rol !== "ADMIN") redirect("/");
+  if ((await perfilAcceso()).soloLectura) redirect("/");
 
   const { id } = await params;
 
   const [usuario, proveedores] = await Promise.all([
-    prisma.usuario.findUnique({ where: { id: Number(id) } }),
-    prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.usuario.findUnique({
+      where: { id: Number(id) },
+      include: { proveedoresAcceso: { select: { id: true } } },
+    }),
+    prisma.proveedor.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
   ]);
 
   if (!usuario) notFound();
@@ -82,29 +85,11 @@ export default async function EditarUsuarioPage({
           <label className="text-sm font-medium text-gray-700">Rol</label>
           <select
             name="rol"
-            defaultValue={usuario.rol}
+            defaultValue={usuario.rol === "ADMIN" ? "ADMIN" : "SOLO_LECTURA"}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
           >
-            <option value="ADMIN">Administrador (acceso total)</option>
-            <option value="LECTOR_RESTRINGIDO">Lector restringido a un proveedor</option>
-          </select>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">
-            Proveedor (solo para Lector restringido)
-          </label>
-          <select
-            name="proveedorRestrictoId"
-            defaultValue={usuario.proveedorRestrictoId ?? ""}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="">Sin restricción</option>
-            {proveedores.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
+            <option value="ADMIN">Administrador (puede ver y modificar)</option>
+            <option value="SOLO_LECTURA">Solo lectura (puede ver, no modificar)</option>
           </select>
         </div>
 
@@ -114,6 +99,11 @@ export default async function EditarUsuarioPage({
             Usuario activo
           </label>
         </div>
+
+        <ProveedoresCampo
+          proveedores={proveedores}
+          seleccionados={usuario.proveedoresAcceso.map((p) => p.id)}
+        />
 
         <ModulosCampo seleccionados={usuario.modulos} />
 

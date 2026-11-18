@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { auth } from "@/auth";
+import { perfilAcceso } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { FiltrosVentas } from "./filtros-ventas";
 import { VentasTabla } from "./ventas-tabla";
@@ -18,8 +18,10 @@ export default async function VentasPage({
 }) {
   const params = await searchParams;
 
-  const session = await auth();
-  const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
+  // restringido: filtra por sus proveedores y oculta ganancias; soloLectura: oculta acciones.
+  const { soloLectura, proveedores } = await perfilAcceso();
+  const esRestringido = proveedores !== null;
+  const sinEdicion = soloLectura || esRestringido;
 
   const canalesSeleccionados = params.canal
     ? Array.isArray(params.canal) ? params.canal : [params.canal]
@@ -43,9 +45,9 @@ export default async function VentasPage({
   if (canalesSeleccionados.length > 0) where.canalVenta = { in: canalesSeleccionados };
   if (pagosSeleccionados.length > 0) where.medioPago = { in: pagosSeleccionados };
 
-  if (esRestringido) {
+  if (proveedores) {
     const comprasDelProveedor = await prisma.compra.findMany({
-      where: { proveedorId: session?.user?.proveedorRestrictoId ?? -1 },
+      where: { proveedorId: { in: proveedores } },
       select: { productoId: true },
       distinct: ["productoId"],
     });
@@ -106,7 +108,7 @@ export default async function VentasPage({
             </p>
           )}
         </div>
-        {!esRestringido && (
+        {!sinEdicion && (
           <div className="flex items-center gap-2">
             <Link
               href="/ventas/uso-interno"
@@ -148,7 +150,8 @@ export default async function VentasPage({
               </div>
             )}
             <VentasTabla
-              esRestringido={esRestringido}
+              ocultarGanancia={esRestringido}
+              sinEdicion={sinEdicion}
               ventas={lista.map((venta) => ({
                 ...venta,
                 costoEnvio: venta.costoEnvio.toString(),

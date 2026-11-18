@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { calcularRango } from "@/lib/reporte-utils";
-import { auth } from "@/auth";
+import { puedeVer } from "@/lib/permissions";
 
 const CANAL_LABELS: Record<string, string> = { TIENDANUBE: "Tiendanube", WHATSAPP: "WhatsApp", TELEFONO: "Teléfono" };
 
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session || session.user?.rol !== "ADMIN") {
+  // Exportar es leer: alcanza con tener la sección Reportes (también para Solo lectura).
+  if (!(await puedeVer("REPORTES"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

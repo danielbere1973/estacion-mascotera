@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { AppShell } from "@/components/nav";
-import { modulosPermitidos } from "@/lib/permissions";
+import { modulosPermitidos, perfilAcceso } from "@/lib/permissions";
 
 export default async function AppLayout({
   children,
@@ -8,9 +8,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const isAdmin = session?.user?.rol === "ADMIN";
-  const isRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
-  const modulos = await modulosPermitidos();
+  // Con Restricción de acceso a Proveedores el menú muestra Compras en lugar de Inventario.
+  const [modulos, { soloLectura, proveedores }] = await Promise.all([modulosPermitidos(), perfilAcceso()]);
+  const isAdmin = !soloLectura;
+  const isRestringido = proveedores !== null;
 
   return (
     <AppShell isAdmin={isAdmin} isRestringido={isRestringido} modulos={modulos} userName={session?.user?.name ?? ""}>

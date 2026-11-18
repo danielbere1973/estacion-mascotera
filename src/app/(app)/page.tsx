@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MODULOS } from "@/lib/modulos";
-import { modulosPermitidos } from "@/lib/permissions";
-import { auth } from "@/auth";
+import { modulosPermitidos, perfilAcceso } from "@/lib/permissions";
 import { getDashboardMetrics, getDashboardMetricsRestringido } from "@/lib/metrics";
 import { getRangoFechas, parsePeriodo, PERIODOS, type PeriodoKey } from "@/lib/periodo";
 import { formatCurrency } from "@/lib/format";
@@ -28,12 +27,12 @@ export default async function DashboardPage({
   const params = await searchParams;
   const periodo = parsePeriodo(params.periodo);
   const rango = getRangoFechas(periodo);
-  const session = await auth();
-  const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
-  const metrics =
-    esRestringido && session?.user?.proveedorRestrictoId
-      ? await getDashboardMetricsRestringido(rango, session.user.proveedorRestrictoId)
-      : await getDashboardMetrics(rango);
+  // Con Restricción de acceso a Proveedores, las métricas son solo de esos proveedores.
+  const { proveedores } = await perfilAcceso();
+  const esRestringido = proveedores !== null;
+  const metrics = proveedores
+    ? await getDashboardMetricsRestringido(rango, proveedores)
+    : await getDashboardMetrics(rango);
 
   const pctOperativa = metrics.totalIngresosConsolidados > 0
     ? (metrics.rentabilidadSinFijos / metrics.totalIngresosConsolidados) * 100

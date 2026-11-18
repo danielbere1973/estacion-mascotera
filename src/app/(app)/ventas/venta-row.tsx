@@ -133,7 +133,15 @@ function AccionesVenta({ ventaId, className }: { ventaId: number; className: str
 }
 
 // Versión mobile de la fila: tarjeta con los datos principales; al tocarla muestra el detalle.
-export function VentaCard({ venta, esRestringido }: { venta: VentaRow; esRestringido: boolean }) {
+export function VentaCard({
+  venta,
+  ocultarGanancia,
+  sinEdicion,
+}: {
+  venta: VentaRow;
+  ocultarGanancia: boolean;
+  sinEdicion: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const { descuento, costosCobranza, totalAbonado, ganancia, pctGanancia } = calcularTotalesVenta(venta);
   const { estado, clase } = estadoPagoVenta(venta, totalAbonado);
@@ -152,7 +160,7 @@ export function VentaCard({ venta, esRestringido }: { venta: VentaRow; esRestrin
         </div>
         <div className="mt-1 flex items-baseline justify-between gap-2">
           <span className="text-lg font-bold text-blue-600">{fmt(totalAbonado)}</span>
-          {!esRestringido && (
+          {!ocultarGanancia && (
             <span className={`text-sm font-semibold ${ganancia >= 0 ? "text-green-600" : "text-red-500"}`}>
               Gan. {fmt(ganancia)}
               {pctGanancia !== null && (
@@ -218,7 +226,7 @@ export function VentaCard({ venta, esRestringido }: { venta: VentaRow; esRestrin
             })}
           </ul>
 
-          {!esRestringido && (
+          {!sinEdicion && (
             <div className="mt-3 flex gap-2">
               <AccionesVenta
                 ventaId={venta.id}
@@ -234,10 +242,12 @@ export function VentaCard({ venta, esRestringido }: { venta: VentaRow; esRestrin
 
 export function VentaExpandibleRow({
   venta,
-  esRestringido,
+  ocultarGanancia,
+  sinEdicion,
 }: {
   venta: VentaRow;
-  esRestringido: boolean;
+  ocultarGanancia: boolean;
+  sinEdicion: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -275,7 +285,7 @@ export function VentaExpandibleRow({
         <td className="whitespace-nowrap px-3 py-2 text-right text-sm font-bold text-blue-600">
           {fmt(totalAbonado)}
         </td>
-        {!esRestringido && (
+        {!ocultarGanancia && (
           <td className={`whitespace-nowrap px-3 py-2 text-right text-sm font-semibold ${ganancia >= 0 ? "text-green-600" : "text-red-500"}`}>
             {fmt(ganancia)}
             {pctGanancia !== null && (
@@ -306,7 +316,7 @@ export function VentaExpandibleRow({
 
       {open && (
         <tr>
-          <td colSpan={esRestringido ? 7 : 8} className="px-4 pb-3 pt-0 bg-blue-50">
+          <td colSpan={ocultarGanancia ? 7 : 8} className="px-4 pb-3 pt-0 bg-blue-50">
             <div className="rounded-lg border border-blue-100 bg-white overflow-hidden">
 
               {/* Fila de datos secundarios */}
@@ -371,7 +381,7 @@ export function VentaExpandibleRow({
               </table>
 
               {/* Acciones */}
-              {!esRestringido && (
+              {!sinEdicion && (
                 <div className="flex gap-2 border-t border-gray-100 bg-gray-50 px-3 py-2">
                   <AccionesVenta
                     ventaId={venta.id}

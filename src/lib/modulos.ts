@@ -58,3 +58,13 @@ export function textoModulos(modulos: ModuloApp[]) {
   );
   return nombres.length ? nombres.join(", ") : "Ninguna sección";
 }
+
+// Secciones que filtran por proveedor: un usuario con Restricción de acceso a
+// Proveedores solo puede entrar a estas (de Inventario, solo a Compras).
+export const MODULOS_CON_RESTRICCION: ModuloApp[] = [
+  "DASHBOARD",
+  "VENTAS",
+  "INVENTARIO",
+  "CONSIGNACIONES",
+  "LOGISTICA",
+];

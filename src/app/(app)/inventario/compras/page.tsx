@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { auth } from "@/auth";
+import { perfilAcceso } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { eliminarCompra } from "../actions";
+import { eliminarCompra } from "../(inventario)/actions";
 import { ComprasAgrupadas } from "./compras-agrupadas";
 
 export default async function ComprasPage() {
-  const session = await auth();
-  const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
+  // restringido: solo compras de sus proveedores; sin botones de edición si es solo lectura o restringido.
+  const { soloLectura, proveedores } = await perfilAcceso();
+  const esRestringido = soloLectura || proveedores !== null;
 
   const compras = await prisma.compra.findMany({
-    where: esRestringido ? { proveedorId: session?.user?.proveedorRestrictoId ?? -1 } : undefined,
+    where: proveedores ? { proveedorId: { in: proveedores } } : undefined,
     include: { proveedor: true, producto: true },
     orderBy: { fechaCompra: "desc" },
     take: 200,

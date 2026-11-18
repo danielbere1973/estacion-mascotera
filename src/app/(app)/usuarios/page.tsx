@@ -1,26 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { perfilAcceso } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { textoModulos } from "@/lib/modulos";
 import { crearUsuario } from "./actions";
 import { ModulosCampo } from "./modulos-campo";
+import { ProveedoresCampo } from "./proveedores-campo";
 
 const ROL_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
-  LECTOR_RESTRINGIDO: "Lector restringido",
+  SOLO_LECTURA: "Solo lectura",
+  LECTOR_RESTRINGIDO: "Solo lectura",
 };
 
 export default async function UsuariosPage() {
-  const session = await auth();
-  if (session?.user?.rol !== "ADMIN") redirect("/");
+  if ((await perfilAcceso()).soloLectura) redirect("/");
 
   const [usuarios, proveedores] = await Promise.all([
     prisma.usuario.findMany({
       orderBy: { nombre: "asc" },
-      include: { proveedorRestricto: { select: { nombre: true } } },
+      include: { proveedoresAcceso: { select: { nombre: true }, orderBy: { nombre: "asc" } } },
     }),
-    prisma.proveedor.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.proveedor.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
   ]);
 
   return (
@@ -81,26 +82,8 @@ export default async function UsuariosPage() {
               defaultValue="ADMIN"
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="ADMIN">Administrador (acceso total)</option>
-              <option value="LECTOR_RESTRINGIDO">Lector restringido a un proveedor</option>
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
-              Proveedor (solo para Lector restringido)
-            </label>
-            <select
-              name="proveedorRestrictoId"
-              defaultValue=""
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">Sin restricción</option>
-              {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                </option>
-              ))}
+              <option value="ADMIN">Administrador (puede ver y modificar)</option>
+              <option value="SOLO_LECTURA">Solo lectura (puede ver, no modificar)</option>
             </select>
           </div>
 
@@ -110,6 +93,8 @@ export default async function UsuariosPage() {
               Usuario activo
             </label>
           </div>
+
+          <ProveedoresCampo proveedores={proveedores} />
 
           <ModulosCampo />
 
@@ -140,7 +125,7 @@ export default async function UsuariosPage() {
               <p className="mt-0.5 break-all text-xs text-gray-500">{u.email}</p>
               <p className="mt-0.5 text-xs text-gray-500">
                 {ROL_LABELS[u.rol]}
-                {u.proveedorRestricto && ` · ${u.proveedorRestricto.nombre}`}
+                {u.proveedoresAcceso.length > 0 && ` · Solo ${u.proveedoresAcceso.map((p) => p.nombre).join(", ")}`}
               </p>
               <p className="mt-0.5 text-xs text-gray-500">Ve: {textoModulos(u.modulos)}</p>
             </Link>
@@ -155,7 +140,7 @@ export default async function UsuariosPage() {
               <th className="px-3 py-2">Nombre</th>
               <th className="px-3 py-2">Email</th>
               <th className="px-3 py-2">Rol</th>
-              <th className="px-3 py-2">Restringido a</th>
+              <th className="px-3 py-2">Proveedores</th>
               <th className="px-3 py-2">Secciones</th>
               <th className="px-3 py-2">Activo</th>
               <th className="px-3 py-2"></th>
@@ -168,7 +153,7 @@ export default async function UsuariosPage() {
                 <td className="whitespace-nowrap px-3 py-2 text-gray-500">{u.email}</td>
                 <td className="whitespace-nowrap px-3 py-2">{ROL_LABELS[u.rol]}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-500">
-                  {u.proveedorRestricto?.nombre ?? "-"}
+                  {u.proveedoresAcceso.length ? u.proveedoresAcceso.map((p) => p.nombre).join(", ") : "Todos"}
                 </td>
                 <td className="px-3 py-2 text-gray-600">{textoModulos(u.modulos)}</td>
                 <td className="whitespace-nowrap px-3 py-2">
