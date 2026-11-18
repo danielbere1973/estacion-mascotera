@@ -59,8 +59,8 @@ export function ModulosCampo({ seleccionados }: { seleccionados?: ModuloApp[] })
       </div>
 
       <p className="text-xs text-gray-400">
-        El menú Admin lo ven solo los administradores. El Lector restringido además queda limitado a
-        sus secciones fijas (Dashboard, Ventas, Compras, Consignaciones y Logística).
+        El menú Admin lo ven solo los administradores. Con Restricción de acceso a Proveedores, solo
+        valen Dashboard, Ventas, Compras (de Inventario), Consignaciones y Logística.
       </p>
     </fieldset>
   );

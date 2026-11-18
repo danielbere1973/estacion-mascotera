@@ -25,7 +25,15 @@ function valorOrden(venta: VentaRow, columna: Columna): ValorOrden {
 }
 
 // Tabla de Ventas con orden por columna (sin elegir, queda por fecha descendente como viene del server).
-export function VentasTabla({ ventas, esRestringido }: { ventas: VentaRow[]; esRestringido: boolean }) {
+export function VentasTabla({
+  ventas,
+  ocultarGanancia,
+  sinEdicion,
+}: {
+  ventas: VentaRow[];
+  ocultarGanancia: boolean;
+  sinEdicion: boolean;
+}) {
   const { ordenadas, orden, ordenar } = useOrden(ventas, valorOrden);
   const th = { orden, onOrdenar: ordenar };
 
@@ -34,7 +42,7 @@ export function VentasTabla({ ventas, esRestringido }: { ventas: VentaRow[]; esR
       {/* Mobile: tarjetas, en el orden en que vienen (fecha descendente). */}
       <ul className="space-y-2 md:hidden">
         {ventas.map((venta) => (
-          <VentaCard key={venta.id} venta={venta} esRestringido={esRestringido} />
+          <VentaCard key={venta.id} venta={venta} ocultarGanancia={ocultarGanancia} sinEdicion={sinEdicion} />
         ))}
         {ventas.length === 0 && (
           <li className="py-6 text-center text-sm text-gray-400">No hay ventas registradas para este filtro.</li>
@@ -49,7 +57,7 @@ export function VentasTabla({ ventas, esRestringido }: { ventas: VentaRow[]; esR
           <ThOrdenable label="Cliente" columna="cliente" {...th} />
           <ThOrdenable label="Total" columna="total" className="px-3 py-2 text-right" {...th} />
           <ThOrdenable label="Total abonado" columna="totalAbonado" className="px-3 py-2 text-right" {...th} />
-          {!esRestringido && (
+          {!ocultarGanancia && (
             <ThOrdenable label="Ganancia" columna="ganancia" className="px-3 py-2 text-right" {...th} />
           )}
           <ThOrdenable label="Facturado" columna="facturado" {...th} />
@@ -57,11 +65,11 @@ export function VentasTabla({ ventas, esRestringido }: { ventas: VentaRow[]; esR
       </thead>
       <tbody className="divide-y divide-gray-100">
         {ordenadas.map((venta) => (
-          <VentaExpandibleRow key={venta.id} venta={venta} esRestringido={esRestringido} />
+          <VentaExpandibleRow key={venta.id} venta={venta} ocultarGanancia={ocultarGanancia} sinEdicion={sinEdicion} />
         ))}
         {ventas.length === 0 && (
           <tr>
-            <td colSpan={esRestringido ? 7 : 8} className="px-3 py-8 text-center text-gray-400">
+            <td colSpan={ocultarGanancia ? 7 : 8} className="px-3 py-8 text-center text-gray-400">
               No hay ventas registradas para este filtro.
             </td>
           </tr>

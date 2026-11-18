@@ -18,6 +18,7 @@ model Usuario {
   // Secciones que el usuario puede ver (el menú Admin depende solo del rol ADMIN).
   modulos              ModuloApp[]            @default([DASHBOARD, VENTAS, CLIENTES, PROVEEDORES, INVENTARIO, CONSIGNACIONES, GASTOS, REPORTES, ESTADISTICAS, TABLERO_CONTROL, LOGISTICA, MARKETING, REMINDERS, MAYORISTA_TIPO, MAYORISTA_MARGENES, MAYORISTA_CATALOGO])
   createdAt            DateTime               @default(now())
+  // Obsoleto: reemplazado por proveedoresAcceso (se conserva para no romper datos viejos).
   proveedorRestrictoId Int?
   comprasPagadas       Compra[]               @relation("CompraPagadaPor")
   compras              Compra[]
@@ -26,6 +27,8 @@ model Usuario {
   logsActividad        LogActividad[]
   logsMarketing        LogMarketing[]
   proveedorRestricto   Proveedor?             @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
+  // Restricción de acceso a Proveedores: vacía = ve todo; con proveedores = solo ve datos de esos.
+  proveedoresAcceso    Proveedor[]            @relation("UsuarioProveedoresAcceso")
   ventasCobradas       Venta[]                @relation("VentaCobradaPor")
   ventas               Venta[]
   ventasVendidas       Venta[]                @relation("VentaVendidaPor")
@@ -110,14 +113,14 @@ model ProductoCategoriaTiendanube {
 }
 
 model MargenMayorista {
-  id               Int                   @id @default(autoincrement())
-  tipoProducto     TipoProductoMayorista @unique
-  margenPorcentaje Decimal               @default(20)
+  id                     Int                   @id @default(autoincrement())
+  tipoProducto           TipoProductoMayorista @unique
+  margenPorcentaje       Decimal               @default(20)
   // Solo se usa en ALIMENTO_SECO: margen distinto para bolsas grandes (ver umbralKgTramo2).
   // En el resto de los tipos queda null y se ignora.
   margenPorcentajeTramo2 Decimal?
   umbralKgTramo2         Decimal?
-  updatedAt        DateTime              @updatedAt
+  updatedAt              DateTime              @updatedAt
 }
 
 model Proveedor {
@@ -135,6 +138,7 @@ model Proveedor {
   historialMayorista   HistorialStockMayorista[]
   sociosConsignacion   SocioConsignacion[]
   usuariosRestringidos Usuario[]                  @relation("UsuarioProveedorRestricto")
+  usuariosConAcceso    Usuario[]                  @relation("UsuarioProveedoresAcceso")
   pendientesCompra     PendienteCompraMayorista[]
 }
 
@@ -568,6 +572,8 @@ model CarritoAbandonadoNotificado {
 
 enum RolUsuario {
   ADMIN
+  SOLO_LECTURA
+  // Obsoleto: equivale a SOLO_LECTURA (la restricción de proveedor ahora es aparte).
   LECTOR_RESTRINGIDO
 }
 

@@ -232,7 +232,8 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   };
 }
 
-export async function getDashboardMetricsRestringido(rango: RangoFechas, proveedorId: number) {
+export async function getDashboardMetricsRestringido(rango: RangoFechas, proveedorIds: number[]) {
+  const proveedorId = { in: proveedorIds };
   const fechaVenta = fechaWhere(rango);
   const fechaCompra = fechaWhere(rango);
 

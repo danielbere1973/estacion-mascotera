@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { perfilAcceso } from "@/lib/permissions";
 import { registrarVentaConsignacion, cerrarConsignacion, registrarPagoConsignacion, eliminarPagoConsignacion, eliminarConsignacion } from "../actions";
 import { FacturadoField } from "@/components/facturado-field";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
@@ -15,9 +15,10 @@ const fmt = (n: number) =>
 
 export default async function DetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await auth();
-  const esRestringido = session?.user?.rol === "LECTOR_RESTRINGIDO";
-  const proveedorRestrictoId = session?.user?.proveedorRestrictoId;
+  // esRestringido: vista del proveedor (sin costos ni pagos); sinEdicion además para solo lectura.
+  const { soloLectura, proveedores } = await perfilAcceso();
+  const esRestringido = proveedores !== null;
+  const sinEdicion = soloLectura || esRestringido;
 
   const [cons, productos] = await Promise.all([
     prisma.consignacion.findUnique({
@@ -42,8 +43,8 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
   ]);
   if (!cons) notFound();
 
-  // Restringido solo puede ver consignaciones de su socio vinculado
-  if (esRestringido && proveedorRestrictoId && cons.socio.proveedorId !== proveedorRestrictoId) {
+  // Con restricción solo puede ver consignaciones de socios vinculados a sus proveedores
+  if (proveedores && (cons.socio.proveedorId === null || !proveedores.includes(cons.socio.proveedorId))) {
     notFound();
   }
 
@@ -82,7 +83,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
             </span>
           </p>
         </div>
-        {!esRestringido && (
+        {!sinEdicion && (
           <div className="flex flex-wrap gap-2">
             <EditarConsignacionForm
               id={cons.id}
@@ -217,7 +218,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                       : `Costo: ${fmt(Number(item.precioCosto))} · Piso: ${fmt(Number(item.precioPiso))} · Cant: ${item.cantidad} · Disponibles: ${disponible}`
                     }
                   </p>
-                  {!esRestringido && cons.estado === "ABIERTA" && (
+                  {!sinEdicion && cons.estado === "ABIERTA" && (
                     <EditarItemForm
                       item={{
                         id: item.id,
@@ -237,7 +238,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
 
               {/* Registrar venta: solo para ENTREGAMOS (el socio vende a su propio cliente).
                   Los items RECIBIMOS se venden desde "Nueva venta" porque son ventas a nuestro cliente. */}
-              {!esRestringido && esEntregamos && disponible > 0 && cons.estado === "ABIERTA" && (
+              {!sinEdicion && esEntregamos && disponible > 0 && cons.estado === "ABIERTA" && (
                 <form action={registrarVentaConsignacion} className="space-y-2 mb-3">
                   <input type="hidden" name="detalleId" value={item.id} />
                   <div className="grid grid-cols-2 gap-2 md:flex md:items-end md:flex-wrap">
@@ -264,7 +265,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                   {!esRestringido && <FacturadoField />}
                 </form>
               )}
-              {!esRestringido && !esEntregamos && disponible > 0 && cons.estado === "ABIERTA" && (
+              {!sinEdicion && !esEntregamos && disponible > 0 && cons.estado === "ABIERTA" && (
                 <p className="text-xs text-gray-400 mb-3 italic">
                   Las ventas de este producto se cargan desde{" "}
                   <Link href="/ventas/nueva" className="text-blue-600 hover:underline">Nueva venta</Link>.
@@ -301,7 +302,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
         })}
       </div>
 
-      {!esRestringido && cons.estado === "ABIERTA" && (
+      {!sinEdicion && cons.estado === "ABIERTA" && (
         <AgregarItemForm
           consignacionId={cons.id}
           direccion={cons.direccion}

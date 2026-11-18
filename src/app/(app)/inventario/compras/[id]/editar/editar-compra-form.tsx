@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Combobox } from "@/components/combobox";
 import { formatCurrency } from "@/lib/format";
 import { PagadoField } from "@/components/pagado-field";
-import { actualizarCompra } from "../../../actions";
+import { actualizarCompra } from "../../../(inventario)/actions";
 
 type MayoristaItem = {
   proveedorId: number;

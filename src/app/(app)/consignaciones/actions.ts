@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, requireAuth } from "@/lib/permissions";
+import { requireAdmin } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -250,7 +250,7 @@ export async function eliminarConsignacion(formData: FormData) {
 }
 
 export async function registrarVentaConsignacion(formData: FormData) {
-  await requireAuth("CONSIGNACIONES");
+  await requireAdmin("CONSIGNACIONES");
   const detalleId = Number(formData.get("detalleId"));
   const cantidad = Number(formData.get("cantidad"));
   const precioVentaReal = Number(formData.get("precioVentaReal"));
