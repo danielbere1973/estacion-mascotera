@@ -149,10 +149,10 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
               <ThOrdenable label="Nombre" columna="nombre" orden={orden} onOrdenar={ordenar} />
-              <ThOrdenable label="Familia" columna="familia" orden={orden} onOrdenar={ordenar} />
               <ThOrdenable label="Teléfono" columna="telefono" orden={orden} onOrdenar={ordenar} />
               <ThOrdenable label="Email" columna="email" orden={orden} onOrdenar={ordenar} />
               <ThOrdenable label="Dirección" columna="direccion" orden={orden} onOrdenar={ordenar} />
+              <ThOrdenable label="Familia" columna="familia" orden={orden} onOrdenar={ordenar} />
               <ThOrdenable
                 label="Ventas"
                 columna="ventas"
@@ -169,10 +169,10 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
                 <td className="px-3 py-2 font-medium">
                   {c.apellido}, {c.nombre}
                 </td>
-                <td className="px-3 py-2 text-gray-600">{c.familia ?? "-"}</td>
                 <td className="px-3 py-2 text-gray-600">{c.telefono}</td>
                 <td className="px-3 py-2 text-gray-600">{c.email ?? "-"}</td>
                 <td className="px-3 py-2 text-gray-600">{c.direccion}</td>
+                <td className="px-3 py-2 text-gray-600">{c.familia ?? "-"}</td>
                 <td className="px-3 py-2 text-right text-gray-500">{c._count.ventas}</td>
                 <td className="px-3 py-2 text-right">
                   <div className="flex justify-end gap-2">
