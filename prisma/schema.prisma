@@ -16,7 +16,7 @@ model Usuario {
   activo               Boolean                @default(true)
   rol                  RolUsuario             @default(ADMIN)
   // Secciones que el usuario puede ver (el menú Admin depende solo del rol ADMIN).
-  modulos              ModuloApp[]            @default([DASHBOARD, VENTAS, CLIENTES, PROVEEDORES, INVENTARIO, CONSIGNACIONES, GASTOS, REPORTES, ESTADISTICAS, TABLERO_CONTROL, LOGISTICA, MARKETING, REMINDERS])
+  modulos              ModuloApp[]            @default([DASHBOARD, VENTAS, CLIENTES, PROVEEDORES, INVENTARIO, CONSIGNACIONES, GASTOS, REPORTES, ESTADISTICAS, TABLERO_CONTROL, LOGISTICA, MARKETING, REMINDERS, MAYORISTA])
   createdAt            DateTime               @default(now())
   proveedorRestrictoId Int?
   comprasPagadas       Compra[]               @relation("CompraPagadaPor")
@@ -585,6 +585,7 @@ enum ModuloApp {
   LOGISTICA
   MARKETING
   REMINDERS
+  MAYORISTA
 }
 
 enum Presentacion {
