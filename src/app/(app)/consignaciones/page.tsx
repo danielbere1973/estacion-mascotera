@@ -38,9 +38,11 @@ export default async function ConsignacionesPage() {
             <Link href="/consignaciones/socios" className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
               Socios
             </Link>
-            <Link href="/consignaciones/nueva" className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 md:px-4">
-              + Nueva<span className="hidden md:inline"> consignación</span>
-            </Link>
+            {!sinEdicion && (
+              <Link href="/consignaciones/nueva" className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 md:px-4">
+                + Nueva<span className="hidden md:inline"> consignación</span>
+              </Link>
+            )}
           </div>
         )}
       </div>

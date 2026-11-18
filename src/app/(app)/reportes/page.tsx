@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { requireAdmin } from "@/lib/permissions";
+import { requireAuth } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { calcularRango, formatARS } from "@/lib/reporte-utils";
 import { PeriodoSelector } from "./periodo-selector";
@@ -28,7 +28,7 @@ export default async function ReportesPage({
 }: {
   searchParams: Promise<{ periodo?: string; desde?: string; hasta?: string; tipo?: string; producto?: string }>;
 }) {
-  await requireAdmin();
+  await requireAuth(); // La sección la controla el layout; Solo lectura también puede ver.
   const sp = await searchParams;
   const tipo = sp.tipo ?? "ventas-resumen";
   const { fechaDesde, fechaHasta, label } = calcularRango(sp.periodo, sp.desde, sp.hasta);

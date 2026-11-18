@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
+import { perfilAcceso } from "@/lib/permissions";
 
 export default async function CombosPage() {
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin Nuevo ni Editar.
   const combos = await prisma.producto.findMany({
     where: { esCombo: true },
     orderBy: { nombre: "asc" },
@@ -16,12 +18,14 @@ export default async function CombosPage() {
           <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
           <h1 className="text-xl font-semibold text-gray-900 mt-1">Combos</h1>
         </div>
-        <Link
-          href="/inventario/combos/nuevo"
-          className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          + Nuevo combo
-        </Link>
+        {!soloLectura && (
+          <Link
+            href="/inventario/combos/nuevo"
+            className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            + Nuevo combo
+          </Link>
+        )}
       </div>
 
       <ul className="space-y-2">
@@ -49,14 +53,14 @@ export default async function CombosPage() {
                   )}
                 </div>
               </div>
-              <div className="mt-2 flex justify-end gap-2 border-t border-gray-100 pt-2">
+              {!soloLectura && <div className="mt-2 flex justify-end gap-2 border-t border-gray-100 pt-2">
                 <Link
                   href={`/inventario/combos/${combo.id}/editar`}
                   className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
                 >
                   Editar
                 </Link>
-              </div>
+              </div>}
             </li>
           );
         })}

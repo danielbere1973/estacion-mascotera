@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { perfilAcceso } from "@/lib/permissions";
 import { ResolverBtn } from "./resolver-btn";
 
 export default async function PendientesHymPage() {
-  await requireAdmin();
+  const { soloLectura } = await perfilAcceso(); // Solo lectura puede ver, sin botones de edición.
 
   const pendientes = await prisma.pendienteCompraMayorista.findMany({
     where: { estado: { in: ["PENDIENTE", "EN_PROCESO"] } },
@@ -52,7 +52,7 @@ export default async function PendientesHymPage() {
                 {p.estado === "EN_PROCESO" ? "En proceso" : "Pendiente"}
               </p>
               <div className="mt-2 border-t border-gray-100 pt-2">
-                <ResolverBtn pendienteId={p.id} />
+                {!soloLectura && <ResolverBtn pendienteId={p.id} />}
               </div>
             </li>
           ))}
@@ -83,7 +83,7 @@ export default async function PendientesHymPage() {
                     {p.estado === "EN_PROCESO" ? "En proceso" : "Pendiente"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <ResolverBtn pendienteId={p.id} />
+                    {!soloLectura && <ResolverBtn pendienteId={p.id} />}
                   </td>
                 </tr>
               ))}

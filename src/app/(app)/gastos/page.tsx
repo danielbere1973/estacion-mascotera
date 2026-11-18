@@ -4,6 +4,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { CATEGORIAS_GASTO_SUGERIDAS } from "@/lib/metrics";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { crearGasto, eliminarGasto } from "./actions";
+import { perfilAcceso } from "@/lib/permissions";
 
 const TIPOS_GASTO: Record<string, { label: string; cls: string }> = {
   FIJO:        { label: "Fijo",        cls: "bg-gray-100 text-gray-600" },
@@ -41,6 +42,7 @@ function AccionesGasto({ id }: { id: number }) {
 }
 
 export default async function GastosPage() {
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin alta, Editar ni Eliminar.
   const [gastos, usuariosActivos] = await Promise.all([
     prisma.gasto.findMany({
       orderBy: { fechaGasto: "desc" },
@@ -60,6 +62,7 @@ export default async function GastosPage() {
     <div className="w-full space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Gastos</h1>
 
+      {!soloLectura && (
       <form
         action={crearGasto}
         className="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -151,6 +154,7 @@ export default async function GastosPage() {
           </button>
         </div>
       </form>
+      )}
 
       {/* Mobile: tarjetas */}
       <ul className="space-y-2 md:hidden">
@@ -174,7 +178,7 @@ export default async function GastosPage() {
                 Pagó: {g.pagadoPor?.nombre ?? "-"} · Cargó: {g.usuario?.nombre ?? "-"}
               </p>
               <div className="shrink-0">
-                <AccionesGasto id={g.id} />
+                {!soloLectura && <AccionesGasto id={g.id} />}
               </div>
             </div>
           </li>
@@ -219,7 +223,7 @@ export default async function GastosPage() {
                   {g.pagadoPor?.nombre ?? "-"}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-right">
-                  <AccionesGasto id={g.id} />
+                  {!soloLectura && <AccionesGasto id={g.id} />}
                 </td>
               </tr>
             ))}

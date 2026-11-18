@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, useTransition } from "react";
 import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
 import { formatDate } from "@/lib/format";
 import { DIAS_ENTRE_REMINDERS } from "@/lib/reminders-reglas";
@@ -48,6 +48,9 @@ const METODO_RECOMPRA: Record<MetodoRecompra, { label: string; ayuda: string }> 
 };
 
 const DIA_MS = 24 * 60 * 60 * 1000;
+
+// Solo lectura: los campos y botones de cada fila quedan deshabilitados.
+export const SoloLecturaReminders = createContext(false);
 
 function aFecha(dia: string) {
   return new Date(`${dia}T12:00:00Z`);
@@ -105,6 +108,7 @@ function TextoEditable({
   onGuardar: (valor: string) => void;
   className?: string;
 }) {
+  const soloLectura = useContext(SoloLecturaReminders);
   const [valor, setValor] = useState(guardado);
   // Si el valor cambia desde el server, sincronizar el input.
   const [valorServer, setValorServer] = useState(guardado);
@@ -114,6 +118,7 @@ function TextoEditable({
   }
   return (
     <input
+      disabled={soloLectura}
       type="text"
       value={valor}
       onChange={(e) => setValor(e.target.value)}
@@ -152,6 +157,7 @@ function Fila({
   mostrarStatus: boolean;
   vista?: "tabla" | "tarjeta";
 }) {
+  const soloLectura = useContext(SoloLecturaReminders);
   const [dias, setDias] = useState(fila.setupReminderDias.toString());
   const [status, setStatus] = useState(fila.statusCliente);
   // Si el status cambia desde el server (p. ej. el switch "Todo Activo/Pausado"), sincronizar el select.
@@ -200,6 +206,7 @@ function Fila({
   const celdaTipo =
     esMascota && tipo ? (
       <select
+        disabled={soloLectura}
         value={tipo}
         onChange={(e) => {
           setTipo(e.target.value as TipoMascota);
@@ -215,6 +222,7 @@ function Fila({
       </select>
     ) : (
       <select
+        disabled={soloLectura}
         value={borrador.tipo}
         onChange={(e) => editarBorrador({ tipo: e.target.value as TipoMascota | "" })}
         title={ayudaBorrador}
@@ -283,6 +291,7 @@ function Fila({
 
   const inputSetup = (
     <input
+      disabled={soloLectura}
       type="number"
       min={1}
       required
@@ -318,6 +327,7 @@ function Fila({
 
   const selectStatus = mostrarStatus && (
     <select
+      disabled={soloLectura}
       value={status}
       onChange={(e) => {
         setStatus(e.target.value as StatusReminder);
@@ -396,6 +406,7 @@ function Fila({
 
 // Force Mail: envía el reminder al cliente ignorando todas las reglas (previa confirmación).
 function ForceMail({ fila }: { fila: FilaReminder }) {
+  const soloLectura = useContext(SoloLecturaReminders);
   const [pending, startTransition] = useTransition();
   const enviar = () => {
     if (!window.confirm(`¿Enviar el mail de reminder a ${fila.cliente} ahora, sin aplicar ninguna regla?`)) return;
@@ -408,7 +419,7 @@ function ForceMail({ fila }: { fila: FilaReminder }) {
     <button
       type="button"
       onClick={enviar}
-      disabled={pending || !fila.tieneEmail}
+      disabled={soloLectura || pending || !fila.tieneEmail}
       title={fila.tieneEmail ? "Enviar reminder ahora (Force Mail)" : "El cliente no tiene email"}
       aria-label="Force Mail"
       className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-600 text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"

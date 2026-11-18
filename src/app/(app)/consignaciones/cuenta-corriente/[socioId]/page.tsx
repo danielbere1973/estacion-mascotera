@@ -2,12 +2,14 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { generarLiquidacion } from "../../actions";
+import { perfilAcceso } from "@/lib/permissions";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
 export default async function CuentaCorrientePage({ params }: { params: Promise<{ socioId: string }> }) {
   const { socioId } = await params;
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin generar liquidación ni nueva consignación.
   const socio = await prisma.socioConsignacion.findUnique({
     where: { id: Number(socioId) },
     include: {
@@ -111,7 +113,7 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
       )}
 
       {/* Generar liquidación */}
-      {ventasPendientes.length > 0 && (
+      {!soloLectura && ventasPendientes.length > 0 && (
         <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
           <h2 className="text-sm font-semibold text-blue-900 mb-3">Generar liquidación</h2>
           <form action={generarLiquidacion} className="grid grid-cols-2 gap-3 md:flex md:items-end md:flex-wrap">
@@ -143,8 +145,10 @@ export default async function CuentaCorrientePage({ params }: { params: Promise<
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <h2 className="text-sm font-semibold text-gray-700">Consignaciones</h2>
-          <Link href="/consignaciones/nueva"
-            className="text-xs text-blue-600 hover:underline">+ Nueva</Link>
+          {!soloLectura && (
+            <Link href="/consignaciones/nueva"
+              className="text-xs text-blue-600 hover:underline">+ Nueva</Link>
+          )}
         </div>
         <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
           {socio.consignaciones.map((c) => {

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { requireAuth } from "@/lib/permissions";
 import { marcarEnviado } from "../actions";
 
 type Filtro = "todos" | "vencidos" | "proximos7" | "proximos30";
@@ -19,7 +19,7 @@ export default async function ReposicionPage({
 }: {
   searchParams: Promise<{ filtro?: string }>;
 }) {
-  await requireAdmin();
+  await requireAuth(); // La sección la controla el layout; Solo lectura también puede ver.
 
   const { filtro: filtroParam } = await searchParams;
   const filtro: Filtro = (["todos", "vencidos", "proximos7", "proximos30"].includes(filtroParam ?? "") ? filtroParam : "proximos7") as Filtro;

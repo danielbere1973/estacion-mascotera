@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { perfilAcceso } from "@/lib/permissions";
 import type { Prisma } from "@prisma/client";
 import { FiltroFechas } from "./filtro-fechas";
 
@@ -20,7 +20,7 @@ export default async function EventLogPage({
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
-  await requireAdmin();
+  const { soloLectura } = await perfilAcceso(); // Solo lectura puede ver, sin botones de edición.
 
   // Rango de días en hora Argentina (UTC-3), ambos extremos incluidos.
   const params = await searchParams;
@@ -61,7 +61,7 @@ export default async function EventLogPage({
           )}
         </p>
       </div>
-      <FiltroFechas desde={desde} hasta={hasta} />
+      <FiltroFechas desde={desde} hasta={hasta} soloLectura={soloLectura} />
       {/* Mobile: tarjetas */}
       <ul className="space-y-2 md:hidden">
         {eventos.map((e) => (

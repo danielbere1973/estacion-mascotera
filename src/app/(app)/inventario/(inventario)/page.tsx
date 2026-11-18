@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/format";
 import { ImportarExcel } from "./importar-excel";
 import { ImportarPlegable } from "./importar-plegable";
 import { ProductoCard, ProductoRow, type ProductoListado } from "./producto-row";
+import { perfilAcceso } from "@/lib/permissions";
 
 const STOCK_BAJO_UMBRAL = 5;
 
@@ -14,6 +15,7 @@ export default async function InventarioPage({
   searchParams: Promise<{ q?: string; proveedor?: string; stockDistintoCero?: string }>;
 }) {
   const { q, proveedor: proveedorFiltro, stockDistintoCero } = await searchParams;
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin altas, importación ni Editar.
   const filtroStockDistintoCero = stockDistintoCero === "1";
 
   const [productos, proveedores] = await Promise.all([
@@ -113,6 +115,7 @@ export default async function InventarioPage({
           >
             Combos
           </Link>
+          {!soloLectura && (<>
           <Link
             href="/inventario/productos/nuevo"
             className="order-first rounded-md bg-green-600 px-2 py-2 text-center text-sm font-semibold text-white hover:bg-green-700 sm:order-none sm:px-4"
@@ -125,6 +128,7 @@ export default async function InventarioPage({
           >
             + Registrar compra
           </Link>
+          </>)}
         </div>
       </div>
 
@@ -136,9 +140,11 @@ export default async function InventarioPage({
         <p className="mt-1 text-xs text-gray-400">Suma de precio de venta × stock actual de cada producto</p>
       </div>
 
-      <ImportarPlegable titulo="Importar lista de precios del mayorista (.xlsx / .csv)">
-        <ImportarExcel proveedores={proveedores} />
-      </ImportarPlegable>
+      {!soloLectura && (
+        <ImportarPlegable titulo="Importar lista de precios del mayorista (.xlsx / .csv)">
+          <ImportarExcel proveedores={proveedores} />
+        </ImportarPlegable>
+      )}
 
       {/* Buscador y filtro por proveedor */}
       <form method="GET" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
@@ -177,7 +183,7 @@ export default async function InventarioPage({
       {/* Mobile: tarjetas */}
       <ul className="space-y-2 md:hidden">
         {listado.map((p) => (
-          <ProductoCard key={p.id} p={p} />
+          <ProductoCard key={p.id} p={p} soloLectura={soloLectura} />
         ))}
         {listado.length === 0 && (
           <li className="py-6 text-center text-sm text-gray-400">No hay productos que coincidan con la búsqueda.</li>
@@ -201,7 +207,7 @@ export default async function InventarioPage({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {listado.map((p) => (
-              <ProductoRow key={p.id} p={p} />
+              <ProductoRow key={p.id} p={p} soloLectura={soloLectura} />
             ))}
             {productos.length === 0 && (
               <tr>

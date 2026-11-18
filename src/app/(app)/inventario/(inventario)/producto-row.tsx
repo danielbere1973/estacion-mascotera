@@ -31,14 +31,25 @@ function costoDe(h: HistorialItem) {
 }
 
 // Mobile: tarjeta que abre la edición del producto.
-export function ProductoCard({ p }: { p: ProductoListado }) {
+// Solo lectura: la tarjeta no lleva a Editar.
+function TarjetaLink({ href, className, children }: { href: string | null; className: string; children: React.ReactNode }) {
+  return href ? (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  ) : (
+    <div className={className}>{children}</div>
+  );
+}
+
+export function ProductoCard({ p, soloLectura = false }: { p: ProductoListado; soloLectura?: boolean }) {
   const bajoStock = p.stockActual <= STOCK_BAJO_UMBRAL && p.stockActual > 0;
   const sinStock = p.stockActual === 0;
 
   return (
     <li>
-      <Link
-        href={`/inventario/productos/${p.id}/editar`}
+      <TarjetaLink
+        href={soloLectura ? null : `/inventario/productos/${p.id}/editar`}
         className={`block rounded-xl border p-3 ${
           bajoStock ? "border-red-200 bg-red-50" : sinStock ? "border-gray-200 bg-gray-50 opacity-60" : "border-gray-200 bg-white"
         }`}
@@ -71,12 +82,12 @@ export function ProductoCard({ p }: { p: ProductoListado }) {
             ))}
           </ul>
         )}
-      </Link>
+      </TarjetaLink>
     </li>
   );
 }
 
-export function ProductoRow({ p }: { p: ProductoListado }) {
+export function ProductoRow({ p, soloLectura = false }: { p: ProductoListado; soloLectura?: boolean }) {
   const [expandido, setExpandido] = useState(false);
   const multiProveedor = p.historialStock.length > 1;
   const bajoStock = p.stockActual <= STOCK_BAJO_UMBRAL && p.stockActual > 0;
@@ -151,12 +162,14 @@ export function ProductoRow({ p }: { p: ProductoListado }) {
         {formatCurrency(p.precioVenta.toString())}
       </td>
       <td className="whitespace-nowrap px-3 py-2 text-right">
-        <Link
-          href={`/inventario/productos/${p.id}/editar`}
-          className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-        >
-          Editar
-        </Link>
+        {!soloLectura && (
+          <Link
+            href={`/inventario/productos/${p.id}/editar`}
+            className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+          >
+            Editar
+          </Link>
+        )}
       </td>
     </tr>
   );

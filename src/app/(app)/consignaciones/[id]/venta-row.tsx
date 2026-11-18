@@ -18,9 +18,11 @@ interface Props {
     numeroFactura: string | null;
     maxCantidad: number;
   };
+  // Solo lectura: muestra la venta sin Editar ni Eliminar.
+  soloLectura?: boolean;
 }
 
-export function VentaRow({ venta }: Props) {
+export function VentaRow({ venta, soloLectura = false }: Props) {
   const [editando, setEditando] = useState(false);
   const montoLiq = venta.precioCosto + (venta.precioVentaReal - venta.precioCosto) / 3;
 
@@ -72,18 +74,22 @@ export function VentaRow({ venta }: Props) {
     <div className="flex flex-col gap-0.5 py-1 text-xs text-gray-600 group md:flex-row md:items-center md:justify-between md:py-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span>{new Date(venta.fecha).toLocaleDateString("es-AR")} · {venta.cantidad} u. a {fmt(venta.precioVentaReal)}</span>
-        <button onClick={() => setEditando(true)}
-          className="text-blue-500 hover:text-blue-700 underline">
-          Editar
-        </button>
-        <form action={eliminarVentaConsignacion}
-          onSubmit={(e) => { if (!confirm("¿Eliminar esta venta?")) e.preventDefault(); }}
-          className="inline">
-          <input type="hidden" name="id" value={venta.id} />
-          <button type="submit" className="text-red-400 hover:text-red-600 underline">
-            Eliminar
-          </button>
-        </form>
+        {!soloLectura && (
+          <>
+            <button onClick={() => setEditando(true)}
+              className="text-blue-500 hover:text-blue-700 underline">
+              Editar
+            </button>
+            <form action={eliminarVentaConsignacion}
+              onSubmit={(e) => { if (!confirm("¿Eliminar esta venta?")) e.preventDefault(); }}
+              className="inline">
+              <input type="hidden" name="id" value={venta.id} />
+              <button type="submit" className="text-red-400 hover:text-red-600 underline">
+                Eliminar
+              </button>
+            </form>
+          </>
+        )}
       </div>
       <span className="text-gray-400">
         A liquidar: {fmt(montoLiq * venta.cantidad)} · {venta.liquidacionId ? "Liquidado" : "Pendiente"}

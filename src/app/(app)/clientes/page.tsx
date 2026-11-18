@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { perfilAcceso } from "@/lib/permissions";
 import { ClientesLista } from "./clientes-lista";
 
 export default async function ClientesPage() {
-  await requireAdmin();
+  const { soloLectura } = await perfilAcceso(); // Solo lectura puede ver, sin botones de edición.
 
   const clientes = await prisma.cliente.findMany({
     orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
@@ -12,7 +12,7 @@ export default async function ClientesPage() {
 
   return (
     <div className="w-full space-y-4">
-      <ClientesLista clientes={clientes} />
+      <ClientesLista clientes={clientes} soloLectura={soloLectura} />
     </div>
   );
 }

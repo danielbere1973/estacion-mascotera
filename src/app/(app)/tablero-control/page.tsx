@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { KanbanBoard } from "./kanban-board";
+import { perfilAcceso } from "@/lib/permissions";
 import { COLUMNAS_INICIALES, PALETA_COLORES } from "./columnas";
 
 function esViolacionDeUnicidad(error: unknown) {
@@ -28,6 +29,7 @@ async function getOCrearColumnas() {
 }
 
 export default async function TableroControlPage() {
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: ve el tablero sin modificarlo.
   const [columnas, tarjetas, usuarios, ventas, clientes] = await Promise.all([
     getOCrearColumnas(),
     prisma.tarjetaTablero.findMany({
@@ -76,6 +78,7 @@ export default async function TableroControlPage() {
       usuarios={usuarios}
       ventas={ventasOpciones}
       clientes={clientes}
+      soloLectura={soloLectura}
     />
   );
 }
