@@ -16,6 +16,7 @@ export const MODULOS: { modulo: ModuloApp; href: string; label: string; icon: st
   { modulo: "LOGISTICA", href: "/logistica", label: "Logística", icon: "🚚" },
   { modulo: "MARKETING", href: "/marketing", label: "Marketing: Campañas de mail", icon: "✉️" },
   { modulo: "REMINDERS", href: "/marketing/reminders", label: "Marketing: Reminders", icon: "⏰" },
+  { modulo: "MAYORISTA", href: "/inventario/mayoristas-tipo", label: "Mayorista", icon: "🏪" },
 ];
 
 export const TODOS_LOS_MODULOS: ModuloApp[] = MODULOS.map((m) => m.modulo);

@@ -10,7 +10,7 @@ import { MODULOS } from "@/lib/modulos";
 
 type Link_ = { href: string; label: string; icon: string; exact?: boolean; modulo?: ModuloApp };
 
-const links: Link_[] = MODULOS.filter((m) => m.modulo !== "MARKETING" && m.modulo !== "REMINDERS").map(
+const links: Link_[] = MODULOS.filter((m) => !["MARKETING", "REMINDERS", "MAYORISTA"].includes(m.modulo)).map(
   ({ href, label, icon, modulo }) => ({ href, label, icon, modulo })
 );
 
@@ -20,9 +20,9 @@ const marketingLinks: Link_[] = [
 ];
 
 const mayoristaLinks: Link_[] = [
-  { href: "/inventario/mayoristas-tipo", label: "Tipo mayorista", icon: "🏷️", modulo: "INVENTARIO" },
-  { href: "/inventario/mayoristas-margenes", label: "Márgenes mayoristas", icon: "➗", modulo: "INVENTARIO" },
-  { href: "/inventario/mayoristas-catalogo", label: "Catálogo mayorista", icon: "📖", modulo: "INVENTARIO" },
+  { href: "/inventario/mayoristas-tipo", label: "Tipo mayorista", icon: "🏷️", modulo: "MAYORISTA" },
+  { href: "/inventario/mayoristas-margenes", label: "Márgenes mayoristas", icon: "➗", modulo: "MAYORISTA" },
+  { href: "/inventario/mayoristas-catalogo", label: "Catálogo mayorista", icon: "📖", modulo: "MAYORISTA" },
 ];
 
 const linksRestringido: Link_[] = [
