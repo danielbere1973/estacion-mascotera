@@ -18,6 +18,11 @@ type Cliente = {
 
 type Columna = "nombre" | "familia" | "telefono" | "email" | "direccion" | "ventas";
 
+// Minúsculas y sin acentos, para que "cordoba" encuentre "Córdoba".
+function normalizar(texto: string) {
+  return texto.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+}
+
 // Nombre de la familia a la que pertenece el cliente (la del referente), o null si no tiene.
 function nombreFamilia(c: Cliente, porId: Map<number, Cliente>): string | null {
   const ref = c.familiaId ? porId.get(c.familiaId) : c._count.miembrosFamilia > 0 ? c : undefined;
@@ -43,6 +48,7 @@ function valorOrden(c: Cliente & { familia: string | null }, columna: Columna): 
 
 export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; soloLectura: boolean }) {
   const [busqueda, setBusqueda] = useState("");
+  const [busquedaDireccion, setBusquedaDireccion] = useState("");
 
   const conFamilia = useMemo(() => {
     const porId = new Map(clientes.map((c) => [c.id, c]));
@@ -50,10 +56,16 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
   }, [clientes]);
 
   const filtrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    if (!q) return conFamilia;
-    return conFamilia.filter((c) => `${c.nombre} ${c.apellido} ${c.familia ?? ""}`.toLowerCase().includes(q));
-  }, [conFamilia, busqueda]);
+    const q = normalizar(busqueda.trim());
+    const qDir = normalizar(busquedaDireccion.trim());
+    if (!q && !qDir) return conFamilia;
+    return conFamilia.filter(
+      (c) =>
+        normalizar(`${c.nombre} ${c.apellido} ${c.familia ?? ""}`).includes(q) &&
+        normalizar(c.direccion ?? "").includes(qDir),
+    );
+  }, [conFamilia, busqueda, busquedaDireccion]);
+  const hayBusqueda = Boolean(busqueda.trim() || busquedaDireccion.trim());
   const { ordenadas, orden, ordenar } = useOrden(filtrados, valorOrden);
 
   return (
@@ -74,7 +86,14 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre..."
-            className="w-full rounded-md border border-gray-300 bg-gray-200 px-3 py-2 text-sm md:w-auto md:bg-white"
+            className="min-w-0 flex-1 rounded-md border border-gray-300 bg-gray-200 px-3 py-2 text-sm md:w-auto md:flex-none md:bg-white"
+          />
+          <input
+            type="search"
+            value={busquedaDireccion}
+            onChange={(e) => setBusquedaDireccion(e.target.value)}
+            placeholder="Buscar por dirección..."
+            className="min-w-0 flex-1 rounded-md border border-gray-300 bg-gray-200 px-3 py-2 text-sm md:w-auto md:flex-none md:bg-white"
           />
           <div className="hidden items-center gap-2 md:flex">
             {!soloLectura && <AltaClienteModal clientes={clientes} />}
@@ -139,7 +158,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
         ))}
         {filtrados.length === 0 && (
           <li className="py-6 text-center text-sm text-gray-400">
-            {busqueda ? "No se encontraron clientes para esa búsqueda." : "No hay clientes cargados todavía."}
+            {hayBusqueda ? "No se encontraron clientes para esa búsqueda." : "No hay clientes cargados todavía."}
           </li>
         )}
       </ul>
@@ -197,7 +216,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
             {filtrados.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-gray-400">
-                  {busqueda
+                  {hayBusqueda
                     ? "No se encontraron clientes para esa búsqueda."
                     : "No hay clientes cargados todavía."}
                 </td>
