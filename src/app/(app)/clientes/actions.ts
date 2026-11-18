@@ -11,11 +11,11 @@ import { TipoMascota, TamanioMascota } from "@prisma/client";
 async function resolverFamilia(formData: FormData, clienteId?: number): Promise<number | null> {
   const elegido = Number(formData.get("familiaId"));
   if (!elegido) return null;
+  // Elegirse a sí mismo = es el referente de su propia familia.
+  if (elegido === clienteId) return clienteId;
   const c = await prisma.cliente.findUnique({ where: { id: elegido }, select: { id: true, familiaId: true } });
   if (!c) return null;
-  const referente = c.familiaId ?? c.id;
-  // Elegirse a sí mismo (o a su propia familia) = es el referente: no apunta a nadie.
-  return referente === clienteId ? null : referente;
+  return c.familiaId ?? c.id;
 }
 
 export async function crearCliente(formData: FormData) {
