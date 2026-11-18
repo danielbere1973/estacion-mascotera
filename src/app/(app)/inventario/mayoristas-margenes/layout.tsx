@@ -1,7 +1,7 @@
 import { requireModulo } from "@/lib/permissions";
 
-// Solo entra quien tiene la sección Mayorista habilitada en su usuario.
+// Solo entra quien tiene esta sección de Mayorista habilitada en su usuario.
 export default async function Layout({ children }: { children: React.ReactNode }) {
-  await requireModulo("MAYORISTA");
+  await requireModulo("MAYORISTA_MARGENES");
   return children;
 }

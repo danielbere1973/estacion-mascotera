@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { ModuloApp } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizarModulos } from "@/lib/modulos";
 
 // Los módulos se leen de la base y no de la sesión: así, si a un usuario se le
 // quita una sección o se lo desactiva, la pierde al instante sin volver a iniciar sesión.
@@ -14,7 +15,7 @@ const usuarioActual = cache(async () => {
     where: { id: Number(session.user.id) },
     select: { activo: true, modulos: true },
   });
-  return usuario?.activo ? usuario : null;
+  return usuario?.activo ? { ...usuario, modulos: normalizarModulos(usuario.modulos) } : null;
 });
 
 async function exigirModulo(modulo?: ModuloApp) {
