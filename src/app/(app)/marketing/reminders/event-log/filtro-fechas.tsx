@@ -3,7 +3,7 @@
 import { DepurarLogs } from "./depurar-logs";
 
 // Filtro Desde/Hasta del Event log. Al hacer clic en el campo se abre el calendario.
-export function FiltroFechas({ desde, hasta }: { desde: string; hasta: string }) {
+export function FiltroFechas({ desde, hasta, soloLectura = false }: { desde: string; hasta: string; soloLectura?: boolean }) {
   const abrirCalendario = (e: React.MouseEvent<HTMLInputElement>) => {
     try {
       e.currentTarget.showPicker();
@@ -57,7 +57,7 @@ export function FiltroFechas({ desde, hasta }: { desde: string; hasta: string })
         </a>
       </form>
       <div className="sm:ml-auto">
-        <DepurarLogs />
+        {!soloLectura && <DepurarLogs />}
       </div>
     </div>
   );

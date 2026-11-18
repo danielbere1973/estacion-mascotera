@@ -2,8 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { eliminarSocio } from "../actions";
+import { perfilAcceso } from "@/lib/permissions";
 
 export default async function SociosPage() {
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin Nuevo, Editar ni Eliminar.
   const socios = await prisma.socioConsignacion.findMany({
     include: { proveedor: { select: { nombre: true } } },
     orderBy: { nombre: "asc" },
@@ -15,10 +17,12 @@ export default async function SociosPage() {
         <Link href="/consignaciones" className="text-xs text-gray-400 hover:text-gray-600">← Consignaciones</Link>
         <div className="mt-1 flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-gray-900">Socios comerciales</h1>
-          <Link href="/consignaciones/socios/nuevo"
-            className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 md:px-4">
-            + Nuevo<span className="hidden md:inline"> socio</span>
-          </Link>
+          {!soloLectura && (
+            <Link href="/consignaciones/socios/nuevo"
+              className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 md:px-4">
+              + Nuevo<span className="hidden md:inline"> socio</span>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -32,7 +36,7 @@ export default async function SociosPage() {
                 {s.proveedor && <span className="inline-block text-blue-600">Proveedor: {s.proveedor.nombre}</span>}
               </p>
             </div>
-            <div className="flex shrink-0 gap-2">
+            {!soloLectura && (<div className="flex shrink-0 gap-2">
               <Link href={`/consignaciones/socios/${s.id}/editar`}
                 className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50">
                 Editar
@@ -45,7 +49,7 @@ export default async function SociosPage() {
                   Eliminar
                 </ConfirmSubmitButton>
               </form>
-            </div>
+            </div>)}
           </div>
         ))}
         {socios.length === 0 && (

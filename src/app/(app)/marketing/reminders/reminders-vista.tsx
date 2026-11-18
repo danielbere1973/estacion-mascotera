@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
-import { RemindersTabla, type FilaReminder } from "./reminders-tabla";
+import { RemindersTabla, SoloLecturaReminders, type FilaReminder } from "./reminders-tabla";
 
 // Sin mayúsculas ni acentos, para que "ramon" encuentre "Ramón".
 function normalizar(texto: string) {
@@ -15,12 +15,14 @@ export function RemindersVista({
   acciones,
   filas,
   hoy,
+  soloLectura = false,
 }: {
   titulo: ReactNode;
   subtitulo: ReactNode;
   acciones: ReactNode;
   filas: FilaReminder[];
   hoy: string;
+  soloLectura?: boolean;
 }) {
   const [busqueda, setBusqueda] = useState("");
 
@@ -47,11 +49,13 @@ export function RemindersVista({
           </div>
         </div>
       </div>
-      <RemindersTabla
-        filas={filtradas}
-        hoy={hoy}
-        mensajeVacio={filas.length > 0 ? "No hay resultados para la búsqueda." : undefined}
-      />
+      <SoloLecturaReminders.Provider value={soloLectura}>
+        <RemindersTabla
+          filas={filtradas}
+          hoy={hoy}
+          mensajeVacio={filas.length > 0 ? "No hay resultados para la búsqueda." : undefined}
+        />
+      </SoloLecturaReminders.Provider>
     </>
   );
 }

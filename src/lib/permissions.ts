@@ -90,3 +90,8 @@ export async function requireModulo(modulo: ModuloApp) {
 export async function requireSinRestriccion(destino: string) {
   if ((await perfilAcceso()).proveedores) redirect(destino);
 }
+
+// Para layouts de páginas de alta o edición: un usuario Solo lectura vuelve a `destino`.
+export async function requireEdicion(destino: string) {
+  if ((await perfilAcceso()).soloLectura) redirect(destino);
+}

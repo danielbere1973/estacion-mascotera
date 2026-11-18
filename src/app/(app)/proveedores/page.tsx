@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { perfilAcceso } from "@/lib/permissions";
 import { ProveedoresLista } from "./proveedores-lista";
 
 export default async function ProveedoresPage() {
-  await requireAdmin();
+  const { soloLectura } = await perfilAcceso(); // Solo lectura puede ver, sin botones de edición.
 
   const proveedores = await prisma.proveedor.findMany({
     orderBy: { nombre: "asc" },
@@ -23,7 +23,7 @@ export default async function ProveedoresPage() {
 
   return (
     <div className="w-full space-y-4">
-      <ProveedoresLista proveedores={proveedores} />
+      <ProveedoresLista proveedores={proveedores} soloLectura={soloLectura} />
     </div>
   );
 }

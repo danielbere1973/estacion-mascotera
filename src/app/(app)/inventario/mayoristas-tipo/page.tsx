@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { perfilAcceso } from "@/lib/permissions";
 import { TipoProductoMayorista } from "@prisma/client";
 import { TablaMayoristas } from "./tabla-mayoristas";
 
@@ -19,6 +20,7 @@ export default async function MayoristasTipoPage({
 }) {
   const { proveedor: proveedorFiltro, sinAsignar, q, tipoActual } = await searchParams;
   const soloSinAsignar = sinAsignar === "1";
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: ve el tipo sin poder cambiarlo.
 
   const [productos, proveedores] = await Promise.all([
     prisma.producto.findMany({
@@ -98,7 +100,7 @@ export default async function MayoristasTipoPage({
 
       <p className="text-xs text-gray-400">{productos.length} productos en este filtro</p>
 
-      <TablaMayoristas productos={productos} />
+      <TablaMayoristas productos={productos} soloLectura={soloLectura} />
     </div>
   );
 }

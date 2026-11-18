@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { requireAdmin } from "@/lib/permissions";
+import { requireAuth } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { calcularRango } from "@/lib/reporte-utils";
 import { FiltroPeriodo } from "./filtro-periodo";
@@ -17,7 +17,7 @@ export default async function EstadisticasPage({
 }: {
   searchParams: Promise<{ periodo?: string; desde?: string; hasta?: string }>;
 }) {
-  await requireAdmin();
+  await requireAuth(); // La sección la controla el layout; Solo lectura también puede ver.
   const sp = await searchParams;
   const { fechaDesde, fechaHasta, label } = rangoEstadisticas(sp.periodo, sp.desde, sp.hasta);
   const rangoVenta = fechaDesde ? { fechaVenta: { gte: fechaDesde, lte: fechaHasta } } : {};

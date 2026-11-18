@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { perfilAcceso } from "@/lib/permissions";
 import { DesvincularBtn } from "./desvincular-btn";
 
 export default async function VinculacionesPage({
@@ -8,7 +8,7 @@ export default async function VinculacionesPage({
 }: {
   searchParams: Promise<{ proveedor?: string; sin?: string }>;
 }) {
-  await requireAdmin();
+  const { soloLectura } = await perfilAcceso(); // Solo lectura puede ver, sin botones de edición.
   const { proveedor: proveedorFiltro, sin } = await searchParams;
   const soloSinVincular = sin === "1";
 
@@ -100,7 +100,7 @@ export default async function VinculacionesPage({
                 )}
                 {h.producto && (
                   <div className="shrink-0">
-                    <DesvincularBtn historialId={h.id} />
+                    {!soloLectura && <DesvincularBtn historialId={h.id} />}
                   </div>
                 )}
               </div>
@@ -144,7 +144,7 @@ export default async function VinculacionesPage({
                     {h.producto?.skuInterno ?? "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    {h.producto && <DesvincularBtn historialId={h.id} />}
+                    {!soloLectura && h.producto && <DesvincularBtn historialId={h.id} />}
                   </td>
                 </tr>
               ))}

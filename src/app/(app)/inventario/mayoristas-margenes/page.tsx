@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { perfilAcceso } from "@/lib/permissions";
 import { TipoProductoMayorista } from "@prisma/client";
 import { actualizarMargenMayorista } from "./actions";
 
@@ -23,6 +24,7 @@ const DEFAULTS: Record<TipoProductoMayorista, { margenPorcentaje: number; margen
 };
 
 export default async function MayoristasMargenesPage() {
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: ve los márgenes sin poder cambiarlos.
   const existentes = await prisma.margenMayorista.findMany();
   const porTipo = new Map(existentes.map((m) => [m.tipoProducto, m]));
 
@@ -58,6 +60,7 @@ export default async function MayoristasMargenesPage() {
               className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-3"
             >
               <input type="hidden" name="tipoProducto" value={tipo} />
+              <fieldset disabled={soloLectura} className="contents">
               <div className="min-w-[140px]">
                 <span className="text-sm font-medium text-gray-800">{LABELS[tipo]}</span>
               </div>
@@ -102,9 +105,12 @@ export default async function MayoristasMargenesPage() {
                 </>
               )}
 
-              <button type="submit" className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
-                Guardar
-              </button>
+              {!soloLectura && (
+                <button type="submit" className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                  Guardar
+                </button>
+              )}
+              </fieldset>
             </form>
           );
         })}

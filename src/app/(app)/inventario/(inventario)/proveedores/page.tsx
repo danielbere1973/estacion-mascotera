@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { crearProveedor, eliminarProveedor } from "./actions";
+import { perfilAcceso } from "@/lib/permissions";
 
 export default async function ProveedoresPage() {
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin alta, Editar ni Eliminar.
   const proveedores = await prisma.proveedor.findMany({
     orderBy: { nombre: "asc" },
     include: {
@@ -38,6 +40,7 @@ export default async function ProveedoresPage() {
       </div>
 
       {/* Formulario nuevo proveedor */}
+      {!soloLectura && (
       <form action={crearProveedor} className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
         <p className="text-sm font-medium text-gray-700">Nuevo proveedor</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -55,6 +58,7 @@ export default async function ProveedoresPage() {
           + Agregar
         </button>
       </form>
+      )}
 
       {/* Lista de proveedores — mobile: tarjetas */}
       <ul className="space-y-2 md:hidden">
@@ -81,7 +85,7 @@ export default async function ProveedoresPage() {
                 {prov.accountManager && <p>Account Manager: {prov.accountManager}</p>}
                 {prov.horarios && <p>Horarios: {prov.horarios}</p>}
               </div>
-              <div className="mt-2 flex justify-end gap-4 border-t border-gray-100 pt-2">
+              {!soloLectura && <div className="mt-2 flex justify-end gap-4 border-t border-gray-100 pt-2">
                 <Link href={`/inventario/proveedores/${prov.id}/editar`} className="text-xs text-blue-600">
                   Editar
                 </Link>
@@ -94,7 +98,7 @@ export default async function ProveedoresPage() {
                     Eliminar
                   </ConfirmSubmitButton>
                 </form>
-              </div>
+              </div>}
             </li>
           );
         })}
@@ -138,7 +142,7 @@ export default async function ProveedoresPage() {
                       : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
+                    {!soloLectura && <div className="flex justify-end gap-2">
                       <Link href={`/inventario/proveedores/${prov.id}/editar`} className="text-xs text-blue-600 hover:underline">
                         Editar
                       </Link>
@@ -151,7 +155,7 @@ export default async function ProveedoresPage() {
                           Eliminar
                         </ConfirmSubmitButton>
                       </form>
-                    </div>
+                    </div>}
                   </td>
                 </tr>
               );

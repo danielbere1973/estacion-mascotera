@@ -60,12 +60,15 @@ export function KanbanBoard({
   usuarios,
   ventas,
   clientes,
+  soloLectura = false,
 }: {
   columnas: Columna[];
   tarjetas: Tarjeta[];
   usuarios: Usuario[];
   ventas: VentaOpcion[];
   clientes: ClienteOpcion[];
+  // Solo lectura: ve el tablero sin crear, editar, borrar ni arrastrar.
+  soloLectura?: boolean;
 }) {
   const [dragItem, setDragItem] = useState<DragItem>(null);
   const [dragOverColId, setDragOverColId] = useState<number | null>(null);
@@ -196,6 +199,7 @@ export function KanbanBoard({
               className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
+          {!soloLectura && (<>
           <button
             onClick={() => setFormTarjetaAbierto(true)}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
@@ -215,6 +219,7 @@ export function KanbanBoard({
           >
             {corteEnCurso ? "Iniciando..." : "Forzar corte compra HYM"}
           </button>
+          </>)}
         </div>
       </div>
 
@@ -335,15 +340,15 @@ export function KanbanBoard({
               } ${isDraggingThisCol ? "opacity-50" : ""}`}
             >
               <div
-                draggable={columnaEditandoId !== col.id}
+                draggable={!soloLectura && columnaEditandoId !== col.id}
                 onDragStart={(e) => {
                   e.stopPropagation();
                   setDragItem({ type: "column", id: col.id });
                 }}
                 onDragEnd={() => setDragItem(null)}
                 style={{ backgroundColor: col.color }}
-                title={columnaSaturada ? "10 o más tarjetas en esta columna" : "Arrastrá para reordenar la columna"}
-                className={`flex cursor-grab items-center justify-between gap-1 rounded-t-xl px-3 py-2 active:cursor-grabbing ${
+                title={columnaSaturada ? "10 o más tarjetas en esta columna" : soloLectura ? undefined : "Arrastrá para reordenar la columna"}
+                className={`flex items-center justify-between gap-1 rounded-t-xl px-3 py-2 ${soloLectura ? "" : "cursor-grab active:cursor-grabbing"} ${
                   columnaSaturada ? "animate-pulse" : ""
                 }`}
               >
@@ -368,6 +373,7 @@ export function KanbanBoard({
                   <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-medium text-white">
                     {tarjetasCol.length}
                   </span>
+                  {!soloLectura && (<>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -390,6 +396,7 @@ export function KanbanBoard({
                   >
                     ✏️
                   </button>
+                  </>)}
                 </div>
               </div>
 
@@ -397,11 +404,11 @@ export function KanbanBoard({
                 {tarjetasCol.map((t) => (
                   <div
                     key={t.id}
-                    draggable
+                    draggable={!soloLectura}
                     onDragStart={() => setDragItem({ type: "card", id: t.id })}
                     onDragEnd={() => setDragItem(null)}
-                    onClick={() => setTarjetaEditando(t)}
-                    className={`group relative cursor-pointer rounded-lg border border-gray-200 bg-white p-3 pr-7 text-sm shadow-sm hover:border-blue-300 ${
+                    onClick={() => !soloLectura && setTarjetaEditando(t)}
+                    className={`group relative ${soloLectura ? "" : "cursor-pointer hover:border-blue-300"} rounded-lg border border-gray-200 bg-white p-3 pr-7 text-sm shadow-sm ${
                       dragItem?.type === "card" && dragItem.id === t.id ? "opacity-50" : ""
                     }`}
                   >
@@ -414,7 +421,7 @@ export function KanbanBoard({
                     </span>
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium text-gray-900">{t.titulo}</p>
-                      <form
+                      {!soloLectura && <form
                         action={eliminarTarjeta}
                         onClick={(e) => e.stopPropagation()}
                         onSubmit={(e) => {
@@ -429,7 +436,7 @@ export function KanbanBoard({
                         >
                           ✕
                         </button>
-                      </form>
+                      </form>}
                     </div>
                     {t.cliente && (
                       <p className="mt-1 text-xs text-gray-500">

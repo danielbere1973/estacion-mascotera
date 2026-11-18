@@ -36,7 +36,7 @@ function valorOrden(p: Proveedor, columna: Columna): ValorOrden {
 const linkWaze = (direccion: string) =>
   `https://waze.com/ul?q=${encodeURIComponent(direccion)}&navigate=yes`;
 
-export function ProveedoresLista({ proveedores }: { proveedores: Proveedor[] }) {
+export function ProveedoresLista({ proveedores, soloLectura }: { proveedores: Proveedor[]; soloLectura: boolean }) {
   const [busqueda, setBusqueda] = useState("");
 
   const filtrados = useMemo(() => {
@@ -113,12 +113,14 @@ export function ProveedoresLista({ proveedores }: { proveedores: Proveedor[] }) 
               >
                 Productos
               </Link>
-              <Link
-                href={`/inventario/proveedores/${p.id}/editar?volver=/proveedores`}
-                className="flex-1 rounded-md bg-blue-50 py-2 text-center text-sm font-medium text-blue-600"
-              >
-                Editar
-              </Link>
+              {!soloLectura && (
+                <Link
+                  href={`/inventario/proveedores/${p.id}/editar?volver=/proveedores`}
+                  className="flex-1 rounded-md bg-blue-50 py-2 text-center text-sm font-medium text-blue-600"
+                >
+                  Editar
+                </Link>
+              )}
             </div>
           </li>
         ))}
@@ -182,12 +184,14 @@ export function ProveedoresLista({ proveedores }: { proveedores: Proveedor[] }) 
                     >
                       Productos
                     </Link>
-                    <Link
-                      href={`/inventario/proveedores/${p.id}/editar?volver=/proveedores`}
-                      className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                    >
-                      Editar
-                    </Link>
+                    {!soloLectura && (
+                      <Link
+                        href={`/inventario/proveedores/${p.id}/editar?volver=/proveedores`}
+                        className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                      >
+                        Editar
+                      </Link>
+                    )}
                   </div>
                 </td>
               </tr>

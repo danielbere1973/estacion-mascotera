@@ -292,7 +292,7 @@ export default async function DetallePage({ params }: { params: Promise<{ id: st
                         facturado: v.facturado,
                         numeroFactura: v.numeroFactura,
                         maxCantidad: item.cantidad,
-                      }} />
+                      }} soloLectura={sinEdicion} />
                     )
                   )}
                 </div>

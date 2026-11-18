@@ -1,6 +1,6 @@
 import type { StatusReminder } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { perfilAcceso } from "@/lib/permissions";
 import type { FilaReminder } from "./reminders-tabla";
 import { RemindersVista } from "./reminders-vista";
 import { SwitchStatusTodos } from "./switch-status-todos";
@@ -14,7 +14,7 @@ import { crearEstimadorRecompra, type MascotaRecompra } from "@/lib/recompra";
 const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
 
 export default async function RemindersPage() {
-  await requireAdmin();
+  const { soloLectura } = await perfilAcceso(); // Solo lectura puede ver, sin botones de edición.
 
   // Una fila por mascota, más una por cada cliente sin mascotas cargadas.
   // "Última compra" es la venta más reciente del cliente.
@@ -185,7 +185,7 @@ export default async function RemindersPage() {
         titulo={
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <h1 className="text-xl font-semibold text-gray-900">Marketing — Reminders</h1>
-            <SwitchEnvioAutomatico activo={config?.envioAutomatico ?? true} />
+            {!soloLectura && <SwitchEnvioAutomatico activo={config?.envioAutomatico ?? true} />}
           </div>
         }
         subtitulo={
@@ -196,7 +196,7 @@ export default async function RemindersPage() {
         }
         acciones={
           <>
-            <EnviarReminders cantidad={paraReminder.elegibles.length} sinEmail={paraReminder.sinEmail.length} />
+            {!soloLectura && <EnviarReminders cantidad={paraReminder.elegibles.length} sinEmail={paraReminder.sinEmail.length} />}
             <a
               href="/marketing/reminders/event-log"
               target="_blank"
@@ -205,11 +205,12 @@ export default async function RemindersPage() {
             >
               Event log
             </a>
-            <SwitchStatusTodos ultimoClic={ultimoClic} />
+            {!soloLectura && <SwitchStatusTodos ultimoClic={ultimoClic} />}
           </>
         }
         filas={filas}
         hoy={diaArgentina.format(new Date())}
+        soloLectura={soloLectura}
       />
     </div>
   );

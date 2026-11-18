@@ -32,7 +32,7 @@ function valorOrden(c: Cliente, columna: Columna): ValorOrden {
   }
 }
 
-export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
+export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; soloLectura: boolean }) {
   const [busqueda, setBusqueda] = useState("");
 
   const filtrados = useMemo(() => {
@@ -49,7 +49,7 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
         <div className="flex items-center justify-between gap-2">
           <h1 className="whitespace-nowrap text-xl font-semibold text-gray-900">Clientes: {clientes.length}</h1>
           <div className="flex items-center gap-2 md:hidden">
-            <AltaClienteModal />
+            {!soloLectura && <AltaClienteModal />}
             <LinkReposiciones />
           </div>
         </div>
@@ -63,7 +63,7 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
             className="w-full rounded-md border border-gray-300 bg-gray-200 px-3 py-2 text-sm md:w-auto md:bg-white"
           />
           <div className="hidden items-center gap-2 md:flex">
-            <AltaClienteModal />
+            {!soloLectura && <AltaClienteModal />}
             <LinkReposiciones />
           </div>
         </div>
@@ -111,12 +111,14 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
               >
                 Historial
               </Link>
-              <Link
-                href={`/clientes/${c.id}/editar`}
-                className="flex-1 rounded-md bg-blue-50 py-2 text-center text-sm font-medium text-blue-600"
-              >
-                Editar
-              </Link>
+              {!soloLectura && (
+                <Link
+                  href={`/clientes/${c.id}/editar`}
+                  className="flex-1 rounded-md bg-blue-50 py-2 text-center text-sm font-medium text-blue-600"
+                >
+                  Editar
+                </Link>
+              )}
             </div>
           </li>
         ))}
@@ -163,12 +165,14 @@ export function ClientesLista({ clientes }: { clientes: Cliente[] }) {
                     >
                       Historial
                     </Link>
-                    <Link
-                      href={`/clientes/${c.id}/editar`}
-                      className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                    >
-                      Editar
-                    </Link>
+                    {!soloLectura && (
+                      <Link
+                        href={`/clientes/${c.id}/editar`}
+                        className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                      >
+                        Editar
+                      </Link>
+                    )}
                   </div>
                 </td>
               </tr>

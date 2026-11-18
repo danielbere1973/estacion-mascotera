@@ -24,7 +24,8 @@ const OPCIONES_MASIVO = [
   { value: "", label: "— Quitar asignación —" },
 ];
 
-export function TablaMayoristas({ productos }: { productos: Producto[] }) {
+// Solo lectura: sin selección masiva y el tipo se muestra como texto.
+export function TablaMayoristas({ productos, soloLectura = false }: { productos: Producto[]; soloLectura?: boolean }) {
   const router = useRouter();
   const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
   const [tipoMasivo, setTipoMasivo] = useState("ALIMENTO_SECO");
@@ -59,7 +60,7 @@ export function TablaMayoristas({ productos }: { productos: Producto[] }) {
 
   return (
     <div className="space-y-3">
-      {seleccionados.size > 0 && (
+      {!soloLectura && seleccionados.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2">
           <span className="text-sm font-medium text-blue-800">{seleccionados.size} seleccionados</span>
           <select
@@ -93,9 +94,11 @@ export function TablaMayoristas({ productos }: { productos: Producto[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 text-left text-xs font-medium text-gray-500">
-              <th className="px-3 py-2 w-8">
-                <input type="checkbox" checked={todosSeleccionados} onChange={toggleTodos} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
-              </th>
+              {!soloLectura && (
+                <th className="px-3 py-2 w-8">
+                  <input type="checkbox" checked={todosSeleccionados} onChange={toggleTodos} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+                </th>
+              )}
               <th className="px-3 py-2">SKU</th>
               <th className="px-3 py-2">Producto</th>
               <th className="px-3 py-2">Categoría</th>
@@ -105,14 +108,16 @@ export function TablaMayoristas({ productos }: { productos: Producto[] }) {
           <tbody>
             {productos.map((p) => (
               <tr key={p.id} className="border-b border-gray-50 last:border-0">
-                <td className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={seleccionados.has(p.id)}
-                    onChange={() => toggleUno(p.id)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                  />
-                </td>
+                {!soloLectura && (
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.has(p.id)}
+                      onChange={() => toggleUno(p.id)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                    />
+                  </td>
+                )}
                 <td className="px-3 py-2 font-mono text-xs text-gray-500">{p.skuInterno}</td>
                 <td className="px-3 py-2">
                   <span className="block text-gray-800">{p.nombre}</span>
@@ -120,7 +125,13 @@ export function TablaMayoristas({ productos }: { productos: Producto[] }) {
                 </td>
                 <td className="px-3 py-2 text-gray-600">{p.categoria}</td>
                 <td className="px-3 py-2">
-                  <TipoMayoristaSelect productoId={p.id} value={p.tipoProductoMayorista ?? ""} />
+                  {soloLectura ? (
+                    <span className="text-gray-700">
+                      {OPCIONES_MASIVO.find((o) => o.value && o.value === p.tipoProductoMayorista)?.label ?? "Sin asignar"}
+                    </span>
+                  ) : (
+                    <TipoMayoristaSelect productoId={p.id} value={p.tipoProductoMayorista ?? ""} />
+                  )}
                 </td>
               </tr>
             ))}

@@ -3,12 +3,14 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { anularLiquidacion, marcarLiquidacionPagada } from "../../actions";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
+import { perfilAcceso } from "@/lib/permissions";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
 export default async function LiquidacionDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin marcar saldada ni anular.
   const liq = await prisma.liquidacionConsignacion.findUnique({
     where: { id: Number(id) },
     include: {
@@ -58,6 +60,7 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
           >
             Imprimir / PDF
           </Link>
+          {!soloLectura && (<>
           <form action={marcarLiquidacionPagada}>
             <input type="hidden" name="id" value={liq.id} />
             <input type="hidden" name="pagada" value={liq.pagado ? "false" : "true"} />
@@ -81,6 +84,7 @@ export default async function LiquidacionDetallePage({ params }: { params: Promi
               Anular liquidación
             </ConfirmSubmitButton>
           </form>
+          </>)}
         </div>
       </div>
 

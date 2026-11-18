@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { perfilAcceso } from "@/lib/permissions";
 import { formatCurrency } from "@/lib/format";
 
 export default async function ProveedorDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin Editar.
 
   const proveedor = await prisma.proveedor.findUnique({
     where: { id: Number(id) },
@@ -34,9 +36,11 @@ export default async function ProveedorDetallePage({ params }: { params: Promise
           {proveedor.accountManager && <p className="text-sm text-gray-500">Account Manager: {proveedor.accountManager}</p>}
           {proveedor.horarios && <p className="text-sm text-gray-500">Horarios: {proveedor.horarios}</p>}
         </div>
-        <Link href={`/inventario/proveedores/${proveedor.id}/editar`} className="shrink-0 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
-          Editar
-        </Link>
+        {!soloLectura && (
+          <Link href={`/inventario/proveedores/${proveedor.id}/editar`} className="shrink-0 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+            Editar
+          </Link>
+        )}
       </div>
 
       {/* Productos vinculados */}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { perfilAcceso } from "@/lib/permissions";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 export default async function ClienteHistorialPage({
@@ -9,7 +9,7 @@ export default async function ClienteHistorialPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  const { soloLectura } = await perfilAcceso(); // Solo lectura puede ver, sin botones de edición.
   const { id } = await params;
   const clienteId = Number(id);
 
@@ -66,12 +66,14 @@ export default async function ClienteHistorialPage({
             <span className="break-words">{cliente.direccion}</span>
           </div>
         </div>
-        <Link
-          href={`/clientes/${clienteId}/editar`}
-          className="self-start rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 shrink-0"
-        >
-          Editar
-        </Link>
+        {!soloLectura && (
+          <Link
+            href={`/clientes/${clienteId}/editar`}
+            className="self-start rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 shrink-0"
+          >
+            Editar
+          </Link>
+        )}
       </div>
 
       {/* Mascotas */}
@@ -189,14 +191,16 @@ export default async function ClienteHistorialPage({
                 )}
               </div>
 
-              <div className="flex justify-end">
-                <Link
-                  href={`/ventas/${venta.id}/editar`}
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  Ver / editar venta
-                </Link>
-              </div>
+              {!soloLectura && (
+                <div className="flex justify-end">
+                  <Link
+                    href={`/ventas/${venta.id}/editar`}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Ver / editar venta
+                  </Link>
+                </div>
+              )}
             </div>
           );
         })}

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { eliminarItemMayorista } from "../actions";
+import { perfilAcceso } from "@/lib/permissions";
 
 export default async function ListasMayoristaPage({
   searchParams,
@@ -10,6 +11,7 @@ export default async function ListasMayoristaPage({
   searchParams: Promise<{ proveedorId?: string }>;
 }) {
   const params = await searchParams;
+  const { soloLectura } = await perfilAcceso(); // Solo lectura: sin Crear producto, Editar ni Eliminar.
   const proveedorId = params.proveedorId ? Number(params.proveedorId) : undefined;
 
   const proveedores = await prisma.proveedor.findMany({ orderBy: { nombre: "asc" } });
@@ -137,7 +139,7 @@ export default async function ListasMayoristaPage({
                       </span>
                     ) : null}
                   </span>
-                  <div className="flex shrink-0 gap-1">
+                  {!soloLectura && <div className="flex shrink-0 gap-1">
                     {!item.vinculado && (
                       <Link
                         href={`/inventario/listas/${item.id}/crear-producto?proveedorId=${proveedorId}`}
@@ -162,7 +164,7 @@ export default async function ListasMayoristaPage({
                         Eliminar
                       </ConfirmSubmitButton>
                     </form>
-                  </div>
+                  </div>}
                 </div>
               </li>
             );
@@ -225,7 +227,7 @@ export default async function ListasMayoristaPage({
                     })()}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
-                    <div className="flex justify-end gap-2">
+                    {!soloLectura && <div className="flex justify-end gap-2">
                       {!item.vinculado && (
                         <Link
                           href={`/inventario/listas/${item.id}/crear-producto?proveedorId=${proveedorId}`}
@@ -250,7 +252,7 @@ export default async function ListasMayoristaPage({
                           Eliminar
                         </ConfirmSubmitButton>
                       </form>
-                    </div>
+                    </div>}
                   </td>
                 </tr>
               ))}
