@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { requireAdmin, requireModulo } from "@/lib/permissions";
 import { PromoForm } from "./promo-form";
 
 export default async function MarketingPage() {
+  await requireModulo("MARKETING");
   await requireAdmin();
 
   const clientes = await prisma.cliente.findMany({

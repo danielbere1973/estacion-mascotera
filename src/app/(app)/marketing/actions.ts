@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { FROM_ADDRESS, REMITENTE_FIJO } from "@/lib/mail";
 
 export async function subirImagenMail(formData: FormData): Promise<{ url?: string; error?: string }> {
-  await requireAdmin();
+  await requireAdmin("MARKETING");
 
   const archivo = formData.get("file");
   if (!(archivo instanceof File)) {
@@ -37,7 +37,7 @@ export async function enviarCampania({
   cuerpoHtml: string;
   destinatarios: string[];
 }): Promise<{ ok?: boolean; error?: string }> {
-  await requireAdmin();
+  await requireAdmin("MARKETING");
 
   if (!process.env.RESEND_API_KEY) {
     return { error: "Falta configurar RESEND_API_KEY en el servidor." };

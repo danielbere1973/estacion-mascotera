@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 import { RolUsuario } from "@prisma/client";
+import { modulosDelFormulario } from "@/lib/modulos";
 
 export async function crearUsuario(formData: FormData) {
   const session = await requireAdmin();
@@ -18,6 +19,7 @@ export async function crearUsuario(formData: FormData) {
   const rol = formData.get("rol")?.toString() as RolUsuario;
   const proveedorRestrictoIdStr = formData.get("proveedorRestrictoId")?.toString();
   const activo = formData.get("activo") === "on";
+  const modulos = modulosDelFormulario(formData);
 
   if (!nombre || !apellido || !email || !password) {
     throw new Error("Faltan datos del usuario.");
@@ -43,6 +45,7 @@ export async function crearUsuario(formData: FormData) {
         passwordHash,
         rol,
         activo,
+        modulos,
         proveedorRestrictoId,
       },
     });
@@ -73,6 +76,7 @@ export async function actualizarUsuario(formData: FormData) {
   const rol = formData.get("rol")?.toString() as RolUsuario;
   const proveedorRestrictoIdStr = formData.get("proveedorRestrictoId")?.toString();
   const activo = formData.get("activo") === "on";
+  const modulos = modulosDelFormulario(formData);
 
   if (!nombre || !apellido || !email) throw new Error("Faltan datos del usuario.");
   if (rol !== "ADMIN" && rol !== "LECTOR_RESTRINGIDO") throw new Error("Rol inválido.");
@@ -90,6 +94,7 @@ export async function actualizarUsuario(formData: FormData) {
     email,
     rol,
     activo,
+    modulos,
     proveedorRestrictoId,
   };
 

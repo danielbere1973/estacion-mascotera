@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { MODULOS } from "@/lib/modulos";
+import { modulosPermitidos } from "@/lib/permissions";
 import { auth } from "@/auth";
 import { getDashboardMetrics, getDashboardMetricsRestringido } from "@/lib/metrics";
 import { getRangoFechas, parsePeriodo, PERIODOS, type PeriodoKey } from "@/lib/periodo";
@@ -10,6 +13,18 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ periodo?: string }>;
 }) {
+  // Sin el Dashboard habilitado, el inicio es la primera sección que sí puede ver.
+  const permitidos = await modulosPermitidos();
+  if (!permitidos.includes("DASHBOARD")) {
+    const inicio = MODULOS.find((m) => permitidos.includes(m.modulo));
+    if (inicio) redirect(inicio.href);
+    return (
+      <p className="text-sm text-gray-500">
+        Tu usuario no tiene secciones habilitadas. Pedile a un administrador que te dé acceso.
+      </p>
+    );
+  }
+
   const params = await searchParams;
   const periodo = parsePeriodo(params.periodo);
   const rango = getRangoFechas(periodo);

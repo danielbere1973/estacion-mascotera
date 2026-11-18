@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { actualizarUsuario } from "../../actions";
+import { ModulosCampo } from "../../modulos-campo";
 
 export default async function EditarUsuarioPage({
   params,
@@ -113,6 +114,8 @@ export default async function EditarUsuarioPage({
             Usuario activo
           </label>
         </div>
+
+        <ModulosCampo seleccionados={usuario.modulos} />
 
         <div className="sm:col-span-2">
           <button

@@ -9,7 +9,7 @@ const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argen
 // Borra los eventos con más de `dias` días de antigüedad: conserva los últimos `dias` días
 // calendario (hora Argentina, hoy = día 1) y borra todo lo anterior.
 export async function depurarLogs(dias: number): Promise<{ borrados?: number; error?: string }> {
-  const session = await requireAdmin();
+  const session = await requireAdmin("REMINDERS");
   if (!Number.isInteger(dias) || dias < 1) return { error: "Ingresá una cantidad de días válida (mínimo 1)." };
 
   const hoy = new Date(`${diaArgentina.format(new Date())}T00:00:00.000-03:00`);

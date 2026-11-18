@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 // ---------------------------------------------------------------------------
 
 export async function crearSocio(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const nombre = formData.get("nombre")?.toString().trim();
   const contacto = formData.get("contacto")?.toString().trim() || null;
   const notas = formData.get("notas")?.toString().trim() || null;
@@ -23,7 +23,7 @@ export async function crearSocio(formData: FormData) {
 }
 
 export async function actualizarSocio(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   const nombre = formData.get("nombre")?.toString().trim();
   const contacto = formData.get("contacto")?.toString().trim() || null;
@@ -37,7 +37,7 @@ export async function actualizarSocio(formData: FormData) {
 }
 
 export async function eliminarSocio(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   await prisma.socioConsignacion.delete({ where: { id } });
   revalidatePath("/consignaciones/socios");
@@ -48,7 +48,7 @@ export async function eliminarSocio(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function crearConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const socioId = Number(formData.get("socioId"));
   const direccion = formData.get("direccion")?.toString() as "ENTREGAMOS" | "RECIBIMOS";
   const fecha = new Date(formData.get("fecha")?.toString() ?? new Date().toISOString());
@@ -164,7 +164,7 @@ export async function crearConsignacion(formData: FormData) {
 }
 
 export async function editarConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   const direccion = formData.get("direccion")?.toString() as "ENTREGAMOS" | "RECIBIMOS";
   const fecha = new Date(formData.get("fecha")?.toString() ?? new Date().toISOString());
@@ -214,7 +214,7 @@ export async function editarConsignacion(formData: FormData) {
 }
 
 export async function eliminarConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
 
   const cons = await prisma.consignacion.findUniqueOrThrow({
@@ -250,7 +250,7 @@ export async function eliminarConsignacion(formData: FormData) {
 }
 
 export async function registrarVentaConsignacion(formData: FormData) {
-  await requireAuth();
+  await requireAuth("CONSIGNACIONES");
   const detalleId = Number(formData.get("detalleId"));
   const cantidad = Number(formData.get("cantidad"));
   const precioVentaReal = Number(formData.get("precioVentaReal"));
@@ -289,7 +289,7 @@ export async function registrarVentaConsignacion(formData: FormData) {
 }
 
 export async function generarLiquidacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const socioId = Number(formData.get("socioId"));
   const fechaDesde = new Date(formData.get("fechaDesde")?.toString() ?? "");
   const fechaHasta = new Date(formData.get("fechaHasta")?.toString() ?? "");
@@ -361,7 +361,7 @@ export async function generarLiquidacion(formData: FormData) {
 }
 
 export async function marcarLiquidacionPagada(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   const pagada = formData.get("pagada") === "true";
 
@@ -376,7 +376,7 @@ export async function marcarLiquidacionPagada(formData: FormData) {
 }
 
 export async function anularLiquidacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   const socioId = Number(formData.get("socioId"));
 
@@ -393,7 +393,7 @@ export async function anularLiquidacion(formData: FormData) {
 }
 
 export async function eliminarVentaConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
 
   const venta = await prisma.ventaConsignacion.findUnique({
@@ -420,7 +420,7 @@ export async function eliminarVentaConsignacion(formData: FormData) {
 }
 
 export async function actualizarVentaConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   const precioVentaReal = Number(formData.get("precioVentaReal"));
   const cantidad = Number(formData.get("cantidad"));
@@ -463,7 +463,7 @@ export async function actualizarVentaConsignacion(formData: FormData) {
 }
 
 export async function cerrarConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   await prisma.consignacion.update({ where: { id }, data: { estado: "CERRADA" } });
   revalidatePath(`/consignaciones/${id}`);
@@ -471,7 +471,7 @@ export async function cerrarConsignacion(formData: FormData) {
 }
 
 export async function registrarPagoConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const consignacionId = Number(formData.get("consignacionId"));
   const monto = Number(formData.get("monto"));
   const notas = formData.get("notas")?.toString().trim() || null;
@@ -507,7 +507,7 @@ export async function registrarPagoConsignacion(formData: FormData) {
 }
 
 export async function eliminarPagoConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   const pago = await prisma.pagoConsignacion.findUnique({ where: { id } });
   if (!pago) throw new Error("Pago no encontrado.");
@@ -516,7 +516,7 @@ export async function eliminarPagoConsignacion(formData: FormData) {
 }
 
 export async function agregarItemConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const consignacionId = Number(formData.get("consignacionId"));
   const productoIdStr = formData.get("productoId")?.toString();
   const productoId = productoIdStr ? Number(productoIdStr) : null;
@@ -553,7 +553,7 @@ export async function agregarItemConsignacion(formData: FormData) {
 }
 
 export async function editarItemConsignacion(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CONSIGNACIONES");
   const id = Number(formData.get("id"));
   const costo = Number(formData.get("costo"));
   const piso = Number(formData.get("piso"));

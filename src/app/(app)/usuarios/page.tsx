@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { textoModulos } from "@/lib/modulos";
 import { crearUsuario } from "./actions";
+import { ModulosCampo } from "./modulos-campo";
 
 const ROL_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
@@ -109,6 +111,8 @@ export default async function UsuariosPage() {
             </label>
           </div>
 
+          <ModulosCampo />
+
           <div className="sm:col-span-2">
             <button
               type="submit"
@@ -138,6 +142,7 @@ export default async function UsuariosPage() {
                 {ROL_LABELS[u.rol]}
                 {u.proveedorRestricto && ` · ${u.proveedorRestricto.nombre}`}
               </p>
+              <p className="mt-0.5 text-xs text-gray-500">Ve: {textoModulos(u.modulos)}</p>
             </Link>
           </li>
         ))}
@@ -151,6 +156,7 @@ export default async function UsuariosPage() {
               <th className="px-3 py-2">Email</th>
               <th className="px-3 py-2">Rol</th>
               <th className="px-3 py-2">Restringido a</th>
+              <th className="px-3 py-2">Secciones</th>
               <th className="px-3 py-2">Activo</th>
               <th className="px-3 py-2"></th>
             </tr>
@@ -164,6 +170,7 @@ export default async function UsuariosPage() {
                 <td className="whitespace-nowrap px-3 py-2 text-gray-500">
                   {u.proveedorRestricto?.nombre ?? "-"}
                 </td>
+                <td className="px-3 py-2 text-gray-600">{textoModulos(u.modulos)}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {u.activo ? (
                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Sí</span>

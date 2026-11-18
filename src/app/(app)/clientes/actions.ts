@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { TipoMascota, TamanioMascota } from "@prisma/client";
 
 export async function crearCliente(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CLIENTES");
 
   const nombre = formData.get("nombre")?.toString().trim();
   const apellido = formData.get("apellido")?.toString().trim();
@@ -32,7 +32,7 @@ export async function crearCliente(formData: FormData) {
 }
 
 export async function actualizarCliente(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CLIENTES");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Cliente inválido.");
@@ -62,7 +62,7 @@ export async function actualizarCliente(formData: FormData) {
 }
 
 export async function agregarMascota(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CLIENTES");
 
   const clienteId = Number(formData.get("clienteId"));
   const tipo = formData.get("tipo")?.toString() as TipoMascota;
@@ -82,7 +82,7 @@ export async function agregarMascota(formData: FormData) {
 }
 
 export async function eliminarMascota(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CLIENTES");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Inválido.");
@@ -93,7 +93,7 @@ export async function eliminarMascota(formData: FormData) {
 }
 
 export async function agregarProductoRecurrente(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CLIENTES");
 
   const clienteId = Number(formData.get("clienteId"));
   const productoId = Number(formData.get("productoId"));
@@ -113,7 +113,7 @@ export async function agregarProductoRecurrente(formData: FormData) {
 }
 
 export async function editarProductoRecurrente(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CLIENTES");
 
   const id = Number(formData.get("id"));
   const periodoDias = Number(formData.get("periodoDias"));
@@ -132,7 +132,7 @@ export async function editarProductoRecurrente(formData: FormData) {
 }
 
 export async function eliminarProductoRecurrente(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CLIENTES");
 
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Inválido.");
@@ -144,7 +144,7 @@ export async function eliminarProductoRecurrente(formData: FormData) {
 }
 
 export async function marcarEnviado(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin("CLIENTES");
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Recordatorio inválido.");
 

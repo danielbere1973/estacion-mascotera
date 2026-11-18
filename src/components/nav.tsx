@@ -5,45 +5,41 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
+import type { ModuloApp } from "@prisma/client";
+import { MODULOS } from "@/lib/modulos";
 
-const links = [
-  { href: "/", label: "Dashboard", icon: "🏠" },
-  { href: "/ventas", label: "Ventas", icon: "🛒" },
-  { href: "/clientes", label: "Clientes", icon: "👥" },
-  { href: "/proveedores", label: "Proveedores", icon: "🏭" },
-  { href: "/inventario", label: "Inventario", icon: "📦" },
-  { href: "/consignaciones", label: "Consignaciones", icon: "🤝" },
-  { href: "/gastos", label: "Gastos", icon: "💸" },
-  { href: "/reportes", label: "Reportes", icon: "📊" },
-  { href: "/estadisticas", label: "Estadísticas", icon: "📈" },
-  { href: "/tablero-control", label: "Tablero de Control", icon: "🎛️" },
-  { href: "/logistica", label: "Logística", icon: "🚚" },
+type Link_ = { href: string; label: string; icon: string; exact?: boolean; modulo?: ModuloApp };
+
+const links: Link_[] = MODULOS.filter((m) => m.modulo !== "MARKETING" && m.modulo !== "REMINDERS").map(
+  ({ href, label, icon, modulo }) => ({ href, label, icon, modulo })
+);
+
+const marketingLinks: Link_[] = [
+  { href: "/marketing", label: "Campañas de mail", icon: "✉️", exact: true, modulo: "MARKETING" },
+  { href: "/marketing/reminders", label: "Reminders", icon: "⏰", modulo: "REMINDERS" },
 ];
 
-const marketingLinks = [
-  { href: "/marketing", label: "Campañas de mail", icon: "✉️", exact: true },
-  { href: "/marketing/reminders", label: "Reminders", icon: "⏰" },
+const mayoristaLinks: Link_[] = [
+  { href: "/inventario/mayoristas-tipo", label: "Tipo mayorista", icon: "🏷️", modulo: "INVENTARIO" },
+  { href: "/inventario/mayoristas-margenes", label: "Márgenes mayoristas", icon: "➗", modulo: "INVENTARIO" },
+  { href: "/inventario/mayoristas-catalogo", label: "Catálogo mayorista", icon: "📖", modulo: "INVENTARIO" },
 ];
 
-const mayoristaLinks = [
-  { href: "/inventario/mayoristas-tipo", label: "Tipo mayorista", icon: "🏷️" },
-  { href: "/inventario/mayoristas-margenes", label: "Márgenes mayoristas", icon: "➗" },
-  { href: "/inventario/mayoristas-catalogo", label: "Catálogo mayorista", icon: "📖" },
+const linksRestringido: Link_[] = [
+  { href: "/", label: "Dashboard", icon: "🏠", modulo: "DASHBOARD" },
+  { href: "/ventas", label: "Ventas", icon: "🛒", modulo: "VENTAS" },
+  { href: "/inventario/compras", label: "Compras", icon: "📦", modulo: "INVENTARIO" },
+  { href: "/consignaciones", label: "Consignaciones", icon: "🤝", modulo: "CONSIGNACIONES" },
+  { href: "/logistica", label: "Logística", icon: "🚚", modulo: "LOGISTICA" },
 ];
 
-const linksRestringido = [
-  { href: "/", label: "Dashboard", icon: "🏠" },
-  { href: "/ventas", label: "Ventas", icon: "🛒" },
-  { href: "/inventario/compras", label: "Compras", icon: "📦" },
-  { href: "/consignaciones", label: "Consignaciones", icon: "🤝" },
-  { href: "/logistica", label: "Logística", icon: "🚚" },
-];
-
-const adminLinks = [
+// Usuarios, Actividad, Medios de pago y Precios HYM dependen solo del rol ADMIN;
+// Categorías está dentro de Inventario, así que además pide ese módulo.
+const adminLinks: Link_[] = [
   { href: "/usuarios", label: "Usuarios", icon: "👤" },
   { href: "/actividad", label: "Actividad", icon: "📋" },
   { href: "/admin/medios-pago", label: "Medios de pago", icon: "💳" },
-  { href: "/inventario/tipos", label: "Categorías", icon: "🏷️" },
+  { href: "/inventario/tipos", label: "Categorías", icon: "🏷️", modulo: "INVENTARIO" },
   { href: "/mayoristas-hym", label: "Precios HYM", icon: "💲" },
 ];
 
@@ -58,6 +54,7 @@ function NavLink({
   label: string;
   icon: string;
   exact?: boolean;
+  modulo?: ModuloApp;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -82,12 +79,19 @@ function NavLink({
 export function Sidebar({
   isAdmin,
   isRestringido,
+  modulos,
   onNavigate,
 }: {
   isAdmin: boolean;
   isRestringido: boolean;
+  modulos: ModuloApp[];
   onNavigate?: () => void;
 }) {
+  // Solo las secciones habilitadas para el usuario.
+  const permitido = (l: Link_) => !l.modulo || modulos.includes(l.modulo);
+  const visibleMarketing = marketingLinks.filter(permitido);
+  const visibleMayorista = mayoristaLinks.filter(permitido);
+  const visibleAdmin = adminLinks.filter(permitido);
   const pathname = usePathname();
   const [adminOpen, setAdminOpen] = useState(
     adminLinks.some((l) => pathname.startsWith(l.href))
@@ -96,7 +100,7 @@ export function Sidebar({
   const [mayoristaOpen, setMayoristaOpen] = useState(
     mayoristaLinks.some((l) => pathname.startsWith(l.href))
   );
-  const visibleLinks = isRestringido ? linksRestringido : links;
+  const visibleLinks = (isRestringido ? linksRestringido : links).filter(permitido);
 
   return (
     <aside className="flex h-full w-60 flex-col border-r border-gray-200 bg-white">
@@ -121,7 +125,7 @@ export function Sidebar({
           <NavLink key={link.href} {...link} onNavigate={onNavigate} />
         ))}
 
-        {!isRestringido && (
+        {!isRestringido && visibleMarketing.length > 0 && (
           <div>
             <button
               onClick={() => setMarketingOpen((o) => !o)}
@@ -142,7 +146,7 @@ export function Sidebar({
             </button>
             {marketingOpen && (
               <div className="mt-1 space-y-1 pl-4">
-                {marketingLinks.map((link) => (
+                {visibleMarketing.map((link) => (
                   <NavLink key={link.href} {...link} onNavigate={onNavigate} />
                 ))}
               </div>
@@ -150,7 +154,7 @@ export function Sidebar({
           </div>
         )}
 
-        {!isRestringido && (
+        {!isRestringido && visibleMayorista.length > 0 && (
           <div>
             <button
               onClick={() => setMayoristaOpen((o) => !o)}
@@ -171,7 +175,7 @@ export function Sidebar({
             </button>
             {mayoristaOpen && (
               <div className="mt-1 space-y-1 pl-4">
-                {mayoristaLinks.map((link) => (
+                {visibleMayorista.map((link) => (
                   <NavLink key={link.href} {...link} onNavigate={onNavigate} />
                 ))}
               </div>
@@ -197,7 +201,7 @@ export function Sidebar({
             </button>
             {adminOpen && (
               <div className="mt-1 space-y-1">
-                {adminLinks.map((link) => (
+                {visibleAdmin.map((link) => (
                   <NavLink key={link.href} {...link} onNavigate={onNavigate} />
                 ))}
               </div>
@@ -255,11 +259,13 @@ export function TopBar({
 export function AppShell({
   isAdmin,
   isRestringido,
+  modulos,
   userName,
   children,
 }: {
   isAdmin: boolean;
   isRestringido: boolean;
+  modulos: ModuloApp[];
   userName: string;
   children: React.ReactNode;
 }) {
@@ -289,7 +295,7 @@ export function AppShell({
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Sidebar isAdmin={isAdmin} isRestringido={isRestringido} onNavigate={() => setSidebarOpen(false)} />
+        <Sidebar isAdmin={isAdmin} isRestringido={isRestringido} modulos={modulos} onNavigate={() => setSidebarOpen(false)} />
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -305,14 +311,16 @@ export function Nav({
   userName,
   isAdmin,
   isRestringido,
+  modulos,
 }: {
   userName: string;
   isAdmin: boolean;
   isRestringido: boolean;
+  modulos: ModuloApp[];
 }) {
   return (
     <>
-      <Sidebar isAdmin={isAdmin} isRestringido={isRestringido} />
+      <Sidebar isAdmin={isAdmin} isRestringido={isRestringido} modulos={modulos} />
       <TopBar userName={userName} />
     </>
   );

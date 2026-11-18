@@ -40,7 +40,7 @@ function parseCostos(formData: FormData) {
 }
 
 export async function crearVenta(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("VENTAS");
 
   let clienteId = formData.get("clienteId")?.toString();
 
@@ -196,7 +196,7 @@ export async function crearVenta(formData: FormData) {
 }
 
 export async function actualizarVenta(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("VENTAS");
 
   const id = parseVentaId(formData.get("id"));
   if (id === null) throw new Error("Venta inválida.");
@@ -465,7 +465,7 @@ export async function actualizarVenta(formData: FormData) {
 }
 
 export async function eliminarVenta(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("VENTAS");
 
   const id = parseVentaId(formData.get("id"));
   if (id === null) throw new Error("Venta inválida.");
@@ -478,7 +478,7 @@ export async function eliminarVenta(formData: FormData) {
 }
 
 export async function agregarPagoVenta(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("VENTAS");
 
   const ventaId = parseVentaId(formData.get("ventaId"));
   if (ventaId === null) throw new Error("Venta inválida.");
@@ -507,7 +507,7 @@ export async function agregarPagoVenta(formData: FormData) {
 }
 
 export async function eliminarPagoVenta(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireAdmin("VENTAS");
 
   const id = Number(formData.get("id"));
   const ventaId = parseVentaId(formData.get("ventaId"));
