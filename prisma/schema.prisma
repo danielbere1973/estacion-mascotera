@@ -171,7 +171,12 @@ model Cliente {
   id                   Int                         @id @default(autoincrement())
   nombre               String
   apellido             String
-  direccion            String
+  direccion            String // calle (los clientes viejos pueden tener la dirección completa acá)
+  altura               String?
+  piso                 String?
+  dpto                 String?
+  localidad            String? // "Localidad, Provincia" de public/localidades-ar.json (Georef)
+  cp                   String?
   telefono             String
   email                String?
   cuit                 String?

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { direccionCompleta, linkWaze } from "@/lib/direccion";
 
 const LIMITE_RESULTADOS = 10;
 const SIMILITUD_MINIMA_MARCA = 0.6;
@@ -98,7 +99,7 @@ async function buscarClientePorNombre(nombreBuscado: string): Promise<ResultadoC
 
   const lineas = clientes.map(
     (c) =>
-      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 <a href="https://waze.com/ul?q=${encodeURIComponent(c.direccion)}&navigate=yes">${c.direccion}</a>\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
+      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 <a href="${linkWaze(c)}">${direccionCompleta(c)}</a>\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
   );
   return { texto: `🎙 ${lineas.join("\n\n")}` };
 }
