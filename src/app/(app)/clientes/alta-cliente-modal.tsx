@@ -67,6 +67,10 @@ export function AltaClienteModal({ clientes }: { clientes: OpcionCliente[] }) {
                 </div>
 
                 <CamposDireccion inputClassName="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white" />
+                <CamposDireccion
+                  sufijo="2"
+                  inputClassName="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
+                />
 
                 <div className="space-y-1 sm:col-span-2">
                   <label className="text-sm font-medium text-gray-700">Email (opcional)</label>

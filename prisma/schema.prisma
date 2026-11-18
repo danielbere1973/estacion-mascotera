@@ -177,6 +177,13 @@ model Cliente {
   dpto                 String?
   localidad            String? // "Localidad, Provincia" de public/localidades-ar.json (Georef)
   cp                   String?
+  // Segunda dirección (opcional), mismos campos que la primera.
+  direccion2           String?
+  altura2              String?
+  piso2                String?
+  dpto2                String?
+  localidad2           String?
+  cp2                  String?
   telefono             String
   email                String?
   cuit                 String?

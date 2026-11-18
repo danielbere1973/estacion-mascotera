@@ -25,3 +25,24 @@ export function direccionParaMapa(c: DireccionCliente): string {
 export function linkWaze(c: DireccionCliente): string {
   return `https://waze.com/ul?q=${encodeURIComponent(direccionParaMapa(c))}&navigate=yes`;
 }
+
+type SegundaDireccionCliente = {
+  direccion2?: string | null;
+  altura2?: string | null;
+  piso2?: string | null;
+  dpto2?: string | null;
+  localidad2?: string | null;
+  cp2?: string | null;
+};
+
+// La segunda dirección con la misma forma que la primera (direccion queda "" si no tiene calle).
+export function segundaDireccion(c: SegundaDireccionCliente): DireccionCliente {
+  return {
+    direccion: c.direccion2 ?? "",
+    altura: c.altura2,
+    piso: c.piso2,
+    dpto: c.dpto2,
+    localidad: c.localidad2,
+    cp: c.cp2,
+  };
+}

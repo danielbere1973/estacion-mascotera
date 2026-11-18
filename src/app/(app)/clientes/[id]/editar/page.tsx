@@ -10,6 +10,7 @@ import {
   eliminarMascota,
 } from "../../actions";
 import { CamposDireccion } from "../../campos-direccion";
+import { segundaDireccion } from "@/lib/direccion";
 
 export default async function EditarClientePage({
   params,
@@ -94,6 +95,11 @@ export default async function EditarClientePage({
           </div>
 
           <CamposDireccion valores={cliente} inputClassName="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <CamposDireccion
+            sufijo="2"
+            valores={segundaDireccion(cliente)}
+            inputClassName="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          />
 
           <div className="space-y-1 sm:col-span-2">
             <label className="text-sm font-medium text-gray-700">Email (opcional)</label>

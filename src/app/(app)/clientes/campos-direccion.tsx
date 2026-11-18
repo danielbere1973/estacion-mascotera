@@ -25,7 +25,18 @@ type Valores = {
 };
 
 // Campos de dirección del alta y la edición de cliente: Dirección (calle), Altura, Piso, Dpto, Localidad y CP.
-export function CamposDireccion({ valores = {}, inputClassName }: { valores?: Valores; inputClassName: string }) {
+// sufijo "2" = segunda dirección: campos direccion2, altura2, ..., etiquetas con "#2" y todos opcionales.
+export function CamposDireccion({
+  valores = {},
+  inputClassName,
+  sufijo = "",
+}: {
+  valores?: Valores;
+  inputClassName: string;
+  sufijo?: "" | "2";
+}) {
+  const n = (campo: string) => `${campo}${sufijo}`;
+  const e = sufijo ? `#${sufijo}` : "";
   const [localidades, setLocalidades] = useState<string[]>([]);
 
   useEffect(() => {
@@ -42,30 +53,30 @@ export function CamposDireccion({ valores = {}, inputClassName }: { valores?: Va
   return (
     <>
       <div className="space-y-1 sm:col-span-2">
-        <label className="text-sm font-medium text-gray-700">Dirección (calle)</label>
-        <input name="direccion" defaultValue={valores.direccion ?? ""} required className={inputClassName} />
+        <label className="text-sm font-medium text-gray-700">Dirección (calle){e}</label>
+        <input name={n("direccion")} defaultValue={valores.direccion ?? ""} required={!sufijo} className={inputClassName} />
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:col-span-2">
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Altura</label>
-          <input name="altura" defaultValue={valores.altura ?? ""} inputMode="numeric" className={inputClassName} />
+          <label className="text-sm font-medium text-gray-700">Altura{e}</label>
+          <input name={n("altura")} defaultValue={valores.altura ?? ""} inputMode="numeric" className={inputClassName} />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Piso</label>
-          <input name="piso" defaultValue={valores.piso ?? ""} className={inputClassName} />
+          <label className="text-sm font-medium text-gray-700">Piso{e}</label>
+          <input name={n("piso")} defaultValue={valores.piso ?? ""} className={inputClassName} />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Dpto/Unidad</label>
-          <input name="dpto" defaultValue={valores.dpto ?? ""} className={inputClassName} />
+          <label className="text-sm font-medium text-gray-700">Dpto/Unidad{e}</label>
+          <input name={n("dpto")} defaultValue={valores.dpto ?? ""} className={inputClassName} />
         </div>
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">Localidad</label>
+        <label className="text-sm font-medium text-gray-700">Localidad{e}</label>
         <input
-          name="localidad"
-          list="localidades-ar"
+          name={n("localidad")}
+          list={n("localidades-ar")}
           defaultValue={valores.localidad ?? ""}
           placeholder="Escribí para buscar..."
           autoComplete="off"
@@ -73,7 +84,7 @@ export function CamposDireccion({ valores = {}, inputClassName }: { valores?: Va
           onBlur={(e) => validarLocalidad(e.currentTarget)}
           className={inputClassName}
         />
-        <datalist id="localidades-ar">
+        <datalist id={n("localidades-ar")}>
           {localidades.map((l) => (
             <option key={l} value={l} />
           ))}
@@ -81,8 +92,8 @@ export function CamposDireccion({ valores = {}, inputClassName }: { valores?: Va
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">CP</label>
-        <input name="cp" defaultValue={valores.cp ?? ""} placeholder="Ej: 1406" className={inputClassName} />
+        <label className="text-sm font-medium text-gray-700">CP{e}</label>
+        <input name={n("cp")} defaultValue={valores.cp ?? ""} placeholder="Ej: 1406" className={inputClassName} />
       </div>
     </>
   );

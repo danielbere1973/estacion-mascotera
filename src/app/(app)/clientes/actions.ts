@@ -18,6 +18,19 @@ async function resolverFamilia(formData: FormData, clienteId?: number): Promise<
   return c.familiaId ?? c.id;
 }
 
+// Segunda dirección (opcional): direccion2, altura2, piso2, dpto2, localidad2, cp2.
+function leerSegundaDireccion(formData: FormData) {
+  const leer = (campo: string) => formData.get(`${campo}2`)?.toString().trim() || null;
+  return {
+    direccion2: leer("direccion"),
+    altura2: leer("altura"),
+    piso2: leer("piso"),
+    dpto2: leer("dpto"),
+    localidad2: leer("localidad"),
+    cp2: leer("cp"),
+  };
+}
+
 export async function crearCliente(formData: FormData) {
   await requireAdmin("CLIENTES");
 
@@ -35,6 +48,7 @@ export async function crearCliente(formData: FormData) {
   const dpto = formData.get("dpto")?.toString().trim() || null;
   const localidad = formData.get("localidad")?.toString().trim() || null;
   const cp = formData.get("cp")?.toString().trim() || null;
+  const segunda = leerSegundaDireccion(formData);
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
@@ -43,7 +57,7 @@ export async function crearCliente(formData: FormData) {
   const familiaId = await resolverFamilia(formData);
 
   await prisma.cliente.create({
-    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId, altura, piso, dpto, localidad, cp },
+    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId, altura, piso, dpto, localidad, cp, ...segunda },
   });
 
   revalidatePath("/clientes");
@@ -70,6 +84,7 @@ export async function actualizarCliente(formData: FormData) {
   const dpto = formData.get("dpto")?.toString().trim() || null;
   const localidad = formData.get("localidad")?.toString().trim() || null;
   const cp = formData.get("cp")?.toString().trim() || null;
+  const segunda = leerSegundaDireccion(formData);
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
@@ -84,7 +99,7 @@ export async function actualizarCliente(formData: FormData) {
       : []),
     prisma.cliente.update({
       where: { id },
-      data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId, altura, piso, dpto, localidad, cp },
+      data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId, altura, piso, dpto, localidad, cp, ...segunda },
     }),
   ]);
 
