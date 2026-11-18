@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { crearCliente } from "./actions";
+import { CamposDireccion } from "./campos-direccion";
 
 type OpcionCliente = { id: number; nombre: string; apellido: string };
 
@@ -56,15 +57,6 @@ export function AltaClienteModal({ clientes }: { clientes: OpcionCliente[] }) {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Dirección</label>
-                  <input
-                    name="direccion"
-                    required
-                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
-                  />
-                </div>
-
-                <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">Teléfono</label>
                   <input
                     name="telefono"
@@ -73,6 +65,8 @@ export function AltaClienteModal({ clientes }: { clientes: OpcionCliente[] }) {
                     className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white"
                   />
                 </div>
+
+                <CamposDireccion inputClassName="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm md:bg-white" />
 
                 <div className="space-y-1 sm:col-span-2">
                   <label className="text-sm font-medium text-gray-700">Email (opcional)</label>

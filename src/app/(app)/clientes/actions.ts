@@ -30,6 +30,11 @@ export async function crearCliente(formData: FormData) {
   const dni = formData.get("dni")?.toString().trim() || null;
   const alias = formData.get("alias")?.toString().trim() || null;
   const cbu = formData.get("cbu")?.toString().trim() || null;
+  const altura = formData.get("altura")?.toString().trim() || null;
+  const piso = formData.get("piso")?.toString().trim() || null;
+  const dpto = formData.get("dpto")?.toString().trim() || null;
+  const localidad = formData.get("localidad")?.toString().trim() || null;
+  const cp = formData.get("cp")?.toString().trim() || null;
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
@@ -38,7 +43,7 @@ export async function crearCliente(formData: FormData) {
   const familiaId = await resolverFamilia(formData);
 
   await prisma.cliente.create({
-    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId },
+    data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId, altura, piso, dpto, localidad, cp },
   });
 
   revalidatePath("/clientes");
@@ -60,6 +65,11 @@ export async function actualizarCliente(formData: FormData) {
   const dni = formData.get("dni")?.toString().trim() || null;
   const alias = formData.get("alias")?.toString().trim() || null;
   const cbu = formData.get("cbu")?.toString().trim() || null;
+  const altura = formData.get("altura")?.toString().trim() || null;
+  const piso = formData.get("piso")?.toString().trim() || null;
+  const dpto = formData.get("dpto")?.toString().trim() || null;
+  const localidad = formData.get("localidad")?.toString().trim() || null;
+  const cp = formData.get("cp")?.toString().trim() || null;
 
   if (!nombre || !apellido || !direccion || !telefono) {
     throw new Error("Faltan datos obligatorios.");
@@ -74,7 +84,7 @@ export async function actualizarCliente(formData: FormData) {
       : []),
     prisma.cliente.update({
       where: { id },
-      data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId },
+      data: { nombre, apellido, direccion, telefono, email, cuit, dni, alias, cbu, familiaId, altura, piso, dpto, localidad, cp },
     }),
   ]);
 

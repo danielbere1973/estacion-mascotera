@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
 import { AltaClienteModal } from "./alta-cliente-modal";
+import { direccionCompleta, linkWaze } from "@/lib/direccion";
 
 type Cliente = {
   id: number;
@@ -12,6 +13,11 @@ type Cliente = {
   telefono: string;
   email: string | null;
   direccion: string;
+  altura: string | null;
+  piso: string | null;
+  dpto: string | null;
+  localidad: string | null;
+  cp: string | null;
   familiaId: number | null;
   _count: { ventas: number; miembrosFamilia: number };
 };
@@ -29,7 +35,7 @@ function nombreFamilia(c: Cliente, porId: Map<number, Cliente>): string | null {
   return ref ? `${ref.apellido}, ${ref.nombre}` : null;
 }
 
-function valorOrden(c: Cliente & { familia: string | null }, columna: Columna): ValorOrden {
+function valorOrden(c: Cliente & { familia: string | null; direccionTexto: string }, columna: Columna): ValorOrden {
   switch (columna) {
     case "nombre":
       return `${c.apellido}, ${c.nombre}`;
@@ -40,7 +46,7 @@ function valorOrden(c: Cliente & { familia: string | null }, columna: Columna): 
     case "email":
       return c.email || null;
     case "direccion":
-      return c.direccion || null;
+      return c.direccionTexto || null;
     case "ventas":
       return c._count.ventas;
   }
@@ -52,7 +58,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
 
   const conFamilia = useMemo(() => {
     const porId = new Map(clientes.map((c) => [c.id, c]));
-    return clientes.map((c) => ({ ...c, familia: nombreFamilia(c, porId) }));
+    return clientes.map((c) => ({ ...c, familia: nombreFamilia(c, porId), direccionTexto: direccionCompleta(c) }));
   }, [clientes]);
 
   const filtrados = useMemo(() => {
@@ -62,7 +68,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
     return conFamilia.filter(
       (c) =>
         normalizar(`${c.nombre} ${c.apellido} ${c.familia ?? ""}`).includes(q) &&
-        normalizar(c.direccion ?? "").includes(qDir),
+        normalizar(c.direccionTexto).includes(qDir),
     );
   }, [conFamilia, busqueda, busquedaDireccion]);
   const hayBusqueda = Boolean(busqueda.trim() || busquedaDireccion.trim());
@@ -129,12 +135,12 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
               {c.direccion && (
                 // Mismo link de Waze que usa el bot de Telegram: abre la app y arranca a navegar.
                 <a
-                  href={`https://waze.com/ul?q=${encodeURIComponent(c.direccion)}&navigate=yes`}
+                  href={linkWaze(c)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block truncate text-blue-600"
                 >
-                  📍 {c.direccion}
+                  📍 {c.direccionTexto}
                 </a>
               )}
             </div>
@@ -190,7 +196,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
                 </td>
                 <td className="px-3 py-2 text-gray-600">{c.telefono}</td>
                 <td className="px-3 py-2 text-gray-600">{c.email ?? "-"}</td>
-                <td className="px-3 py-2 text-gray-600">{c.direccion}</td>
+                <td className="px-3 py-2 text-gray-600">{c.direccionTexto}</td>
                 <td className="px-3 py-2 text-gray-600">{c.familia ?? "-"}</td>
                 <td className="px-3 py-2 text-right text-gray-500">{c._count.ventas}</td>
                 <td className="px-3 py-2 text-right">

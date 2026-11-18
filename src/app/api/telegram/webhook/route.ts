@@ -13,6 +13,7 @@ import { resolverPendienteSinStock, resolverPendienteManual } from "@/lib/compra
 import { armarNivelRaiz, armarNivelCategoria, armarListaClientes, armarInfoProveedores } from "@/lib/categorias-telegram";
 import { transcribirVozTelegram } from "@/lib/transcripcion";
 import { ejecutarComandoVoz } from "@/lib/comandos-voz";
+import { direccionCompleta, linkWaze } from "@/lib/direccion";
 
 type TelegramUpdate = {
   message?: { chat: { id: number }; text?: string; voice?: { file_id: string } };
@@ -94,7 +95,7 @@ async function manejarBusquedaCliente(chatId: string, nombreBuscado: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const lineas = clientes.map(
     (c) =>
-      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 <a href="https://waze.com/ul?q=${encodeURIComponent(c.direccion)}&navigate=yes">${c.direccion}</a>\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
+      `<b>${c.nombre} ${c.apellido}</b>\n📞 ${c.telefono}\n✉️ ${c.email ?? "-"}\n📍 <a href="${linkWaze(c)}">${direccionCompleta(c)}</a>\n🛒 Ventas: <a href="${appUrl}/clientes/${c.id}">${c._count.ventas}</a>`
   );
   await sendTelegramMessage(lineas.join("\n\n"), { chatId });
 }
