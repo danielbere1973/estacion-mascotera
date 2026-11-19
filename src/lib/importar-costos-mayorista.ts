@@ -144,6 +144,9 @@ export async function importarCostosMayoristaCore(
     select: { nombre: true },
   });
   const importandoHym = proveedor?.nombre?.toUpperCase() === "HYM";
+  // Amo Snack: todo lo que manda se toma como "Stock disponible", diga lo que diga la lista
+  // (se compara sin espacios ni mayúsculas: "Amo Snack", "AMO SNACK", "AmoSnack").
+  const importandoAmoSnack = (proveedor?.nombre ?? "").replace(/\s+/g, "").toLowerCase() === "amosnack";
 
   const historialItems = await prisma.historialStockMayorista.findMany({
     where: { proveedorId, productoId: { not: null } },
@@ -246,7 +249,9 @@ export async function importarCostosMayoristaCore(
     const precioConDescuentoTexto = String(fila["Precio c/dto"] ?? "").trim();
     const precioConDescuento = precioConDescuentoTexto ? parsearPrecio(precioConDescuentoTexto) : null;
     const tamanios = String(fila["Tamaño"] ?? fila["Tamaños"] ?? "").trim() || null;
-    const estadoStockMayorista = String(fila["Estado de stock"] ?? "").trim() || null;
+    const estadoStockMayorista = importandoAmoSnack
+      ? "Stock disponible"
+      : String(fila["Estado de stock"] ?? "").trim() || null;
     const tipoProducto = String(fila["Tipo"] ?? fila["Categoria"] ?? "").trim() || null;
     const codigoHym = String(fila["Codigo"] ?? "").trim() || null;
 
