@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import { DURACION_SEGUIMIENTO_MS } from "@/lib/seguimiento";
+import { sumarKm } from "@/lib/km-recorridos";
 
 type Posicion = { latitud: number; longitud: number; precision: number | null };
 
@@ -46,6 +47,8 @@ export async function iniciarSeguimiento(clienteId: number, posicion: Posicion) 
         precision: posicion.precision,
         ubicacionAt: ahora,
         venceAt: new Date(ahora.getTime() + DURACION_SEGUIMIENTO_MS),
+        // Punto de partida para contar los km (si la lectura es precisa).
+        ...(sumarKm({ kmLatitud: null, kmLongitud: null, kmAt: null, kmRecorridos: 0 }, posicion, ahora) ?? {}),
       },
       select: { id: true, token: true, venceAt: true },
     }),
@@ -55,26 +58,33 @@ export async function iniciarSeguimiento(clienteId: number, posicion: Posicion) 
   return { ...seguimiento, clienteNombre: cliente.nombre, clienteTelefono: cliente.telefono };
 }
 
-// Devuelve false si el seguimiento ya no está activo (venció o lo finalizaron
-// desde otro lado), para que el celular deje de mandar posiciones.
-export async function actualizarUbicacion(token: string, posicion: Posicion) {
+// Guarda la posición y suma los km recorridos. activo = false si el seguimiento ya no está
+// activo (venció o lo finalizaron desde otro lado), para que el celular deje de mandar posiciones.
+export async function actualizarUbicacion(
+  token: string,
+  posicion: Posicion
+): Promise<{ activo: boolean; km: number | null }> {
   const session = await requireAuth("LOGISTICA");
-  if (!posicionValida(posicion)) return true;
-  const { count } = await prisma.seguimientoUbicacion.updateMany({
-    where: {
-      token,
-      usuarioId: Number(session.user.id),
-      finalizadoAt: null,
-      venceAt: { gt: new Date() },
-    },
+  const ahora = new Date();
+  const seguimiento = await prisma.seguimientoUbicacion.findFirst({
+    where: { token, usuarioId: Number(session.user.id), finalizadoAt: null, venceAt: { gt: ahora } },
+    select: { id: true, kmLatitud: true, kmLongitud: true, kmAt: true, kmRecorridos: true },
+  });
+  if (!seguimiento) return { activo: false, km: null };
+  if (!posicionValida(posicion)) return { activo: true, km: seguimiento.kmRecorridos };
+
+  const km = sumarKm(seguimiento, posicion, ahora);
+  await prisma.seguimientoUbicacion.update({
+    where: { id: seguimiento.id },
     data: {
       latitud: posicion.latitud,
       longitud: posicion.longitud,
       precision: posicion.precision,
-      ubicacionAt: new Date(),
+      ubicacionAt: ahora,
+      ...(km ?? {}),
     },
   });
-  return count > 0;
+  return { activo: true, km: km?.kmRecorridos ?? seguimiento.kmRecorridos };
 }
 
 // Seguimientos activos de todo el equipo, para la lista y el mapa general de
@@ -93,6 +103,7 @@ export async function listarSeguimientosActivos() {
       precision: true,
       ubicacionAt: true,
       venceAt: true,
+      kmRecorridos: true,
       cliente: { select: { nombre: true, apellido: true, telefono: true } },
       usuario: { select: { nombre: true, apellido: true } },
     },
