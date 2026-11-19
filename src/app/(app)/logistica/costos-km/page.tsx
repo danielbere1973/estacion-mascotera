@@ -55,7 +55,7 @@ export default async function CostosKmPage({
   const hayFiltro = Boolean(filtro.desde || filtro.hasta || filtro.usuarioId || filtro.clienteId);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="w-full space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Logística</h1>
       <PestanasLogistica activa="costos" />
 
@@ -178,8 +178,8 @@ export default async function CostosKmPage({
         </div>
       </div>
 
-      {/* Mobile: tarjetas */}
-      <ul className="space-y-2 md:hidden">
+      {/* Celular y tablet: tarjetas */}
+      <ul className="space-y-2 lg:hidden">
         {recorridos.map((r) => (
           <li key={r.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
             <div className="flex items-start justify-between gap-2">
@@ -210,47 +210,51 @@ export default async function CostosKmPage({
         ))}
       </ul>
 
-      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
+      {/* Escritorio: columnas agrupadas (venta bajo la fecha, auto bajo quien manejó, duración bajo el horario)
+          para que la tabla entre en el ancho sin barra de desplazamiento. */}
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white lg:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th className="px-3 py-2">Fecha</th>
-              <th className="px-3 py-2">Venta</th>
-              <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2">Manejó</th>
-              <th className="px-3 py-2">Auto</th>
-              <th className="px-3 py-2">Horario</th>
-              <th className="px-3 py-2">Duración</th>
-              <th className="px-3 py-2 text-right">Km</th>
-              <th className="px-3 py-2 text-right">Costo estimado</th>
-              <th className="px-3 py-2">Estado</th>
+              <th className="px-2.5 py-2">Fecha / Venta</th>
+              <th className="px-2.5 py-2">Cliente</th>
+              <th className="px-2.5 py-2">Manejó / Auto</th>
+              <th className="px-2.5 py-2">Horario</th>
+              <th className="px-2.5 py-2 text-right">Km</th>
+              <th className="px-2.5 py-2 text-right">Costo</th>
+              <th className="px-2.5 py-2">Estado</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {recorridos.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap px-3 py-2">{fechaHora.format(r.inicio).split(",")[0]}</td>
-                <td className="whitespace-nowrap px-3 py-2">
-                  {r.ventaId != null ? (
-                    <Link href={`/ventas/${r.ventaId}/editar`} className="text-blue-600 hover:underline">
-                      #{r.ventaId}
-                    </Link>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
+              <tr key={r.id} className="align-top hover:bg-gray-50">
+                <td className="whitespace-nowrap px-2.5 py-2">
+                  {fechaHora.format(r.inicio).split(",")[0]}
+                  <span className="block text-xs">
+                    {r.ventaId != null ? (
+                      <Link href={`/ventas/${r.ventaId}/editar`} className="text-blue-600 hover:underline">
+                        Venta #{r.ventaId}
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">Sin venta</span>
+                    )}
+                  </span>
                 </td>
-                <td className="px-3 py-2 font-medium">{r.cliente}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-gray-600">{r.usuario}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-gray-600">{r.auto ?? "-"}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-gray-600">
+                <td className="px-2.5 py-2 font-medium">{r.cliente}</td>
+                <td className="px-2.5 py-2 text-gray-700">
+                  {r.usuario}
+                  <span className="block text-xs text-gray-500">{r.auto ?? "Auto sin cargar"}</span>
+                </td>
+                <td className="whitespace-nowrap px-2.5 py-2 text-gray-700">
                   {hora.format(r.inicio)} – {r.estado === "ACTIVO" ? "en curso" : hora.format(r.fin)}
+                  <span className="block text-xs text-gray-500">{formatoDuracion(r.minutos)}</span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-gray-600">{formatoDuracion(r.minutos)}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{formatoKm(r.km)}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-right" title={`${formatCurrency(r.costoPorKm)} / km`}>
+                <td className="whitespace-nowrap px-2.5 py-2 text-right font-medium">{formatoKm(r.km)}</td>
+                <td className="whitespace-nowrap px-2.5 py-2 text-right">
                   {formatCurrency(r.costo)}
+                  <span className="block text-xs text-gray-500">{formatCurrency(r.costoPorKm)}/km</span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2">
+                <td className="whitespace-nowrap px-2.5 py-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs ${ESTADO_CLASE[r.estado]}`}>{ESTADO_LABEL[r.estado]}</span>
                 </td>
               </tr>
