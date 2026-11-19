@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { precioMayoristaDe } from "@/lib/mayoristas";
-import { traerCategoriasTiendanube, traerDatosPorSkuTiendanube, type CategoriaTN, type DatosTN } from "@/lib/tiendanube";
+import type { CategoriaTN, DatosTN } from "@/lib/tiendanube";
+import { traerCategoriasTiendanubeCacheado, traerDatosPorSkuTiendanubeCacheado } from "@/lib/tiendanube-cache";
 import { TipoProductoMayorista } from "@prisma/client";
 import { perfilAcceso } from "@/lib/permissions";
 import { BotonCarrito, CarritoProvider } from "./carrito";
@@ -98,8 +99,8 @@ export default async function MayoristasCatalogoPage({
   let errorTiendanube = !config;
   if (config) {
     const [datos, categorias] = await Promise.allSettled([
-      traerDatosPorSkuTiendanube(config.storeId, config.accessToken),
-      traerCategoriasTiendanube(config.storeId, config.accessToken),
+      traerDatosPorSkuTiendanubeCacheado(config.storeId, config.accessToken),
+      traerCategoriasTiendanubeCacheado(config.storeId, config.accessToken),
     ]);
     // Si falla Tiendanube (token vencido, etc.), avisamos en vez de romper la pantalla.
     if (datos.status === "fulfilled") datosTN = datos.value;
