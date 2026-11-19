@@ -2,7 +2,13 @@ import Link from "next/link";
 import { perfilAcceso, requireSinRestriccion } from "@/lib/permissions";
 import { formatCurrency } from "@/lib/format";
 import { formatoKm } from "@/lib/km-recorridos";
-import { ESTADO_LABEL, formatoDuracion, traerConductores, traerRecorridos } from "@/lib/recorridos-logistica";
+import {
+  ESTADO_LABEL,
+  formatoDuracion,
+  traerClientesConRecorridos,
+  traerConductores,
+  traerRecorridos,
+} from "@/lib/recorridos-logistica";
 import { BotonExportar } from "@/components/boton-exportar";
 import { PestanasLogistica } from "../pestanas";
 import { guardarVehiculo } from "./actions";
@@ -31,18 +37,22 @@ const ESTADO_CLASE = {
 export default async function CostosKmPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; usuarioId?: string }>;
+  searchParams: Promise<{ desde?: string; hasta?: string; usuarioId?: string; clienteId?: string }>;
 }) {
   // Con restricción de proveedores solo ve el seguimiento en vivo.
   await requireSinRestriccion("/logistica");
   const { soloLectura } = await perfilAcceso();
   const filtro = await searchParams;
 
-  const [recorridos, conductores] = await Promise.all([traerRecorridos(filtro), traerConductores()]);
+  const [recorridos, conductores, clientes] = await Promise.all([
+    traerRecorridos(filtro),
+    traerConductores(),
+    traerClientesConRecorridos(),
+  ]);
 
   const kmTotal = recorridos.reduce((acc, r) => acc + r.km, 0);
   const costoTotal = recorridos.reduce((acc, r) => acc + r.costo, 0);
-  const hayFiltro = Boolean(filtro.desde || filtro.hasta || filtro.usuarioId);
+  const hayFiltro = Boolean(filtro.desde || filtro.hasta || filtro.usuarioId || filtro.clienteId);
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
@@ -123,6 +133,14 @@ export default async function CostosKmPage({
             </option>
           ))}
         </select>
+        <select name="clienteId" defaultValue={filtro.clienteId ?? ""} className="col-span-2 rounded-md border border-gray-300 px-2 py-1.5">
+          <option value="">Todos los clientes</option>
+          {clientes.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.apellido}, {c.nombre}
+            </option>
+          ))}
+        </select>
         <button type="submit" className="rounded-md bg-gray-800 px-3 py-2 text-white hover:bg-gray-900 md:py-1.5">
           Filtrar
         </button>
@@ -134,7 +152,12 @@ export default async function CostosKmPage({
         <div className="col-span-2 md:ml-auto">
           <BotonExportar
             ruta="/api/logistica/costos-km/exportar"
-            params={{ desde: filtro.desde ?? "", hasta: filtro.hasta ?? "", usuarioId: filtro.usuarioId ?? "" }}
+            params={{
+              desde: filtro.desde ?? "",
+              hasta: filtro.hasta ?? "",
+              usuarioId: filtro.usuarioId ?? "",
+              clienteId: filtro.clienteId ?? "",
+            }}
           />
         </div>
       </form>

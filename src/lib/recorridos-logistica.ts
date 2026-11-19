@@ -4,7 +4,7 @@ import { estadoSeguimiento, type EstadoSeguimiento } from "@/lib/seguimiento";
 
 // Recorridos de Logística > Costos/KM: cada vez que se compartió la ubicación con un cliente.
 
-export type FiltroRecorridos = { desde?: string; hasta?: string; usuarioId?: string };
+export type FiltroRecorridos = { desde?: string; hasta?: string; usuarioId?: string; clienteId?: string };
 
 export type Recorrido = {
   id: number;
@@ -37,6 +37,15 @@ export async function traerConductores() {
   }));
 }
 
+// Clientes a los que se les compartió la ubicación alguna vez (para el filtro).
+export async function traerClientesConRecorridos() {
+  return prisma.cliente.findMany({
+    where: { seguimientos: { some: {} } },
+    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    select: { id: true, nombre: true, apellido: true },
+  });
+}
+
 // Cada viaje se calcula con el costo por km del auto de quien manejó (vigente hoy).
 export async function traerRecorridos(filtro: FiltroRecorridos): Promise<Recorrido[]> {
   const where: Prisma.SeguimientoUbicacionWhereInput = {};
@@ -48,6 +57,7 @@ export async function traerRecorridos(filtro: FiltroRecorridos): Promise<Recorri
     };
   }
   if (filtro.usuarioId) where.usuarioId = Number(filtro.usuarioId);
+  if (filtro.clienteId) where.clienteId = Number(filtro.clienteId);
 
   const seguimientos = await prisma.seguimientoUbicacion.findMany({
     where,

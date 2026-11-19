@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
     desde: sp.get("desde") ?? undefined,
     hasta: sp.get("hasta") ?? undefined,
     usuarioId: sp.get("usuarioId") ?? undefined,
+    clienteId: sp.get("clienteId") ?? undefined,
   });
   const kmTotal = recorridos.reduce((acc, r) => acc + r.km, 0);
   const costoTotal = recorridos.reduce((acc, r) => acc + r.costo, 0);
