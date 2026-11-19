@@ -5,7 +5,7 @@ import { createContext, useContext, useMemo, useState, useSyncExternalStore, use
 import { Combobox, type ComboboxOption } from "@/components/combobox";
 import { formatCurrency } from "@/lib/format";
 import { confirmarCarritoMayorista } from "./actions";
-import { COMO_NOS_CONOCISTE, MEDIOS_PAGO_MAYORISTA } from "./opciones";
+import { COMO_NOS_CONOCISTE, COMPRA_MINIMA_MAYORISTA, COMPRA_MINIMA_TEXTO, MEDIOS_PAGO_MAYORISTA } from "./opciones";
 
 // Carrito del Catálogo mayorista. Se guarda en este navegador (localStorage) hasta confirmarlo.
 
@@ -205,6 +205,7 @@ function VentanaCarrito({ onCerrar, clientes, clienteFijo }: Opciones & { onCerr
   const [enviando, startTransition] = useTransition();
 
   const total = items.reduce((acc, i) => acc + i.cantidad * i.precio, 0);
+  const faltaParaMinimo = COMPRA_MINIMA_MAYORISTA - total;
 
   function confirmar() {
     setError(null);
@@ -368,6 +369,11 @@ function VentanaCarrito({ onCerrar, clientes, clienteFijo }: Opciones & { onCerr
                 <span className="text-gray-500">Total</span>
                 <span className="text-lg font-semibold text-gray-900">{formatCurrency(total)}</span>
               </div>
+              {items.length > 0 && faltaParaMinimo > 0 && (
+                <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                  La compra mínima es de {COMPRA_MINIMA_TEXTO}. Te faltan {formatCurrency(faltaParaMinimo)}.
+                </p>
+              )}
               {paso === "lista" ? (
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -379,7 +385,7 @@ function VentanaCarrito({ onCerrar, clientes, clienteFijo }: Opciones & { onCerr
                   </button>
                   <button
                     type="button"
-                    disabled={items.length === 0}
+                    disabled={items.length === 0 || faltaParaMinimo > 0}
                     onClick={() => {
                       setError(null);
                       setPaso("confirmar");
