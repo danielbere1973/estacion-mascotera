@@ -75,12 +75,17 @@ export function armarArbolCategorias<T extends { categorias: number[] }>(categor
 
   return {
     raices: armar(null),
-    // Ids desde la raíz hasta la categoría (para expandir el árbol y mostrar la ruta).
-    rutaHasta: (id: number) => camino(id).slice().reverse(),
-    nombre: (id: number) => {
-      const c = porId.get(id);
-      return c ? nombreDe(c) : null;
-    },
-    filtrar: (id: number) => productos.filter((p) => categoriasDeProducto.get(p)?.has(id)),
+    // Categorías visibles del producto con todas sus ancestras: filtrar por una rama es ver si la incluye.
+    categoriasDe: (p: T) => [...(categoriasDeProducto.get(p) ?? [])],
   };
+}
+
+// Ids desde la raíz hasta la categoría (vacío si no está en el árbol).
+export function rutaEnArbol(raices: NodoCategoria[], id: number): NodoCategoria[] {
+  for (const nodo of raices) {
+    if (nodo.id === id) return [nodo];
+    const resto = rutaEnArbol(nodo.hijas, id);
+    if (resto.length > 0) return [nodo, ...resto];
+  }
+  return [];
 }
