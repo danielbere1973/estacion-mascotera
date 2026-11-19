@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
+import { BotonExportar } from "@/components/boton-exportar";
 
 type Proveedor = {
   id: number;
@@ -50,13 +51,23 @@ export function ProveedoresLista({ proveedores, soloLectura }: { proveedores: Pr
     ? "No se encontraron proveedores para esa búsqueda."
     : "No hay proveedores cargados todavía.";
 
+  // Exporta los proveedores que coinciden con la búsqueda escrita.
+  const exportar = (
+    <BotonExportar
+      ruta="/api/proveedores/exportar"
+      params={{ q: busqueda.trim() }}
+      nota={busqueda.trim() ? "Con la búsqueda aplicada" : "Todos los proveedores"}
+    />
+  );
+
   return (
     <>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center justify-between gap-2">
           <h1 className="whitespace-nowrap text-xl font-semibold text-gray-900">Proveedores: {proveedores.length}</h1>
-          <div className="md:hidden">
+          <div className="flex items-center gap-2 md:hidden">
             <LinkAlta />
+            {exportar}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -68,8 +79,9 @@ export function ProveedoresLista({ proveedores, soloLectura }: { proveedores: Pr
             placeholder="Buscar por nombre o dirección..."
             className="w-full rounded-md border border-gray-300 bg-gray-200 px-3 py-2 text-sm md:w-72 md:bg-white"
           />
-          <div className="hidden md:block">
+          <div className="hidden items-center gap-2 md:flex">
             <LinkAlta />
+            {exportar}
           </div>
         </div>
       </div>
