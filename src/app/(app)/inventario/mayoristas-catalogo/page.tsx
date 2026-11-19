@@ -66,22 +66,25 @@ export default async function MayoristasCatalogoPage({
   }));
 
   // Nombre y foto salen de Tiendanube (por SKU interno = SKU de la variante).
+  // Solo se muestran los productos que están en Tiendanube.
   let datosTN = new Map<string, DatosTN>();
+  let errorTiendanube = !config;
   if (config) {
     try {
       datosTN = await traerDatosPorSkuTiendanube(config.storeId, config.accessToken);
     } catch {
-      // Si falla Tiendanube (token vencido, etc.), seguimos con el nombre propio y sin fotos.
+      // Si falla Tiendanube (token vencido, etc.), avisamos en vez de romper la pantalla.
+      errorTiendanube = true;
     }
   }
 
-  const listado = productos.map((p) => {
+  const listado = productos.flatMap((p) => {
     const tn = datosTN.get(p.skuInterno.toUpperCase());
+    if (!tn) return [];
     return {
       id: p.id,
       skuInterno: p.skuInterno,
-      // Si el producto no está en Tiendanube, queda el nombre de la app.
-      nombre: tn?.nombre ?? p.nombreTiendanube ?? p.nombre,
+      nombre: tn.nombre ?? p.nombreTiendanube ?? p.nombre,
       marca: p.marca,
       estadoStock: p.historialStock.some((h) => h.proveedor?.nombre === "HYM")
         ? p.historialStock.some((h) => h.estadoStockMayorista === "Stock disponible")
@@ -98,7 +101,7 @@ export default async function MayoristasCatalogoPage({
         },
         margenesNum
       ),
-      foto: tn?.foto ?? null,
+      foto: tn.foto,
     };
   });
 
@@ -108,7 +111,7 @@ export default async function MayoristasCatalogoPage({
         <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
         <h1 className="text-xl font-semibold text-gray-900 mt-1">Catálogo mayorista</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Vista previa de precios mayoristas (costo + margen por tipo de producto). Muestra lo que tiene stock según el proveedor (igual que la tienda pública), no el stock propio.
+          Vista previa de precios mayoristas (costo + margen por tipo de producto). Muestra los productos publicados en Tiendanube que tienen stock según el proveedor (igual que la tienda pública), no el stock propio.
         </p>
       </div>
 
@@ -138,6 +141,12 @@ export default async function MayoristasCatalogoPage({
           </a>
         )}
       </form>
+
+      {errorTiendanube && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          No se pudo conectar con Tiendanube, por eso no se muestran productos. Probá de nuevo en un rato.
+        </p>
+      )}
 
       <p className="text-xs text-gray-400">{listado.length} producto{listado.length !== 1 ? "s" : ""}</p>
 
