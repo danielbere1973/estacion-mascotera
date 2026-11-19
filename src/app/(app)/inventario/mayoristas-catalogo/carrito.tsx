@@ -243,7 +243,7 @@ function VentanaCarrito({ onCerrar, clientes, clienteFijo }: Opciones & { onCerr
             <p className="text-sm text-gray-500">Total: {formatCurrency(confirmado.total)}</p>
             <p className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-800">
               Gracias por tu compra, en breve nos contactaremos contigo. Cualquier duda o asistencia que necesites dale
-              clic al botón Whatsapp.
+              clic al botón Contactanos, caso contrario dale clic a Cerrar
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
