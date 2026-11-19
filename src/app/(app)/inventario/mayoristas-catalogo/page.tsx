@@ -132,7 +132,7 @@ export default async function MayoristasCatalogoPage({
           <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
           <h1 className="text-xl font-semibold text-gray-900 mt-1">Catálogo mayorista</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Vista previa de precios mayoristas (costo + margen por tipo de producto). Muestra los productos publicados en Tiendanube que tienen stock según el proveedor (igual que la tienda pública), no el stock propio.
+            Selecciona los productos que desees y agregalos a tu carrito de compras, luego prosigue directo desde el carrito
           </p>
         </div>
         {puedeComprar && <BotonCarrito clientes={opcionesClientes} mediosPago={mediosPago.map((m) => m.nombre)} />}
