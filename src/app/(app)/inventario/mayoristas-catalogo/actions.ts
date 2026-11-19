@@ -7,7 +7,8 @@ import { traerPedidosMayoristas, type PedidoMayorista } from "@/lib/pedidos-mayo
 import { precioMayoristaDe } from "@/lib/mayoristas";
 import { registrarVenta } from "@/lib/registrar-venta";
 import { estadoStockDe, maximoPorEstado } from "./limites";
-import { COMO_NOS_CONOCISTE, MEDIOS_PAGO_MAYORISTA } from "./opciones";
+import { formatCurrency } from "@/lib/format";
+import { COMO_NOS_CONOCISTE, COMPRA_MINIMA_MAYORISTA, COMPRA_MINIMA_TEXTO, MEDIOS_PAGO_MAYORISTA } from "./opciones";
 
 export type ItemCarrito = { productoId: number; cantidad: number };
 
@@ -101,6 +102,15 @@ export async function confirmarCarritoMayorista(datos: {
       items.push({ productoId, cantidad, precioVentaUnitario: Math.round(precio * 100) / 100, descuentoPorcentaje: 0 });
     }
 
+    // Compra mínima, con los precios recalculados acá (no los del navegador).
+    const total = items.reduce((acc, i) => acc + i.cantidad * i.precioVentaUnitario, 0);
+    if (total < COMPRA_MINIMA_MAYORISTA) {
+      return {
+        ok: false,
+        error: `La compra mínima es de ${COMPRA_MINIMA_TEXTO}. Tu pedido suma ${formatCurrency(total)}.`,
+      };
+    }
+
     const ventaId = await registrarVenta({
       clienteId,
       // La venta necesita un canal: los pedidos del catálogo mayorista quedan como WhatsApp.
@@ -119,7 +129,6 @@ export async function confirmarCarritoMayorista(datos: {
     revalidatePath("/");
     revalidatePath("/tablero-control");
 
-    const total = items.reduce((acc, i) => acc + i.cantidad * i.precioVentaUnitario, 0);
     return { ok: true, ventaId, total };
   } catch (error) {
     console.error("confirmarCarritoMayorista", error);
