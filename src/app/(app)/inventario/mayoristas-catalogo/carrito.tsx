@@ -158,6 +158,13 @@ type Opciones = {
   clientes: ComboboxOption[];
 };
 
+// WhatsApp de Estación Mascotera para consultas sobre un pedido mayorista (con el número de pedido ya escrito).
+const WHATSAPP_CONTACTO = "5491173711835";
+function linkWhatsapp(ventaId: number) {
+  const texto = `Hola! Te escribo por mi pedido mayorista #${ventaId}.`;
+  return `https://wa.me/${WHATSAPP_CONTACTO}?text=${encodeURIComponent(texto)}`;
+}
+
 // Ícono del carrito (arriba a la derecha) y la ventana con el detalle.
 export function BotonCarrito({ clientes }: Opciones) {
   const { items } = useCarrito();
@@ -231,13 +238,27 @@ function VentanaCarrito({ onCerrar, clientes }: Opciones & { onCerrar: () => voi
             <p className="text-sm text-gray-600">Tu número de pedido es</p>
             <p className="text-4xl font-bold text-sky-700">#{confirmado.ventaId}</p>
             <p className="text-sm text-gray-500">Total: {formatCurrency(confirmado.total)}</p>
-            <button
-              type="button"
-              onClick={onCerrar}
-              className="mt-2 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              Cerrar
-            </button>
+            <p className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-800">
+              Gracias por tu compra, en breve nos contactaremos contigo. Cualquier duda o asistencia que necesites dale
+              clic al botón Whatsapp.
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={onCerrar}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cerrar
+              </button>
+              <a
+                href={linkWhatsapp(confirmado.ventaId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+              >
+                Contactanos
+              </a>
+            </div>
           </div>
         ) : (
           <>
