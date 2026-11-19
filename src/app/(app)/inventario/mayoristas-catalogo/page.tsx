@@ -144,7 +144,7 @@ export default async function MayoristasCatalogoPage({
           <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
           <h1 className="text-xl font-semibold text-gray-900 mt-1">Catálogo mayorista</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Selecciona los productos que desees y agregalos a tu carrito de compras, luego prosigue directo desde el carrito
+            Selecciona los productos que desees y agregalos a tu carrito de compras, luego prosigue directo desde el carrito. La compra mínima es de $150.000.
           </p>
         </div>
         {puedeComprar && (
