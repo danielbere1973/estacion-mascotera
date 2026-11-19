@@ -5,6 +5,8 @@ import { formatCurrency } from "@/lib/format";
 import { precioMayoristaDe } from "@/lib/mayoristas";
 import { traerDatosPorSkuTiendanube, type DatosTN } from "@/lib/tiendanube";
 import { TipoProductoMayorista } from "@prisma/client";
+import { perfilAcceso } from "@/lib/permissions";
+import { AgregarAlCarrito, BotonCarrito, CarritoProvider } from "./carrito";
 
 const LABELS: Record<TipoProductoMayorista, string> = {
   ALIMENTO_SECO: "Alimento seco",
@@ -21,8 +23,11 @@ export default async function MayoristasCatalogoPage({
   searchParams: Promise<{ q?: string; tipo?: string }>;
 }) {
   const { q, tipo: tipoFiltro } = await searchParams;
+  // El carrito crea ventas: solo para usuarios Administrador (Solo lectura ve el catálogo sin carrito).
+  const { soloLectura } = await perfilAcceso();
+  const puedeComprar = !soloLectura;
 
-  const [productos, margenes, config] = await Promise.all([
+  const [productos, margenes, config, clientes, mediosPago] = await Promise.all([
     prisma.producto.findMany({
       where: {
         activo: true,
@@ -56,7 +61,21 @@ export default async function MayoristasCatalogoPage({
     }),
     prisma.margenMayorista.findMany(),
     prisma.tiendanubeConfig.findFirst(),
+    puedeComprar
+      ? prisma.cliente.findMany({
+          select: { id: true, nombre: true, apellido: true, dni: true },
+          orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+        })
+      : [],
+    puedeComprar ? prisma.medioPago.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }) : [],
   ]);
+
+  const opcionesClientes = clientes.map((c) => ({
+    value: String(c.id),
+    label: `${c.apellido}, ${c.nombre}`,
+    search: `${c.nombre} ${c.apellido} ${c.dni ?? ""}`,
+    hint: c.dni ? `DNI ${c.dni}` : undefined,
+  }));
 
   const margenesNum = margenes.map((m) => ({
     tipoProducto: m.tipoProducto,
@@ -106,13 +125,17 @@ export default async function MayoristasCatalogoPage({
   });
 
   return (
+    <CarritoProvider>
     <div className="space-y-4">
-      <div>
-        <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
-        <h1 className="text-xl font-semibold text-gray-900 mt-1">Catálogo mayorista</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Vista previa de precios mayoristas (costo + margen por tipo de producto). Muestra los productos publicados en Tiendanube que tienen stock según el proveedor (igual que la tienda pública), no el stock propio.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
+          <h1 className="text-xl font-semibold text-gray-900 mt-1">Catálogo mayorista</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Vista previa de precios mayoristas (costo + margen por tipo de producto). Muestra los productos publicados en Tiendanube que tienen stock según el proveedor (igual que la tienda pública), no el stock propio.
+          </p>
+        </div>
+        {puedeComprar && <BotonCarrito clientes={opcionesClientes} mediosPago={mediosPago.map((m) => m.nombre)} />}
       </div>
 
       <form method="GET" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
@@ -152,7 +175,7 @@ export default async function MayoristasCatalogoPage({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {listado.map((p) => (
-          <div key={p.id} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div key={p.id} className="flex flex-col rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
             <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-gray-100">
               {p.foto ? (
                 <Image src={p.foto} alt={p.nombre} fill className="object-cover" unoptimized />
@@ -171,6 +194,19 @@ export default async function MayoristasCatalogoPage({
                 {p.estadoStock}
               </p>
             )}
+            {puedeComprar && p.precioMayorista != null && (
+              <div className="mt-auto">
+                <AgregarAlCarrito
+                  producto={{
+                    productoId: p.id,
+                    nombre: p.nombre,
+                    marca: p.marca,
+                    foto: p.foto,
+                    precio: p.precioMayorista,
+                  }}
+                />
+              </div>
+            )}
           </div>
         ))}
         {listado.length === 0 && (
@@ -178,5 +214,6 @@ export default async function MayoristasCatalogoPage({
         )}
       </div>
     </div>
+    </CarritoProvider>
   );
 }

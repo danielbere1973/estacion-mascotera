@@ -31,6 +31,7 @@ interface Tarjeta {
   clienteId: number | null;
   usuarioAsignado: { nombre: string; apellido: string } | null;
   cliente: { nombre: string; apellido: string } | null;
+  venta?: { esMayorista: boolean } | null; // las ventas mayoristas se pintan de celeste
 }
 
 interface Usuario {
@@ -408,7 +409,9 @@ export function KanbanBoard({
                     onDragStart={() => setDragItem({ type: "card", id: t.id })}
                     onDragEnd={() => setDragItem(null)}
                     onClick={() => !soloLectura && setTarjetaEditando(t)}
-                    className={`group relative ${soloLectura ? "" : "cursor-pointer hover:border-blue-300"} rounded-lg border border-gray-200 bg-white p-3 pr-7 text-sm shadow-sm ${
+                    className={`group relative ${soloLectura ? "" : "cursor-pointer hover:border-blue-300"} rounded-lg border p-3 pr-7 text-sm shadow-sm ${
+                      t.venta?.esMayorista ? "border-sky-200 bg-sky-100" : "border-gray-200 bg-white"
+                    } ${
                       dragItem?.type === "card" && dragItem.id === t.id ? "opacity-50" : ""
                     }`}
                   >

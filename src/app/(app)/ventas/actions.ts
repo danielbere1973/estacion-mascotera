@@ -5,14 +5,14 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
-import { crearVentaCore, eliminarVentaCore, calcularMontoCosto, calcularTotalACobrar, agregarPagoVentaCore, eliminarPagoVentaCore } from "@/lib/ventas";
+import { eliminarVentaCore, calcularMontoCosto, agregarPagoVentaCore, eliminarPagoVentaCore } from "@/lib/ventas";
 import {
   registrarPendientesCompra,
   moverOCrearTarjetaCompraMayorista,
-  crearTarjetaIngresoOrden,
 } from "@/lib/compras-mayoristas";
 import { ejecutarCorteCompraHym } from "@/lib/corte-compras-hym";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { registrarVenta } from "@/lib/registrar-venta";
 import { CanalVenta } from "@prisma/client";
 
 // Los IDs de venta pueden ser 0 (la venta #0 existe), así que no alcanza con `!id`.
@@ -104,89 +104,24 @@ export async function crearVenta(formData: FormData) {
   const costos = parseCostos(formData);
   const clienteIdNum = Number(clienteId);
 
-  const resultado = await prisma.$transaction(async (tx) => {
-    const venta = await crearVentaCore(
-      {
-        clienteId: clienteIdNum,
-        canalVenta,
-        medioPago,
-        costoEnvio,
-        facturado,
-        esVentaInterna,
-        descripcion,
-        numeroFactura,
-        fechaVenta,
-        fechaAcreditacion,
-        vendidoPorId,
-        cobrado,
-        cobradoPorId,
-        usuarioId: Number(session.user.id),
-        items,
-        costos,
-      },
-      tx
-    );
-
-    if (cobrado) {
-      const totalACobrar = calcularTotalACobrar(items, costoEnvio);
-      await agregarPagoVentaCore(
-        venta.ventaId,
-        { monto: totalACobrar, medioPago, fechaAcreditacion, cobradoPorId },
-        Number(session.user.id),
-        tx
-      );
-    }
-
-    const { huboPendienteHym, sinMapeoHym, conMapeoHym } = await registrarPendientesCompra(tx, venta.productosStockNegativo);
-
-    const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
-    const tituloTarjeta = `Venta a ${cliente.nombre} ${cliente.apellido}`;
-    if (huboPendienteHym) {
-      await moverOCrearTarjetaCompraMayorista(tx, {
-        ventaId: venta.ventaId,
-        clienteId: clienteIdNum,
-        titulo: tituloTarjeta,
-      });
-    } else {
-      await crearTarjetaIngresoOrden(tx, {
-        ventaId: venta.ventaId,
-        clienteId: clienteIdNum,
-        titulo: tituloTarjeta,
-      });
-    }
-
-    return { sinMapeoHym, conMapeoHym, huboPendienteHym, ventaId: venta.ventaId };
+  await registrarVenta({
+    clienteId: clienteIdNum,
+    canalVenta,
+    medioPago,
+    costoEnvio,
+    facturado,
+    esVentaInterna,
+    descripcion,
+    numeroFactura,
+    fechaVenta,
+    fechaAcreditacion,
+    vendidoPorId,
+    cobrado,
+    cobradoPorId,
+    usuarioId: Number(session.user.id),
+    items,
+    costos,
   });
-
-  const cliente = await prisma.cliente.findUniqueOrThrow({ where: { id: clienteIdNum } });
-
-  const productosVendidos = await prisma.producto.findMany({
-    where: { id: { in: items.map((i) => i.productoId) } },
-    select: { id: true, nombre: true },
-  });
-  const nombrePorProductoId = new Map(productosVendidos.map((p) => [p.id, p.nombre]));
-  const detalleItems = items
-    .map((i) => `${i.cantidad}x ${nombrePorProductoId.get(i.productoId) ?? "producto"}`)
-    .join(", ");
-
-  const avisoStockManual = resultado.huboPendienteHym
-    ? `\n\n⚠️ ${resultado.conMapeoHym.join(", ")} se quedó sin stock — ya arrancó la compra automática a HYM, te aviso cuando esté confirmada.`
-    : "";
-  await sendTelegramMessage(
-    `🧾 Venta cargada: #${resultado.ventaId} — ${cliente.nombre} ${cliente.apellido}\n${detalleItems}${avisoStockManual}`
-  );
-
-  if (resultado.huboPendienteHym) {
-    ejecutarCorteCompraHym().catch((error) =>
-      console.error("crearVenta: error disparando corte de compras HYM inmediato", error)
-    );
-  }
-
-  if (resultado.sinMapeoHym.length > 0) {
-    await sendTelegramMessage(
-      `⚠️ ${resultado.sinMapeoHym.join(", ")} se quedó sin stock y no tiene proveedor mayorista cargado — hay que reponerlo a mano.`
-    );
-  }
 
   revalidatePath("/ventas");
   revalidatePath("/inventario");
