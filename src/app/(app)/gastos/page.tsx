@@ -5,6 +5,7 @@ import { CATEGORIAS_GASTO_SUGERIDAS } from "@/lib/metrics";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { crearGasto, eliminarGasto } from "./actions";
 import { perfilAcceso } from "@/lib/permissions";
+import { BotonExportar } from "@/components/boton-exportar";
 
 const TIPOS_GASTO: Record<string, { label: string; cls: string }> = {
   FIJO:        { label: "Fijo",        cls: "bg-gray-100 text-gray-600" },
@@ -60,7 +61,10 @@ export default async function GastosPage() {
 
   return (
     <div className="w-full space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">Gastos</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold text-gray-900">Gastos</h1>
+        <BotonExportar ruta="/api/gastos/exportar" nota="Todos los gastos" />
+      </div>
 
       {!soloLectura && (
       <form

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ThOrdenable, useOrden, type ValorOrden } from "@/components/orden-tabla";
 import { AltaClienteModal } from "./alta-cliente-modal";
+import { BotonExportar } from "@/components/boton-exportar";
 import { direccionCompleta, linkWaze, segundaDireccion } from "@/lib/direccion";
 
 type Cliente = {
@@ -85,6 +86,15 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
   const hayBusqueda = Boolean(busqueda.trim() || busquedaDireccion.trim());
   const { ordenadas, orden, ordenar } = useOrden(filtrados, valorOrden);
 
+  // Exporta los clientes que coinciden con las búsquedas escritas.
+  const exportar = (
+    <BotonExportar
+      ruta="/api/clientes/exportar"
+      params={{ q: busqueda.trim(), dir: busquedaDireccion.trim() }}
+      nota={hayBusqueda ? "Con la búsqueda aplicada" : "Todos los clientes"}
+    />
+  );
+
   return (
     <>
       {/* En mobile: título y botones en una fila, buscador abajo a todo el ancho. */}
@@ -94,6 +104,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
           <div className="flex items-center gap-2 md:hidden">
             {!soloLectura && <AltaClienteModal clientes={clientes} />}
             <LinkReposiciones />
+            {exportar}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -115,6 +126,7 @@ export function ClientesLista({ clientes, soloLectura }: { clientes: Cliente[]; 
           <div className="hidden items-center gap-2 md:flex">
             {!soloLectura && <AltaClienteModal clientes={clientes} />}
             <LinkReposiciones />
+            {exportar}
           </div>
         </div>
       </div>
