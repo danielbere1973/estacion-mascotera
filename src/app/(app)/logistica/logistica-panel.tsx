@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Combobox } from "@/components/combobox";
 import { INTERVALO_ACTUALIZACION_MS } from "@/lib/seguimiento";
+import { formatoKm } from "@/lib/km-recorridos";
+import { PestanasLogistica } from "./pestanas";
 import {
   actualizarUbicacion,
   finalizarSeguimiento,
@@ -44,6 +46,7 @@ interface Seguimiento {
   precision: number | null;
   ubicacionAt: Date | null;
   venceAt: Date;
+  kmRecorridos: number;
   cliente: { nombre: string; apellido: string; telefono: string };
   usuario: { nombre: string; apellido: string };
 }
@@ -122,6 +125,8 @@ export function LogisticaPanel({
       : null
   );
   const [ultimoEnvio, setUltimoEnvio] = useState<Date | null>(mio?.ubicacionAt ?? null);
+  // Km del propio seguimiento: los devuelve el servidor en cada envío.
+  const [kmPropio, setKmPropio] = useState<number>(mio?.kmRecorridos ?? 0);
   const [ahora, setAhora] = useState(() => Date.now());
   const posicionRef = useRef<Posicion | null>(posicion);
   // Lista de activos refrescada en vivo (null hasta la primera consulta: se
@@ -172,9 +177,10 @@ export function LogisticaPanel({
       if (!p || detenido) return;
       if (Date.now() >= venceAt) return detener("El seguimiento venció (duraba 1 hora).");
       try {
-        const sigueActivo = await actualizarUbicacion(token, p);
-        if (!sigueActivo) return detener("El seguimiento ya no está activo.");
+        const r = await actualizarUbicacion(token, p);
+        if (!r.activo) return detener("El seguimiento ya no está activo.");
         setUltimoEnvio(new Date());
+        if (r.km != null) setKmPropio(r.km);
       } catch {
         // Sin conexión momentánea: se reintenta en el próximo ciclo.
       }
@@ -239,6 +245,7 @@ export function LogisticaPanel({
       posicionRef.current = p;
       setPosicion(p);
       setUltimoEnvio(new Date());
+      setKmPropio(0);
       setMio({
         id: nuevo.id,
         token: nuevo.token,
@@ -246,6 +253,7 @@ export function LogisticaPanel({
         ...p,
         ubicacionAt: new Date(),
         venceAt: nuevo.venceAt,
+        kmRecorridos: 0,
         cliente: {
           nombre: clienteSeleccionado.nombre,
           apellido: clienteSeleccionado.apellido,
@@ -304,6 +312,7 @@ export function LogisticaPanel({
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <h1 className="text-xl font-semibold text-gray-900">Logística</h1>
+      <PestanasLogistica activa="seguimiento" />
 
       {!mio && (
         <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
@@ -351,6 +360,10 @@ export function LogisticaPanel({
                 Última ubicación enviada {haceCuanto(ultimoEnvio, ahora)} · vence a las{" "}
                 {hora(mio.venceAt)}
               </p>
+            </div>
+            <div className="rounded-lg bg-blue-50 px-3 py-1.5 text-right">
+              <p className="text-lg font-bold leading-tight text-blue-700">{formatoKm(kmPropio)}</p>
+              <p className="text-[11px] text-blue-600">recorridos</p>
             </div>
           </div>
 
@@ -430,7 +443,7 @@ export function LogisticaPanel({
                     Por {s.usuario.nombre} {s.usuario.apellido} · actualizado{" "}
                     {haceCuanto(ultimaUbicacion(s), ahora)}
                     {sinSenal(s) && <span className="text-amber-600"> (sin señal)</span>} · vence{" "}
-                    {hora(s.venceAt)}
+                    {hora(s.venceAt)} · {formatoKm(s.id === mio?.id ? kmPropio : s.kmRecorridos)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

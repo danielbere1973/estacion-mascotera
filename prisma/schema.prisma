@@ -574,6 +574,13 @@ model LogMarketing {
 }
 
 // Configuración general de Marketing → Reminders (una sola fila, id = 1).
+// Configuración de Logística > Costos/KM (una sola fila, id 1).
+model ConfigLogistica {
+  id         Int      @id @default(1)
+  costoPorKm Decimal  @default(0) // $ por km para estimar el costo de cada recorrido
+  updatedAt  DateTime @updatedAt
+}
+
 model ConfigReminders {
   id              Int             @id @default(1)
   switchStatus    StatusReminder? // último clic del botón Switch (null = nunca se usó)
@@ -771,6 +778,12 @@ model SeguimientoUbicacion {
   venceAt      DateTime
   finalizadoAt DateTime?
   createdAt    DateTime  @default(now())
+  // Km recorridos mientras se comparte la ubicación (ver lib/km-recorridos.ts). kmLatitud/kmLongitud/kmAt
+  // es el último punto contado: la distancia se suma desde ahí cuando el movimiento supera el "temblor" del GPS.
+  kmRecorridos Float     @default(0)
+  kmLatitud    Float?
+  kmLongitud   Float?
+  kmAt         DateTime?
   cliente      Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   usuario      Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
