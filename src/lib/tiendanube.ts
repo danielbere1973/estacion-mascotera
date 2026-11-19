@@ -53,7 +53,8 @@ export async function traerProductosTiendanube(storeId: string, accessToken: str
   return productos;
 }
 
-export type DatosTN = { nombre: string | null; foto: string | null };
+// categorias: ids de las categorías de Tiendanube del producto (ver traerCategoriasTiendanube).
+export type DatosTN = { nombre: string | null; foto: string | null; categorias: number[] };
 
 // Nombre y foto principal de Tiendanube por SKU (en mayúsculas). Si el producto tiene
 // varias variantes, el nombre lleva los valores de la variante: "Nombre - 15 kg".
@@ -63,13 +64,14 @@ export async function traerDatosPorSkuTiendanube(storeId: string, accessToken: s
   for (const producto of productos) {
     const foto = producto.images?.[0]?.src ?? null;
     const nombreProducto = producto.name?.es?.trim() || null;
+    const categorias = (producto.categories ?? []).map((c) => c.id);
     for (const variante of producto.variants) {
       const sku = variante.sku?.trim().toUpperCase();
       if (!sku || datosPorSku.has(sku)) continue;
       const valores = (variante.values ?? []).map((v) => v.es?.trim()).filter(Boolean).join(" / ");
       const nombre =
         nombreProducto && valores && producto.variants.length > 1 ? `${nombreProducto} - ${valores}` : nombreProducto;
-      datosPorSku.set(sku, { nombre, foto });
+      datosPorSku.set(sku, { nombre, foto, categorias });
     }
   }
   return datosPorSku;
