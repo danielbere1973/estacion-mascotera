@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { precioMayoristaDe } from "@/lib/mayoristas";
 import { registrarVenta } from "@/lib/registrar-venta";
+import { estadoStockDe, maximoPorEstado } from "./limites";
 
 export type ItemCarrito = { productoId: number; cantidad: number };
 
@@ -50,6 +51,7 @@ export async function confirmarCarritoMayorista(datos: {
           contenido: true,
           unidadMedida: true,
           precioCostoUnitario: true,
+          historialStock: { where: { activo: true }, select: { estadoStockMayorista: true } },
         },
       }),
       prisma.margenMayorista.findMany(),
@@ -67,6 +69,13 @@ export async function confirmarCarritoMayorista(datos: {
     for (const [productoId, cantidad] of cantidadPorProducto) {
       const producto = productos.find((p) => p.id === productoId);
       if (!producto) return { ok: false, error: "Hay un producto del carrito que ya no está en el catálogo. Quitalo y probá de nuevo." };
+      // Límite por stock: Poco Stock hasta 2 unidades, Stock disponible hasta 6.
+      const estado = estadoStockDe(producto.historialStock.map((h) => h.estadoStockMayorista));
+      const maximo = maximoPorEstado(estado);
+      if (maximo === 0) return { ok: false, error: `"${producto.nombre}" ya no tiene stock. Quitalo y probá de nuevo.` };
+      if (cantidad > maximo) {
+        return { ok: false, error: `"${producto.nombre}" tiene ${estado}: se pueden pedir hasta ${maximo} unidades.` };
+      }
       const precio = precioMayoristaDe(
         {
           tipoProductoMayorista: producto.tipoProductoMayorista,

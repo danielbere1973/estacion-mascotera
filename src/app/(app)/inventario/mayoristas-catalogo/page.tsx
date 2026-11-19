@@ -7,6 +7,7 @@ import { traerDatosPorSkuTiendanube, type DatosTN } from "@/lib/tiendanube";
 import { TipoProductoMayorista } from "@prisma/client";
 import { perfilAcceso } from "@/lib/permissions";
 import { AgregarAlCarrito, BotonCarrito, CarritoProvider } from "./carrito";
+import { estadoStockDe, maximoPorEstado } from "./limites";
 
 const LABELS: Record<TipoProductoMayorista, string> = {
   ALIMENTO_SECO: "Alimento seco",
@@ -103,9 +104,7 @@ export default async function MayoristasCatalogoPage({
       skuInterno: p.skuInterno,
       nombre: tn.nombre ?? p.nombreTiendanube ?? p.nombre,
       marca: p.marca,
-      estadoStock: p.historialStock.some((h) => h.estadoStockMayorista === "Stock disponible")
-        ? "Stock disponible"
-        : "Poco Stock",
+      estadoStock: estadoStockDe(p.historialStock.map((h) => h.estadoStockMayorista)),
       tipoProductoMayorista: p.tipoProductoMayorista as TipoProductoMayorista,
       precioMayorista: precioMayoristaDe(
         {
@@ -199,6 +198,7 @@ export default async function MayoristasCatalogoPage({
                     marca: p.marca,
                     foto: p.foto,
                     precio: p.precioMayorista,
+                    maximo: maximoPorEstado(p.estadoStock),
                   }}
                 />
               </div>

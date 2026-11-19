@@ -15,6 +15,7 @@ export type ProductoCarrito = {
   marca: string;
   foto: string | null;
   precio: number; // precio mayorista al momento de agregarlo (al confirmar se recalcula en el servidor)
+  maximo?: number; // unidades máximas según el stock (Poco Stock: 2, Stock disponible: 6)
 };
 
 type ItemCarrito = ProductoCarrito & { cantidad: number };
@@ -85,15 +86,20 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
       agregar: (producto, cantidad) =>
         setItems((prev) => {
           const existente = prev.find((i) => i.productoId === producto.productoId);
+          const tope = (n: number) => (producto.maximo ? Math.min(n, producto.maximo) : n);
           if (existente) {
             return prev.map((i) =>
-              i.productoId === producto.productoId ? { ...i, ...producto, cantidad: i.cantidad + cantidad } : i
+              i.productoId === producto.productoId ? { ...i, ...producto, cantidad: tope(i.cantidad + cantidad) } : i
             );
           }
-          return [...prev, { ...producto, cantidad }];
+          return [...prev, { ...producto, cantidad: tope(cantidad) }];
         }),
       cambiarCantidad: (productoId, cantidad) =>
-        setItems((prev) => prev.map((i) => (i.productoId === productoId ? { ...i, cantidad } : i))),
+        setItems((prev) =>
+          prev.map((i) =>
+            i.productoId === productoId ? { ...i, cantidad: i.maximo ? Math.min(cantidad, i.maximo) : cantidad } : i
+          )
+        ),
       quitar: (productoId) => setItems((prev) => prev.filter((i) => i.productoId !== productoId)),
       vaciar: () => setItems(() => []),
     }),
@@ -104,35 +110,46 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
 }
 
 // Cantidad + "Agregar al carrito" en cada tarjeta del catálogo.
-export function AgregarAlCarrito({ producto }: { producto: ProductoCarrito }) {
-  const { agregar } = useCarrito();
+export function AgregarAlCarrito({ producto }: { producto: ProductoCarrito & { maximo: number } }) {
+  const { items, agregar } = useCarrito();
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
 
+  // Lo que todavía se puede sumar de este producto (máximo menos lo que ya está en el carrito).
+  const enCarrito = items.find((i) => i.productoId === producto.productoId)?.cantidad ?? 0;
+  const disponible = Math.max(0, producto.maximo - enCarrito);
+  const cantidadValida = Math.min(cantidad, Math.max(disponible, 1));
+
   return (
-    <div className="mt-2 flex items-center gap-1.5">
-      <input
-        type="number"
-        min={1}
-        value={cantidad}
-        onChange={(e) => setCantidad(Math.max(1, Math.floor(Number(e.target.value)) || 1))}
-        aria-label="Cantidad"
-        className="w-14 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-      />
-      <button
-        type="button"
-        onClick={() => {
-          agregar(producto, cantidad);
-          setCantidad(1);
-          setAgregado(true);
-          setTimeout(() => setAgregado(false), 1500);
-        }}
-        className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold text-white ${
-          agregado ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
-        }`}
-      >
-        {agregado ? "✓ Agregado" : "Agregar"}
-      </button>
+    <div className="mt-2 space-y-1">
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          min={1}
+          max={Math.max(disponible, 1)}
+          value={cantidadValida}
+          disabled={disponible === 0}
+          onChange={(e) => setCantidad(Math.min(Math.max(1, Math.floor(Number(e.target.value)) || 1), Math.max(disponible, 1)))}
+          aria-label="Cantidad"
+          className="w-14 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
+        />
+        <button
+          type="button"
+          disabled={disponible === 0}
+          onClick={() => {
+            agregar(producto, cantidadValida);
+            setCantidad(1);
+            setAgregado(true);
+            setTimeout(() => setAgregado(false), 1500);
+          }}
+          className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold text-white disabled:bg-gray-300 ${
+            agregado ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
+          }`}
+        >
+          {agregado ? "✓ Agregado" : disponible === 0 ? "Máximo en carrito" : "Agregar"}
+        </button>
+      </div>
+      <p className="text-[11px] text-gray-400">Máximo {producto.maximo} por pedido</p>
     </div>
   );
 }
@@ -260,6 +277,7 @@ function VentanaCarrito({ onCerrar, clientes, mediosPago }: Opciones & { onCerra
                     <input
                       type="number"
                       min={1}
+                      max={i.maximo}
                       value={i.cantidad}
                       onChange={(e) => cambiarCantidad(i.productoId, Math.max(1, Math.floor(Number(e.target.value)) || 1))}
                       aria-label={`Cantidad de ${i.nombre}`}
