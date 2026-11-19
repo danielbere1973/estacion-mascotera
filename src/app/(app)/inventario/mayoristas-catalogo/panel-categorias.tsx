@@ -1,23 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import type { NodoCategoria } from "./arbol-categorias";
 
 type Props = {
   raices: NodoCategoria[];
   // Ids desde la raíz hasta la categoría elegida (vacío si no hay ninguna).
   ruta: number[];
-  // Parámetros de búsqueda a conservar al cambiar de categoría (q, tipo).
-  params: Record<string, string>;
+  onElegir: (categoriaId: number | null) => void;
 };
-
-function hrefCategoria(params: Record<string, string>, categoriaId: number | null) {
-  const sp = new URLSearchParams(params);
-  if (categoriaId != null) sp.set("cat", String(categoriaId));
-  const qs = sp.toString();
-  return `/inventario/mayoristas-catalogo${qs ? `?${qs}` : ""}`;
-}
 
 function Chevron({ abierta, visible }: { abierta: boolean; visible: boolean }) {
   return (
@@ -32,29 +23,29 @@ function Chevron({ abierta, visible }: { abierta: boolean; visible: boolean }) {
   );
 }
 
-function Rama({ nodo, ruta, params, nivel }: { nodo: NodoCategoria; ruta: number[]; params: Record<string, string>; nivel: number }) {
+function Rama({ nodo, ruta, onElegir, nivel }: Omit<Props, "raices"> & { nodo: NodoCategoria; nivel: number }) {
   const elegida = ruta[ruta.length - 1] === nodo.id;
   const abierta = ruta.includes(nodo.id);
   // Cliquear la rama elegida la cierra y vuelve a su padre.
   const destino = elegida ? (ruta.length > 1 ? ruta[ruta.length - 2] : null) : nodo.id;
   return (
     <li>
-      <Link
-        href={hrefCategoria(params, destino)}
-        scroll={false}
+      <button
+        type="button"
+        onClick={() => onElegir(destino)}
         style={{ paddingLeft: `${nivel * 14 + 4}px` }}
-        className={`flex items-center gap-1.5 rounded py-1 pr-2 text-sm ${
+        className={`flex w-full items-center gap-1.5 rounded py-1 pr-2 text-left text-sm ${
           elegida ? "bg-gray-100 font-semibold text-gray-900" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
         }`}
       >
         <Chevron abierta={abierta && nodo.hijas.length > 0} visible={nodo.hijas.length > 0} />
         <span className="min-w-0 flex-1 truncate">{nodo.nombre}</span>
         <span className="text-xs font-normal text-gray-400">{nodo.cantidad}</span>
-      </Link>
+      </button>
       {abierta && nodo.hijas.length > 0 && (
         <ul>
           {nodo.hijas.map((h) => (
-            <Rama key={h.id} nodo={h} ruta={ruta} params={params} nivel={nivel + 1} />
+            <Rama key={h.id} nodo={h} ruta={ruta} onElegir={onElegir} nivel={nivel + 1} />
           ))}
         </ul>
       )}
@@ -62,7 +53,7 @@ function Rama({ nodo, ruta, params, nivel }: { nodo: NodoCategoria; ruta: number
   );
 }
 
-export function PanelCategorias({ raices, ruta, params }: Props) {
+export function PanelCategorias({ raices, ruta, onElegir }: Props) {
   // En el celular el árbol arranca cerrado para no tapar los productos.
   const [abierto, setAbierto] = useState(false);
   if (raices.length === 0) return null;
@@ -80,19 +71,19 @@ export function PanelCategorias({ raices, ruta, params }: Props) {
         <p className="mb-1 hidden text-xs font-semibold uppercase tracking-wide text-gray-400 lg:block">Categorías</p>
         <ul>
           <li>
-            <Link
-              href={hrefCategoria(params, null)}
-              scroll={false}
-              className={`flex items-center gap-1.5 rounded py-1 pl-1 pr-2 text-sm ${
+            <button
+              type="button"
+              onClick={() => onElegir(null)}
+              className={`flex w-full items-center gap-1.5 rounded py-1 pl-1 pr-2 text-left text-sm ${
                 ruta.length === 0 ? "bg-gray-100 font-semibold text-gray-900" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
               <Chevron abierta={false} visible={false} />
               Todos
-            </Link>
+            </button>
           </li>
           {raices.map((r) => (
-            <Rama key={r.id} nodo={r} ruta={ruta} params={params} nivel={0} />
+            <Rama key={r.id} nodo={r} ruta={ruta} onElegir={onElegir} nivel={0} />
           ))}
         </ul>
       </nav>

@@ -1,16 +1,14 @@
 import Link from "next/link";
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency } from "@/lib/format";
 import { precioMayoristaDe } from "@/lib/mayoristas";
 import { traerCategoriasTiendanube, traerDatosPorSkuTiendanube, type CategoriaTN, type DatosTN } from "@/lib/tiendanube";
 import { TipoProductoMayorista } from "@prisma/client";
 import { perfilAcceso } from "@/lib/permissions";
-import { AgregarAlCarrito, BotonCarrito, CarritoProvider } from "./carrito";
+import { BotonCarrito, CarritoProvider } from "./carrito";
 import { BotonMisCarritos } from "./mis-carritos";
-import { estadoStockDe, maximoPorEstado } from "./limites";
+import { estadoStockDe } from "./limites";
 import { armarArbolCategorias } from "./arbol-categorias";
-import { PanelCategorias } from "./panel-categorias";
+import { CatalogoProductos, ExtrasBusqueda, type ProductoCatalogo } from "./catalogo-productos";
 
 const LABELS: Record<TipoProductoMayorista, string> = {
   ALIMENTO_SECO: "Alimento seco",
@@ -24,10 +22,10 @@ const LABELS: Record<TipoProductoMayorista, string> = {
 export default async function MayoristasCatalogoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tipo?: string; cat?: string }>;
+  // ?cat= (categoría del árbol) también viene en la URL, pero se filtra en el navegador.
+  searchParams: Promise<{ q?: string; tipo?: string }>;
 }) {
-  const { q, tipo: tipoFiltro, cat } = await searchParams;
-  const categoriaId = cat && /^\d+$/.test(cat) ? Number(cat) : null;
+  const { q, tipo: tipoFiltro } = await searchParams;
   // El carrito crea ventas: lo usan los Administradores (eligen el cliente) y los usuarios
   // vinculados a un cliente (compran a su nombre y ven "Mis carritos"). El resto ve el catálogo sin carrito.
   const { esAdmin, clienteId: clienteVinculadoId } = await perfilAcceso();
@@ -115,11 +113,10 @@ export default async function MayoristasCatalogoPage({
     if (!tn) return [];
     return {
       id: p.id,
-      skuInterno: p.skuInterno,
       nombre: tn.nombre ?? p.nombreTiendanube ?? p.nombre,
       marca: p.marca,
       estadoStock: estadoStockDe(p.historialStock.map((h) => h.estadoStockMayorista)),
-      tipoProductoMayorista: p.tipoProductoMayorista as TipoProductoMayorista,
+      tipo: LABELS[p.tipoProductoMayorista as TipoProductoMayorista],
       precioMayorista: precioMayoristaDe(
         {
           tipoProductoMayorista: p.tipoProductoMayorista,
@@ -134,14 +131,9 @@ export default async function MayoristasCatalogoPage({
     };
   });
 
-  // El árbol se arma con lo que dejó la búsqueda, y la categoría elegida filtra encima.
+  // El árbol se arma con lo que dejó la búsqueda; la categoría elegida filtra en el navegador.
   const arbol = armarArbolCategorias(categoriasTN, todos);
-  const listado = categoriaId != null ? arbol.filtrar(categoriaId) : todos;
-  const ruta = categoriaId != null ? arbol.rutaHasta(categoriaId) : [];
-  const paramsBusqueda: Record<string, string> = {
-    ...(q ? { q } : {}),
-    ...(tipoFiltro ? { tipo: tipoFiltro } : {}),
-  };
+  const productosCatalogo: ProductoCatalogo[] = todos.map((p) => ({ ...p, categorias: arbol.categoriasDe(p) }));
 
   return (
     <CarritoProvider>
@@ -163,7 +155,6 @@ export default async function MayoristasCatalogoPage({
       </div>
 
       <form method="GET" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-        {categoriaId != null && <input type="hidden" name="cat" value={categoriaId} />}
         <input
           name="q"
           defaultValue={q ?? ""}
@@ -183,11 +174,7 @@ export default async function MayoristasCatalogoPage({
         <button type="submit" className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
           Buscar
         </button>
-        {(q || tipoFiltro || categoriaId != null) && (
-          <a href="/inventario/mayoristas-catalogo" className="rounded-md border border-gray-200 px-4 py-2 text-center text-sm text-gray-500 hover:bg-gray-50">
-            Limpiar
-          </a>
-        )}
+        <ExtrasBusqueda hayBusqueda={!!(q || tipoFiltro)} />
       </form>
 
       {errorTiendanube && (
@@ -196,60 +183,7 @@ export default async function MayoristasCatalogoPage({
         </p>
       )}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      <PanelCategorias raices={arbol.raices} ruta={ruta} params={paramsBusqueda} />
-
-      <div className="min-w-0 flex-1 space-y-3">
-      <p className="text-xs text-gray-400">
-        {ruta.length > 0 && (
-          <span className="text-gray-600">{ruta.map((id) => arbol.nombre(id)).join(" › ")} · </span>
-        )}
-        {listado.length} producto{listado.length !== 1 ? "s" : ""}
-      </p>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {listado.map((p) => (
-          <div key={p.id} className="flex flex-col rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-            <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-gray-100">
-              {p.foto ? (
-                <Image src={p.foto} alt={p.nombre} fill className="object-cover" unoptimized />
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-gray-400">Sin foto</div>
-              )}
-            </div>
-            <p className="text-xs text-gray-400">{p.marca}</p>
-            <p className="text-sm font-medium text-gray-900 leading-snug">{p.nombre}</p>
-            <p className="mt-1 text-xs text-gray-400">{LABELS[p.tipoProductoMayorista]}</p>
-            <p className="mt-2 text-lg font-semibold text-gray-900">
-              {p.precioMayorista != null ? formatCurrency(p.precioMayorista) : "—"}
-            </p>
-            {p.estadoStock && (
-              <p className={`text-xs ${p.estadoStock === "Stock disponible" ? "text-green-600" : "text-amber-600"}`}>
-                {p.estadoStock}
-              </p>
-            )}
-            {puedeComprar && p.precioMayorista != null && (
-              <div className="mt-auto">
-                <AgregarAlCarrito
-                  producto={{
-                    productoId: p.id,
-                    nombre: p.nombre,
-                    marca: p.marca,
-                    foto: p.foto,
-                    precio: p.precioMayorista,
-                    maximo: maximoPorEstado(p.estadoStock),
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        ))}
-        {listado.length === 0 && (
-          <p className="col-span-full py-6 text-center text-sm text-gray-400">No hay productos que coincidan.</p>
-        )}
-      </div>
-      </div>
-      </div>
+      <CatalogoProductos raices={arbol.raices} productos={productosCatalogo} puedeComprar={puedeComprar} />
     </div>
     </CarritoProvider>
   );
