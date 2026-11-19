@@ -10,6 +10,14 @@ function esRaizInterna(nombre: string): boolean {
 
 const nombreDe = (c: CategoriaTN) => c.name.es?.trim() || `Categoría ${c.id}`;
 
+// Orden fijo de las ramas principales; las que no están acá van después, en orden alfabético.
+const ORDEN_RAICES = ["gatos", "perros", "marcas", "promociones"];
+const normalizar = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+const posicionRaiz = (nombre: string) => {
+  const i = ORDEN_RAICES.indexOf(normalizar(nombre));
+  return i === -1 ? ORDEN_RAICES.length : i;
+};
+
 // Árbol de categorías de Tiendanube armado solo con las ramas que tienen productos del listado.
 // Un producto cuenta en su categoría y en todas sus ancestras, así al cliquear una rama
 // aparecen también los productos de sus sub-ramas.
@@ -59,7 +67,11 @@ export function armarArbolCategorias<T extends { categorias: number[] }>(categor
   const armar = (padre: number | null): NodoCategoria[] =>
     (hijasDe.get(padre) ?? [])
       .map((c) => ({ id: c.id, nombre: nombreDe(c), cantidad: cantidad.get(c.id) ?? 0, hijas: armar(c.id) }))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }));
+      .sort(
+        (a, b) =>
+          (padre == null ? posicionRaiz(a.nombre) - posicionRaiz(b.nombre) : 0) ||
+          a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" })
+      );
 
   return {
     raices: armar(null),

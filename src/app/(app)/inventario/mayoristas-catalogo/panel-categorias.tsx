@@ -88,7 +88,7 @@ export function PanelCategorias({ raices, ruta, params }: Props) {
               }`}
             >
               <Chevron abierta={false} visible={false} />
-              Todas
+              Todos
             </Link>
           </li>
           {raices.map((r) => (
