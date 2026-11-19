@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { perfilAcceso } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { armarFiltroVentas } from "@/lib/filtro-ventas";
 import { FiltrosVentas } from "./filtros-ventas";
 import { VentasTabla } from "./ventas-tabla";
 
@@ -30,30 +31,17 @@ export default async function VentasPage({
     ? Array.isArray(params.pago) ? params.pago : [params.pago]
     : [];
 
-  const where: Record<string, unknown> = {};
-
-  if (params.desde || params.hasta) {
-    where.fechaVenta = {
-      ...(params.desde ? { gte: new Date(params.desde) } : {}),
-      ...(params.hasta ? { lt: new Date(`${params.hasta}T23:59:59`) } : {}),
-    };
-  }
-
-  if (params.clienteId) where.clienteId = Number(params.clienteId);
-  if (params.facturado === "si") where.facturado = true;
-  if (params.facturado === "no") where.facturado = false;
-  if (canalesSeleccionados.length > 0) where.canalVenta = { in: canalesSeleccionados };
-  if (pagosSeleccionados.length > 0) where.medioPago = { in: pagosSeleccionados };
-
-  if (proveedores) {
-    const comprasDelProveedor = await prisma.compra.findMany({
-      where: { proveedorId: { in: proveedores } },
-      select: { productoId: true },
-      distinct: ["productoId"],
-    });
-    const productoIds = comprasDelProveedor.map((c) => c.productoId);
-    where.detalles = { some: { productoId: { in: productoIds } } };
-  }
+  const where = await armarFiltroVentas(
+    {
+      desde: params.desde,
+      hasta: params.hasta,
+      clienteId: params.clienteId,
+      facturado: params.facturado,
+      canal: canalesSeleccionados,
+      pago: pagosSeleccionados,
+    },
+    proveedores
+  );
 
   const [ventas, totalVentas, clientes, mediosPagoDistintos] = await Promise.all([
     prisma.venta.findMany({
