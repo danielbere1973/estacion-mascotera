@@ -1,11 +1,10 @@
 import { perfilAcceso, requireSinRestriccion } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
 import { formatoKm } from "@/lib/km-recorridos";
-import { ESTADO_LABEL, formatoDuracion, traerCostoPorKm, traerRecorridos } from "@/lib/recorridos-logistica";
+import { ESTADO_LABEL, formatoDuracion, traerConductores, traerRecorridos } from "@/lib/recorridos-logistica";
 import { BotonExportar } from "@/components/boton-exportar";
 import { PestanasLogistica } from "../pestanas";
-import { guardarCostoPorKm } from "./actions";
+import { guardarVehiculo } from "./actions";
 
 const fechaHora = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -38,15 +37,7 @@ export default async function CostosKmPage({
   const { soloLectura } = await perfilAcceso();
   const filtro = await searchParams;
 
-  const costoPorKm = await traerCostoPorKm();
-  const [recorridos, usuarios] = await Promise.all([
-    traerRecorridos(filtro, costoPorKm),
-    prisma.usuario.findMany({
-      where: { seguimientos: { some: {} } },
-      orderBy: { nombre: "asc" },
-      select: { id: true, nombre: true, apellido: true },
-    }),
-  ]);
+  const [recorridos, conductores] = await Promise.all([traerRecorridos(filtro), traerConductores()]);
 
   const kmTotal = recorridos.reduce((acc, r) => acc + r.km, 0);
   const costoTotal = recorridos.reduce((acc, r) => acc + r.costo, 0);
@@ -62,32 +53,60 @@ export default async function CostosKmPage({
         compartir. Es una estimación por GPS: si la pantalla se bloquea, el tramo sin señal se cuenta en línea recta.
       </p>
 
-      {/* Costo por km */}
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4">
+      {/* Costo por km de cada auto: los viajes de cada uno se calculan con su auto. */}
+      <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-4">
         <div>
-          <p className="text-sm font-medium text-gray-700">Costo por km</p>
-          <p className="text-xs text-gray-500">Se usa para estimar el costo de cada recorrido (combustible, desgaste, etc.).</p>
+          <p className="text-sm font-medium text-gray-700">Costo por km de cada auto</p>
+          <p className="text-xs text-gray-500">
+            Los viajes de cada uno se calculan con el costo por km de su auto (combustible, desgaste, etc.).
+          </p>
         </div>
-        {soloLectura ? (
-          <p className="text-lg font-semibold text-gray-900">{formatCurrency(costoPorKm)} / km</p>
-        ) : (
-          <form action={guardarCostoPorKm} className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">$</span>
-            <input
-              name="costoPorKm"
-              type="number"
-              min={0}
-              step="0.01"
-              defaultValue={costoPorKm || ""}
-              placeholder="0"
-              required
-              className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-            <span className="text-sm text-gray-500">/ km</span>
-            <button type="submit" className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-              Guardar
-            </button>
-          </form>
+        {conductores.length === 0 && (
+          <p className="text-sm text-gray-400">Aparece cada persona después de compartir su ubicación por primera vez.</p>
+        )}
+        {conductores.map((c) =>
+          soloLectura ? (
+            <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-2 text-sm">
+              <span className="font-medium text-gray-800">{c.nombre}</span>
+              <span className="text-gray-700">
+                {formatCurrency(c.costoPorKm)} / km · {c.auto ?? "Auto sin cargar"}
+              </span>
+            </div>
+          ) : (
+            <form
+              key={c.id}
+              action={guardarVehiculo}
+              className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2"
+            >
+              <input type="hidden" name="usuarioId" value={c.id} />
+              <span className="w-full text-sm font-medium text-gray-800 sm:w-40">{c.nombre}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-500">$</span>
+                <input
+                  name="costoPorKm"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  defaultValue={c.costoPorKm || ""}
+                  placeholder="0"
+                  required
+                  aria-label={`Costo por km de ${c.nombre}`}
+                  className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+                <span className="text-sm text-gray-500">/ km</span>
+              </div>
+              <input
+                name="auto"
+                defaultValue={c.auto ?? ""}
+                placeholder="Auto (ej. Fiat Cronos 2020)"
+                aria-label={`Auto de ${c.nombre}`}
+                className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm sm:max-w-xs"
+              />
+              <button type="submit" className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                Guardar
+              </button>
+            </form>
+          )
         )}
       </div>
 
@@ -97,9 +116,9 @@ export default async function CostosKmPage({
         <input type="date" name="hasta" aria-label="Hasta" defaultValue={filtro.hasta} className="min-w-0 rounded-md border border-gray-300 px-2 py-1.5" />
         <select name="usuarioId" defaultValue={filtro.usuarioId ?? ""} className="col-span-2 rounded-md border border-gray-300 px-2 py-1.5">
           <option value="">Todos los que manejaron</option>
-          {usuarios.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.nombre} {u.apellido}
+          {conductores.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
             </option>
           ))}
         </select>
@@ -144,6 +163,7 @@ export default async function CostosKmPage({
                 <p className="font-medium text-gray-900">{r.cliente}</p>
                 <p className="text-xs text-gray-500">
                   {fechaHora.format(r.inicio)} · {r.usuario}
+                  {r.auto && ` (${r.auto})`}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -166,6 +186,7 @@ export default async function CostosKmPage({
               <th className="px-3 py-2">Fecha</th>
               <th className="px-3 py-2">Cliente</th>
               <th className="px-3 py-2">Manejó</th>
+              <th className="px-3 py-2">Auto</th>
               <th className="px-3 py-2">Horario</th>
               <th className="px-3 py-2">Duración</th>
               <th className="px-3 py-2 text-right">Km</th>
@@ -179,12 +200,15 @@ export default async function CostosKmPage({
                 <td className="whitespace-nowrap px-3 py-2">{fechaHora.format(r.inicio).split(",")[0]}</td>
                 <td className="px-3 py-2 font-medium">{r.cliente}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">{r.usuario}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-gray-600">{r.auto ?? "-"}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">
                   {hora.format(r.inicio)} – {r.estado === "ACTIVO" ? "en curso" : hora.format(r.fin)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">{formatoDuracion(r.minutos)}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{formatoKm(r.km)}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">{formatCurrency(r.costo)}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-right" title={`${formatCurrency(r.costoPorKm)} / km`}>
+                  {formatCurrency(r.costo)}
+                </td>
                 <td className="whitespace-nowrap px-3 py-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs ${ESTADO_CLASE[r.estado]}`}>{ESTADO_LABEL[r.estado]}</span>
                 </td>

@@ -12,18 +12,32 @@ export type Recorrido = {
   fin: Date;
   minutos: number;
   cliente: string;
+  usuarioId: number;
   usuario: string;
+  auto: string | null;
   km: number;
+  costoPorKm: number;
   costo: number;
   estado: EstadoSeguimiento;
 };
 
-export async function traerCostoPorKm(): Promise<number> {
-  const config = await prisma.configLogistica.findUnique({ where: { id: 1 } });
-  return config ? Number(config.costoPorKm) : 0;
+// Quienes manejan: los que ya compartieron la ubicación alguna vez o tienen un auto cargado.
+export async function traerConductores() {
+  const usuarios = await prisma.usuario.findMany({
+    where: { OR: [{ seguimientos: { some: {} } }, { vehiculo: { isNot: null } }] },
+    orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true, apellido: true, vehiculo: { select: { auto: true, costoPorKm: true } } },
+  });
+  return usuarios.map((u) => ({
+    id: u.id,
+    nombre: `${u.nombre} ${u.apellido}`,
+    auto: u.vehiculo?.auto ?? null,
+    costoPorKm: u.vehiculo ? Number(u.vehiculo.costoPorKm) : 0,
+  }));
 }
 
-export async function traerRecorridos(filtro: FiltroRecorridos, costoPorKm: number): Promise<Recorrido[]> {
+// Cada viaje se calcula con el costo por km del auto de quien manejó (vigente hoy).
+export async function traerRecorridos(filtro: FiltroRecorridos): Promise<Recorrido[]> {
   const where: Prisma.SeguimientoUbicacionWhereInput = {};
   if (filtro.desde || filtro.hasta) {
     // Fechas del filtro en hora de Argentina (UTC-3).
@@ -44,8 +58,11 @@ export async function traerRecorridos(filtro: FiltroRecorridos, costoPorKm: numb
       venceAt: true,
       finalizadoAt: true,
       kmRecorridos: true,
+      usuarioId: true,
       cliente: { select: { nombre: true, apellido: true } },
-      usuario: { select: { nombre: true, apellido: true } },
+      usuario: {
+        select: { nombre: true, apellido: true, vehiculo: { select: { auto: true, costoPorKm: true } } },
+      },
     },
   });
 
@@ -56,14 +73,18 @@ export async function traerRecorridos(filtro: FiltroRecorridos, costoPorKm: numb
     const fin =
       s.finalizadoAt ??
       (estado === "VENCIDO" ? new Date(Math.min((s.ubicacionAt ?? s.venceAt).getTime(), s.venceAt.getTime())) : ahora);
+    const costoPorKm = s.usuario.vehiculo ? Number(s.usuario.vehiculo.costoPorKm) : 0;
     return {
       id: s.id,
       inicio: s.createdAt,
       fin,
       minutos: Math.max(0, Math.round((fin.getTime() - s.createdAt.getTime()) / 60000)),
       cliente: `${s.cliente.apellido}, ${s.cliente.nombre}`,
+      usuarioId: s.usuarioId,
       usuario: `${s.usuario.nombre} ${s.usuario.apellido}`,
+      auto: s.usuario.vehiculo?.auto ?? null,
       km: s.kmRecorridos,
+      costoPorKm,
       costo: s.kmRecorridos * costoPorKm,
       estado,
     };
