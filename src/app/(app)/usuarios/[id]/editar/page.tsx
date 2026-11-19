@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { actualizarUsuario } from "../../actions";
 import { ModulosCampo } from "../../modulos-campo";
 import { ProveedoresCampo } from "../../proveedores-campo";
+import { ClienteCampo } from "../../cliente-campo";
 
 export default async function EditarUsuarioPage({
   params,
@@ -15,15 +16,26 @@ export default async function EditarUsuarioPage({
 
   const { id } = await params;
 
-  const [usuario, proveedores] = await Promise.all([
+  const [usuario, proveedores, clientes] = await Promise.all([
     prisma.usuario.findUnique({
       where: { id: Number(id) },
       include: { proveedoresAcceso: { select: { id: true } } },
     }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+    prisma.cliente.findMany({
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+      select: { id: true, nombre: true, apellido: true, dni: true },
+    }),
   ]);
 
   if (!usuario) notFound();
+
+  const opcionesClientes = clientes.map((c) => ({
+    value: String(c.id),
+    label: `${c.apellido}, ${c.nombre}`,
+    search: `${c.nombre} ${c.apellido} ${c.dni ?? ""}`,
+    hint: c.dni ? `DNI ${c.dni}` : undefined,
+  }));
 
   return (
     <div className="space-y-4">
@@ -104,6 +116,8 @@ export default async function EditarUsuarioPage({
           proveedores={proveedores}
           seleccionados={usuario.proveedoresAcceso.map((p) => p.id)}
         />
+
+        <ClienteCampo clientes={opcionesClientes} seleccionado={usuario.clienteId} />
 
         <ModulosCampo seleccionados={usuario.modulos} />
 

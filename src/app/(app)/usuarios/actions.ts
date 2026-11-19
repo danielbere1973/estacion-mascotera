@@ -9,6 +9,12 @@ import { registrarLog } from "@/lib/log";
 import { RolUsuario } from "@prisma/client";
 import { modulosDelFormulario } from "@/lib/modulos";
 
+// Cliente mayorista vinculado (vacío = ninguno).
+function clienteDelFormulario(formData: FormData): number | null {
+  const id = Number(formData.get("clienteId"));
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 // Proveedores tildados en "Restricción de acceso a Proveedores" (vacío = sin restricción).
 function proveedoresDelFormulario(formData: FormData): number[] {
   return formData
@@ -26,6 +32,7 @@ export async function crearUsuario(formData: FormData) {
   const password = formData.get("password")?.toString();
   const rol = formData.get("rol")?.toString() as RolUsuario;
   const proveedores = proveedoresDelFormulario(formData);
+  const clienteId = clienteDelFormulario(formData);
   const activo = formData.get("activo") === "on";
   const modulos = modulosDelFormulario(formData);
 
@@ -48,6 +55,7 @@ export async function crearUsuario(formData: FormData) {
         rol,
         activo,
         modulos,
+        clienteId,
         proveedoresAcceso: { connect: proveedores.map((id) => ({ id })) },
       },
     });
@@ -77,6 +85,7 @@ export async function actualizarUsuario(formData: FormData) {
   const password = formData.get("password")?.toString();
   const rol = formData.get("rol")?.toString() as RolUsuario;
   const proveedores = proveedoresDelFormulario(formData);
+  const clienteId = clienteDelFormulario(formData);
   const activo = formData.get("activo") === "on";
   const modulos = modulosDelFormulario(formData);
 
@@ -91,6 +100,7 @@ export async function actualizarUsuario(formData: FormData) {
     rol,
     activo,
     modulos,
+    clienteId,
     proveedoresAcceso: { set: proveedores.map((id) => ({ id })) },
     // Campo viejo de cuando la restricción era un solo proveedor: se limpia al guardar.
     proveedorRestrictoId: null,

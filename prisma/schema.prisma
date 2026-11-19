@@ -29,12 +29,18 @@ model Usuario {
   proveedorRestricto   Proveedor?             @relation("UsuarioProveedorRestricto", fields: [proveedorRestrictoId], references: [id])
   // Restricción de acceso a Proveedores: vacía = ve todo; con proveedores = solo ve datos de esos.
   proveedoresAcceso    Proveedor[]            @relation("UsuarioProveedoresAcceso")
+  // Cliente mayorista vinculado: el usuario compra en el Catálogo mayorista a nombre de este
+  // cliente y en "Mis carritos" ve solo los pedidos de este cliente.
+  clienteId            Int?
+  cliente              Cliente?               @relation("UsuarioCliente", fields: [clienteId], references: [id], onDelete: SetNull)
   ventasCobradas       Venta[]                @relation("VentaCobradaPor")
   ventas               Venta[]
   ventasVendidas       Venta[]                @relation("VentaVendidaPor")
   tarjetasAsignadas    TarjetaTablero[]
   pagosVentaCobrados   PagoVenta[]            @relation("PagoVentaCobradoPor")
   seguimientos         SeguimientoUbicacion[]
+
+  @@index([clienteId])
 }
 
 model TipoProducto {
@@ -205,6 +211,7 @@ model Cliente {
   ventas               Venta[]
   tarjetasTablero      TarjetaTablero[]
   seguimientos         SeguimientoUbicacion[]
+  usuarios             Usuario[]                   @relation("UsuarioCliente")
 
   @@index([familiaId])
 }

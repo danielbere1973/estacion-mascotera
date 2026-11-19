@@ -6,6 +6,7 @@ import { textoModulos } from "@/lib/modulos";
 import { crearUsuario } from "./actions";
 import { ModulosCampo } from "./modulos-campo";
 import { ProveedoresCampo } from "./proveedores-campo";
+import { ClienteCampo } from "./cliente-campo";
 
 const ROL_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
@@ -16,13 +17,27 @@ const ROL_LABELS: Record<string, string> = {
 export default async function UsuariosPage() {
   if ((await perfilAcceso()).soloLectura) redirect("/");
 
-  const [usuarios, proveedores] = await Promise.all([
+  const [usuarios, proveedores, clientes] = await Promise.all([
     prisma.usuario.findMany({
       orderBy: { nombre: "asc" },
-      include: { proveedoresAcceso: { select: { nombre: true }, orderBy: { nombre: "asc" } } },
+      include: {
+        proveedoresAcceso: { select: { nombre: true }, orderBy: { nombre: "asc" } },
+        cliente: { select: { nombre: true, apellido: true } },
+      },
     }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+    prisma.cliente.findMany({
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+      select: { id: true, nombre: true, apellido: true, dni: true },
+    }),
   ]);
+
+  const opcionesClientes = clientes.map((c) => ({
+    value: String(c.id),
+    label: `${c.apellido}, ${c.nombre}`,
+    search: `${c.nombre} ${c.apellido} ${c.dni ?? ""}`,
+    hint: c.dni ? `DNI ${c.dni}` : undefined,
+  }));
 
   return (
     <div className="w-full space-y-4">
@@ -96,6 +111,8 @@ export default async function UsuariosPage() {
 
           <ProveedoresCampo proveedores={proveedores} />
 
+          <ClienteCampo clientes={opcionesClientes} />
+
           <ModulosCampo />
 
           <div className="sm:col-span-2">
@@ -155,7 +172,14 @@ export default async function UsuariosPage() {
                 <td className="whitespace-nowrap px-3 py-2 text-gray-500">
                   {u.proveedoresAcceso.length ? u.proveedoresAcceso.map((p) => p.nombre).join(", ") : "Todos"}
                 </td>
-                <td className="px-3 py-2 text-gray-600">{textoModulos(u.modulos)}</td>
+                <td className="px-3 py-2 text-gray-600">
+                  {textoModulos(u.modulos)}
+                  {u.cliente && (
+                    <span className="mt-0.5 block text-xs text-sky-700">
+                      🛒 Cliente: {u.cliente.apellido}, {u.cliente.nombre}
+                    </span>
+                  )}
+                </td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {u.activo ? (
                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Sí</span>
