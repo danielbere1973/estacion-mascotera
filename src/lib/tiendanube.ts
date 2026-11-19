@@ -9,6 +9,7 @@ export type CategoriaTN = {
 export type VarianteTN = {
   id: number;
   sku: string | null;
+  values?: { es?: string }[]; // valores de la variante, ej. [{ es: "15 kg" }]
 };
 
 export type ImagenTN = {
@@ -52,17 +53,24 @@ export async function traerProductosTiendanube(storeId: string, accessToken: str
   return productos;
 }
 
-// Foto principal por skuInterno (primera imagen de la primera variante que matchea ese SKU).
-export async function traerFotosPorSkuTiendanube(storeId: string, accessToken: string): Promise<Map<string, string>> {
+export type DatosTN = { nombre: string | null; foto: string | null };
+
+// Nombre y foto principal de Tiendanube por SKU (en mayúsculas). Si el producto tiene
+// varias variantes, el nombre lleva los valores de la variante: "Nombre - 15 kg".
+export async function traerDatosPorSkuTiendanube(storeId: string, accessToken: string): Promise<Map<string, DatosTN>> {
   const productos = await traerProductosTiendanube(storeId, accessToken);
-  const fotoPorSku = new Map<string, string>();
+  const datosPorSku = new Map<string, DatosTN>();
   for (const producto of productos) {
-    const foto = producto.images?.[0]?.src;
-    if (!foto) continue;
+    const foto = producto.images?.[0]?.src ?? null;
+    const nombreProducto = producto.name?.es?.trim() || null;
     for (const variante of producto.variants) {
       const sku = variante.sku?.trim().toUpperCase();
-      if (sku && !fotoPorSku.has(sku)) fotoPorSku.set(sku, foto);
+      if (!sku || datosPorSku.has(sku)) continue;
+      const valores = (variante.values ?? []).map((v) => v.es?.trim()).filter(Boolean).join(" / ");
+      const nombre =
+        nombreProducto && valores && producto.variants.length > 1 ? `${nombreProducto} - ${valores}` : nombreProducto;
+      datosPorSku.set(sku, { nombre, foto });
     }
   }
-  return fotoPorSku;
+  return datosPorSku;
 }

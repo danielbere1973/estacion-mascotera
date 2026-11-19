@@ -3,7 +3,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
 import { precioMayoristaDe } from "@/lib/mayoristas";
-import { traerFotosPorSkuTiendanube } from "@/lib/tiendanube";
+import { traerDatosPorSkuTiendanube, type DatosTN } from "@/lib/tiendanube";
 import { TipoProductoMayorista } from "@prisma/client";
 
 const LABELS: Record<TipoProductoMayorista, string> = {
@@ -40,6 +40,7 @@ export default async function MayoristasCatalogoPage({
         ...(q ? {
           OR: [
             { nombre: { contains: q, mode: "insensitive" } },
+            { nombreTiendanube: { contains: q, mode: "insensitive" } },
             { marca: { contains: q, mode: "insensitive" } },
             { skuInterno: { contains: q, mode: "insensitive" } },
           ],
@@ -64,37 +65,42 @@ export default async function MayoristasCatalogoPage({
     umbralKgTramo2: m.umbralKgTramo2 != null ? Number(m.umbralKgTramo2) : null,
   }));
 
-  let fotoPorSku = new Map<string, string>();
+  // Nombre y foto salen de Tiendanube (por SKU interno = SKU de la variante).
+  let datosTN = new Map<string, DatosTN>();
   if (config) {
     try {
-      fotoPorSku = await traerFotosPorSkuTiendanube(config.storeId, config.accessToken);
+      datosTN = await traerDatosPorSkuTiendanube(config.storeId, config.accessToken);
     } catch {
-      // Si falla Tiendanube (token vencido, etc.), seguimos sin fotos en vez de romper la pantalla.
+      // Si falla Tiendanube (token vencido, etc.), seguimos con el nombre propio y sin fotos.
     }
   }
 
-  const listado = productos.map((p) => ({
-    id: p.id,
-    skuInterno: p.skuInterno,
-    nombre: p.nombre,
-    marca: p.marca,
-    estadoStock: p.historialStock.some((h) => h.proveedor?.nombre === "HYM")
-      ? p.historialStock.some((h) => h.estadoStockMayorista === "Stock disponible")
-        ? "Stock disponible"
-        : "Poco Stock"
-      : null,
-    tipoProductoMayorista: p.tipoProductoMayorista as TipoProductoMayorista,
-    precioMayorista: precioMayoristaDe(
-      {
-        tipoProductoMayorista: p.tipoProductoMayorista,
-        contenido: Number(p.contenido),
-        unidadMedida: p.unidadMedida,
-        precioCostoUnitario: Number(p.precioCostoUnitario),
-      },
-      margenesNum
-    ),
-    foto: fotoPorSku.get(p.skuInterno.toUpperCase()) ?? null,
-  }));
+  const listado = productos.map((p) => {
+    const tn = datosTN.get(p.skuInterno.toUpperCase());
+    return {
+      id: p.id,
+      skuInterno: p.skuInterno,
+      // Si el producto no está en Tiendanube, queda el nombre de la app.
+      nombre: tn?.nombre ?? p.nombreTiendanube ?? p.nombre,
+      marca: p.marca,
+      estadoStock: p.historialStock.some((h) => h.proveedor?.nombre === "HYM")
+        ? p.historialStock.some((h) => h.estadoStockMayorista === "Stock disponible")
+          ? "Stock disponible"
+          : "Poco Stock"
+        : null,
+      tipoProductoMayorista: p.tipoProductoMayorista as TipoProductoMayorista,
+      precioMayorista: precioMayoristaDe(
+        {
+          tipoProductoMayorista: p.tipoProductoMayorista,
+          contenido: Number(p.contenido),
+          unidadMedida: p.unidadMedida,
+          precioCostoUnitario: Number(p.precioCostoUnitario),
+        },
+        margenesNum
+      ),
+      foto: tn?.foto ?? null,
+    };
+  });
 
   return (
     <div className="space-y-4">
