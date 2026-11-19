@@ -156,6 +156,8 @@ export function AgregarAlCarrito({ producto }: { producto: ProductoCarrito & { m
 
 type Opciones = {
   clientes: ComboboxOption[];
+  // Usuario vinculado a un cliente: compra a nombre de ese cliente (no elige otro).
+  clienteFijo?: string | null;
 };
 
 // WhatsApp de Estación Mascotera para consultas sobre un pedido mayorista (con el número de pedido ya escrito).
@@ -166,7 +168,7 @@ function linkWhatsapp(ventaId: number) {
 }
 
 // Ícono del carrito (arriba a la derecha) y la ventana con el detalle.
-export function BotonCarrito({ clientes }: Opciones) {
+export function BotonCarrito({ clientes, clienteFijo }: Opciones) {
   const { items } = useCarrito();
   const [abierto, setAbierto] = useState(false);
   const unidades = items.reduce((acc, i) => acc + i.cantidad, 0);
@@ -187,12 +189,12 @@ export function BotonCarrito({ clientes }: Opciones) {
           </span>
         )}
       </button>
-      {abierto && <VentanaCarrito onCerrar={() => setAbierto(false)} clientes={clientes} />}
+      {abierto && <VentanaCarrito onCerrar={() => setAbierto(false)} clientes={clientes} clienteFijo={clienteFijo} />}
     </>
   );
 }
 
-function VentanaCarrito({ onCerrar, clientes }: Opciones & { onCerrar: () => void }) {
+function VentanaCarrito({ onCerrar, clientes, clienteFijo }: Opciones & { onCerrar: () => void }) {
   const { items, cambiarCantidad, quitar, vaciar } = useCarrito();
   const [paso, setPaso] = useState<"lista" | "confirmar">("lista");
   const [clienteId, setClienteId] = useState("");
@@ -206,12 +208,13 @@ function VentanaCarrito({ onCerrar, clientes }: Opciones & { onCerrar: () => voi
 
   function confirmar() {
     setError(null);
-    if (!clienteId) return setError("Elegí un cliente.");
+    if (!clienteFijo && !clienteId) return setError("Elegí un cliente.");
     if (!medioPago) return setError("Elegí un medio de pago.");
     if (!comoNosConociste) return setError("Elegí cómo nos conociste.");
     startTransition(async () => {
       const r = await confirmarCarritoMayorista({
-        clienteId: Number(clienteId),
+        // Con cliente fijo el servidor usa el del usuario.
+        clienteId: clienteFijo ? undefined : Number(clienteId),
         medioPago,
         comoNosConociste,
         items: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad })),
@@ -314,7 +317,11 @@ function VentanaCarrito({ onCerrar, clientes }: Opciones & { onCerrar: () => voi
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-gray-700">Cliente</label>
-                    <Combobox options={clientes} value={clienteId} onSelect={setClienteId} placeholder="Buscar cliente..." required />
+                    {clienteFijo ? (
+                      <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800">{clienteFijo}</p>
+                    ) : (
+                      <Combobox options={clientes} value={clienteId} onSelect={setClienteId} placeholder="Buscar cliente..." required />
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">

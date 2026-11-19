@@ -14,7 +14,7 @@ const usuarioActual = cache(async () => {
   if (!session?.user?.id) return null;
   const usuario = await prisma.usuario.findUnique({
     where: { id: Number(session.user.id) },
-    select: { activo: true, rol: true, modulos: true, proveedoresAcceso: { select: { id: true } } },
+    select: { activo: true, rol: true, modulos: true, clienteId: true, proveedoresAcceso: { select: { id: true } } },
   });
   if (!usuario?.activo) return null;
 
@@ -31,6 +31,8 @@ const usuarioActual = cache(async () => {
     esAdmin: usuario.rol === "ADMIN",
     modulos,
     proveedores,
+    // Cliente mayorista vinculado (null = no compra a nombre de un cliente fijo).
+    clienteId: usuario.clienteId,
   };
 });
 
@@ -67,6 +69,8 @@ export async function perfilAcceso() {
   return {
     soloLectura: !usuario?.esAdmin,
     proveedores: usuario ? usuario.proveedores : [],
+    clienteId: usuario?.clienteId ?? null,
+    esAdmin: usuario?.esAdmin ?? false,
   };
 }
 

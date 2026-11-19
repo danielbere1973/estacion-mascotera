@@ -7,6 +7,7 @@ import { traerDatosPorSkuTiendanube, type DatosTN } from "@/lib/tiendanube";
 import { TipoProductoMayorista } from "@prisma/client";
 import { perfilAcceso } from "@/lib/permissions";
 import { AgregarAlCarrito, BotonCarrito, CarritoProvider } from "./carrito";
+import { BotonMisCarritos } from "./mis-carritos";
 import { estadoStockDe, maximoPorEstado } from "./limites";
 
 const LABELS: Record<TipoProductoMayorista, string> = {
@@ -24,11 +25,14 @@ export default async function MayoristasCatalogoPage({
   searchParams: Promise<{ q?: string; tipo?: string }>;
 }) {
   const { q, tipo: tipoFiltro } = await searchParams;
-  // El carrito crea ventas: solo para usuarios Administrador (Solo lectura ve el catálogo sin carrito).
-  const { soloLectura } = await perfilAcceso();
-  const puedeComprar = !soloLectura;
+  // El carrito crea ventas: lo usan los Administradores (eligen el cliente) y los usuarios
+  // vinculados a un cliente (compran a su nombre y ven "Mis carritos"). El resto ve el catálogo sin carrito.
+  const { esAdmin, clienteId: clienteVinculadoId } = await perfilAcceso();
+  const puedeComprar = esAdmin || clienteVinculadoId != null;
+  // Un usuario vinculado no recibe la lista de clientes: solo el suyo.
+  const eligeCliente = esAdmin && clienteVinculadoId == null;
 
-  const [productos, margenes, config, clientes] = await Promise.all([
+  const [productos, margenes, config, clientes, clienteVinculado] = await Promise.all([
     prisma.producto.findMany({
       where: {
         activo: true,
@@ -60,13 +64,17 @@ export default async function MayoristasCatalogoPage({
     }),
     prisma.margenMayorista.findMany(),
     prisma.tiendanubeConfig.findFirst(),
-    puedeComprar
+    eligeCliente
       ? prisma.cliente.findMany({
           select: { id: true, nombre: true, apellido: true, dni: true },
           orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
         })
       : [],
+    clienteVinculadoId != null
+      ? prisma.cliente.findUnique({ where: { id: clienteVinculadoId }, select: { nombre: true, apellido: true } })
+      : null,
   ]);
+  const nombreClienteVinculado = clienteVinculado ? `${clienteVinculado.apellido}, ${clienteVinculado.nombre}` : null;
 
   const opcionesClientes = clientes.map((c) => ({
     value: String(c.id),
@@ -129,7 +137,12 @@ export default async function MayoristasCatalogoPage({
             Selecciona los productos que desees y agregalos a tu carrito de compras, luego prosigue directo desde el carrito
           </p>
         </div>
-        {puedeComprar && <BotonCarrito clientes={opcionesClientes} />}
+        {puedeComprar && (
+          <div className="flex shrink-0 items-center gap-2">
+            {nombreClienteVinculado && <BotonMisCarritos />}
+            <BotonCarrito clientes={opcionesClientes} clienteFijo={nombreClienteVinculado} />
+          </div>
+        )}
       </div>
 
       <form method="GET" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">

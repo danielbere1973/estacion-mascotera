@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { perfilAcceso, requireAuth } from "@/lib/permissions";
+import { traerPedidosMayoristas, type PedidoMayorista } from "@/lib/pedidos-mayoristas";
 import { precioMayoristaDe } from "@/lib/mayoristas";
 import { registrarVenta } from "@/lib/registrar-venta";
 import { estadoStockDe, maximoPorEstado } from "./limites";
@@ -15,16 +16,22 @@ export type ResultadoCarrito = { ok: true; ventaId: number; total: number } | { 
 // Confirma el carrito del Catálogo mayorista: crea una venta mayorista (mismo circuito que
 // Nueva venta: stock, compras a HYM, tarjeta del Tablero y aviso por Telegram).
 // Los precios se recalculan acá con los márgenes actuales, no se toman del navegador.
+// Puede comprar un Administrador (elige el cliente) o un usuario vinculado a un cliente
+// (aunque sea Solo lectura): ese siempre compra a nombre de su cliente, se ignora el que mande el navegador.
 export async function confirmarCarritoMayorista(datos: {
-  clienteId: number;
+  clienteId?: number;
   medioPago: string;
   comoNosConociste: string;
   items: ItemCarrito[];
 }): Promise<ResultadoCarrito> {
   try {
-    const session = await requireAdmin("MAYORISTA_CATALOGO");
+    const session = await requireAuth("MAYORISTA_CATALOGO");
+    const perfil = await perfilAcceso();
+    if (!perfil.esAdmin && !perfil.clienteId) {
+      return { ok: false, error: "Tu usuario no puede confirmar carritos. Pedí que lo vinculen a un cliente." };
+    }
 
-    const clienteId = Number(datos.clienteId);
+    const clienteId = perfil.clienteId ?? Number(datos.clienteId);
     const medioPago = datos.medioPago?.trim();
     if (!clienteId) return { ok: false, error: "Elegí un cliente." };
     if (!(MEDIOS_PAGO_MAYORISTA as readonly string[]).includes(medioPago)) {
@@ -117,5 +124,21 @@ export async function confirmarCarritoMayorista(datos: {
   } catch (error) {
     console.error("confirmarCarritoMayorista", error);
     return { ok: false, error: error instanceof Error ? error.message : "No se pudo confirmar el carrito." };
+  }
+}
+
+// "Mis carritos": los pedidos mayoristas del cliente vinculado al usuario logueado.
+// El cliente sale siempre de la sesión, así nadie puede ver los pedidos de otro cliente.
+export async function misCarritosMayoristas(): Promise<
+  { ok: true; pedidos: PedidoMayorista[] } | { ok: false; error: string }
+> {
+  try {
+    await requireAuth("MAYORISTA_CATALOGO");
+    const { clienteId } = await perfilAcceso();
+    if (!clienteId) return { ok: false, error: "Tu usuario no está vinculado a un cliente." };
+    return { ok: true, pedidos: await traerPedidosMayoristas({ clienteId }) };
+  } catch (error) {
+    console.error("misCarritosMayoristas", error);
+    return { ok: false, error: "No se pudieron cargar tus carritos." };
   }
 }

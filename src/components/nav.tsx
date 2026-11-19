@@ -8,7 +8,8 @@ import { useEffect, useState } from "react";
 import type { ModuloApp } from "@prisma/client";
 import { MODULOS } from "@/lib/modulos";
 
-type Link_ = { href: string; label: string; icon: string; exact?: boolean; modulo?: ModuloApp };
+// soloAdmin: el link se ve solo con rol ADMIN (además del módulo, si tiene).
+type Link_ = { href: string; label: string; icon: string; exact?: boolean; modulo?: ModuloApp; soloAdmin?: boolean };
 
 const links: Link_[] = MODULOS.filter((m) => !m.grupo).map(
   ({ href, label, icon, modulo }) => ({ href, label, icon, modulo })
@@ -23,6 +24,7 @@ const mayoristaLinks: Link_[] = [
   { href: "/inventario/mayoristas-tipo", label: "Tipo mayorista", icon: "🏷️", modulo: "MAYORISTA_TIPO" },
   { href: "/inventario/mayoristas-margenes", label: "Márgenes mayoristas", icon: "➗", modulo: "MAYORISTA_MARGENES" },
   { href: "/inventario/mayoristas-catalogo", label: "Catálogo mayorista", icon: "📖", modulo: "MAYORISTA_CATALOGO" },
+  { href: "/inventario/mayoristas-carritos", label: "Carritos", icon: "🧾", soloAdmin: true },
 ];
 
 const linksRestringido: Link_[] = [
@@ -88,7 +90,7 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   // Solo las secciones habilitadas para el usuario.
-  const permitido = (l: Link_) => !l.modulo || modulos.includes(l.modulo);
+  const permitido = (l: Link_) => (!l.modulo || modulos.includes(l.modulo)) && (!l.soloAdmin || isAdmin);
   const visibleMarketing = marketingLinks.filter(permitido);
   const visibleMayorista = mayoristaLinks.filter(permitido);
   const visibleAdmin = adminLinks.filter(permitido);
