@@ -27,6 +27,7 @@ export type CrearVentaInput = {
   descripcion?: string | null;
   numeroFactura?: string | null;
   tiendanubeOrderId?: number | null;
+  esMayorista?: boolean;
   fechaVenta?: Date;
   fechaAcreditacion?: Date | null;
   usuarioId: number;
@@ -142,6 +143,7 @@ async function ejecutarCrearVenta(tx: Prisma.TransactionClient, inputOriginal: C
       cobradoPorId: input.cobradoPorId ?? null,
       usuarioId: input.usuarioId,
       tiendanubeOrderId: input.tiendanubeOrderId ?? null,
+      esMayorista: input.esMayorista ?? false,
       detalles: {
         create: input.items.map((item) => ({
           productoId: item.productoId,
