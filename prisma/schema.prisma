@@ -277,6 +277,7 @@ model Venta {
   cobradoPorId      Int?
   tiendanubeOrderId Int?             @unique
   esMayorista       Boolean          @default(false) // venta confirmada desde el carrito del Catálogo mayorista
+  comoNosConociste  String? // respuesta del carrito mayorista ("Redes sociales", "Internet", ...)
   costos            CostoVenta[]
   detalles          DetalleVenta[]
   pagos             PagoVenta[]

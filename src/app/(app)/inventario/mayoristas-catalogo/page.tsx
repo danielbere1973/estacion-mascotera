@@ -28,7 +28,7 @@ export default async function MayoristasCatalogoPage({
   const { soloLectura } = await perfilAcceso();
   const puedeComprar = !soloLectura;
 
-  const [productos, margenes, config, clientes, mediosPago] = await Promise.all([
+  const [productos, margenes, config, clientes] = await Promise.all([
     prisma.producto.findMany({
       where: {
         activo: true,
@@ -66,7 +66,6 @@ export default async function MayoristasCatalogoPage({
           orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
         })
       : [],
-    puedeComprar ? prisma.medioPago.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }) : [],
   ]);
 
   const opcionesClientes = clientes.map((c) => ({
@@ -130,7 +129,7 @@ export default async function MayoristasCatalogoPage({
             Selecciona los productos que desees y agregalos a tu carrito de compras, luego prosigue directo desde el carrito
           </p>
         </div>
-        {puedeComprar && <BotonCarrito clientes={opcionesClientes} mediosPago={mediosPago.map((m) => m.nombre)} />}
+        {puedeComprar && <BotonCarrito clientes={opcionesClientes} />}
       </div>
 
       <form method="GET" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">

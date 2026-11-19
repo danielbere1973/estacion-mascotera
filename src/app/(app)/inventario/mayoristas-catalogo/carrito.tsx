@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import { createContext, useContext, useMemo, useState, useSyncExternalStore, useTransition } from "react";
-import type { CanalVenta } from "@prisma/client";
 import { Combobox, type ComboboxOption } from "@/components/combobox";
 import { formatCurrency } from "@/lib/format";
 import { confirmarCarritoMayorista } from "./actions";
+import { COMO_NOS_CONOCISTE, MEDIOS_PAGO_MAYORISTA } from "./opciones";
 
 // Carrito del Catálogo mayorista. Se guarda en este navegador (localStorage) hasta confirmarlo.
 
@@ -156,17 +156,10 @@ export function AgregarAlCarrito({ producto }: { producto: ProductoCarrito & { m
 
 type Opciones = {
   clientes: ComboboxOption[];
-  mediosPago: string[];
 };
 
-const CANALES: { valor: CanalVenta; label: string }[] = [
-  { valor: "WHATSAPP", label: "WhatsApp" },
-  { valor: "TELEFONO", label: "Teléfono" },
-  { valor: "TIENDANUBE", label: "Tiendanube" },
-];
-
 // Ícono del carrito (arriba a la derecha) y la ventana con el detalle.
-export function BotonCarrito({ clientes, mediosPago }: Opciones) {
+export function BotonCarrito({ clientes }: Opciones) {
   const { items } = useCarrito();
   const [abierto, setAbierto] = useState(false);
   const unidades = items.reduce((acc, i) => acc + i.cantidad, 0);
@@ -187,17 +180,17 @@ export function BotonCarrito({ clientes, mediosPago }: Opciones) {
           </span>
         )}
       </button>
-      {abierto && <VentanaCarrito onCerrar={() => setAbierto(false)} clientes={clientes} mediosPago={mediosPago} />}
+      {abierto && <VentanaCarrito onCerrar={() => setAbierto(false)} clientes={clientes} />}
     </>
   );
 }
 
-function VentanaCarrito({ onCerrar, clientes, mediosPago }: Opciones & { onCerrar: () => void }) {
+function VentanaCarrito({ onCerrar, clientes }: Opciones & { onCerrar: () => void }) {
   const { items, cambiarCantidad, quitar, vaciar } = useCarrito();
   const [paso, setPaso] = useState<"lista" | "confirmar">("lista");
   const [clienteId, setClienteId] = useState("");
-  const [medioPago, setMedioPago] = useState(mediosPago[0] ?? "");
-  const [canalVenta, setCanalVenta] = useState<CanalVenta>("WHATSAPP");
+  const [medioPago, setMedioPago] = useState<string>(MEDIOS_PAGO_MAYORISTA[0]);
+  const [comoNosConociste, setComoNosConociste] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState<{ ventaId: number; total: number } | null>(null);
   const [enviando, startTransition] = useTransition();
@@ -208,11 +201,12 @@ function VentanaCarrito({ onCerrar, clientes, mediosPago }: Opciones & { onCerra
     setError(null);
     if (!clienteId) return setError("Elegí un cliente.");
     if (!medioPago) return setError("Elegí un medio de pago.");
+    if (!comoNosConociste) return setError("Elegí cómo nos conociste.");
     startTransition(async () => {
       const r = await confirmarCarritoMayorista({
         clienteId: Number(clienteId),
         medioPago,
-        canalVenta,
+        comoNosConociste,
         items: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad })),
       });
       if (r.ok) {
@@ -309,7 +303,7 @@ function VentanaCarrito({ onCerrar, clientes, mediosPago }: Opciones & { onCerra
                         onChange={(e) => setMedioPago(e.target.value)}
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                       >
-                        {mediosPago.map((m) => (
+                        {MEDIOS_PAGO_MAYORISTA.map((m) => (
                           <option key={m} value={m}>
                             {m}
                           </option>
@@ -317,15 +311,16 @@ function VentanaCarrito({ onCerrar, clientes, mediosPago }: Opciones & { onCerra
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700">Canal</label>
+                      <label className="text-sm font-medium text-gray-700">¿Cómo nos conociste?</label>
                       <select
-                        value={canalVenta}
-                        onChange={(e) => setCanalVenta(e.target.value as CanalVenta)}
+                        value={comoNosConociste}
+                        onChange={(e) => setComoNosConociste(e.target.value)}
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                       >
-                        {CANALES.map((c) => (
-                          <option key={c.valor} value={c.valor}>
-                            {c.label}
+                        <option value="">Seleccionar...</option>
+                        {COMO_NOS_CONOCISTE.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
                           </option>
                         ))}
                       </select>
