@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
-import { listarSeguimientosActivos } from "./actions";
+import { listarSeguimientosActivos, ventasDeCliente } from "./actions";
 import { LogisticaPanel } from "./logistica-panel";
 
 export default async function LogisticaPage({
@@ -15,12 +15,14 @@ export default async function LogisticaPage({
   const h = await headers();
   const origen = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
 
-  const [clientes, activos] = await Promise.all([
+  const clienteInicial = Number(params.clienteId) || null;
+  const [clientes, activos, ventasIniciales] = await Promise.all([
     prisma.cliente.findMany({
       orderBy: { nombre: "asc" },
       select: { id: true, nombre: true, apellido: true, telefono: true },
     }),
     listarSeguimientosActivos(),
+    clienteInicial ? ventasDeCliente(clienteInicial) : [],
   ]);
 
   return (
@@ -29,6 +31,7 @@ export default async function LogisticaPage({
       activos={activos}
       usuarioId={Number(session.user.id)}
       clienteIdInicial={params.clienteId ?? ""}
+      ventasIniciales={ventasIniciales}
       origen={origen}
     />
   );

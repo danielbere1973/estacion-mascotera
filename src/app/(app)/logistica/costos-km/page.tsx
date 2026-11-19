@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { perfilAcceso, requireSinRestriccion } from "@/lib/permissions";
 import { formatCurrency } from "@/lib/format";
 import { formatoKm } from "@/lib/km-recorridos";
@@ -160,7 +161,14 @@ export default async function CostosKmPage({
           <li key={r.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="font-medium text-gray-900">{r.cliente}</p>
+                <p className="font-medium text-gray-900">
+                  {r.ventaId != null && (
+                    <Link href={`/ventas/${r.ventaId}/editar`} className="mr-1 text-blue-600">
+                      #{r.ventaId}
+                    </Link>
+                  )}
+                  {r.cliente}
+                </p>
                 <p className="text-xs text-gray-500">
                   {fechaHora.format(r.inicio)} · {r.usuario}
                   {r.auto && ` (${r.auto})`}
@@ -184,6 +192,7 @@ export default async function CostosKmPage({
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
               <th className="px-3 py-2">Fecha</th>
+              <th className="px-3 py-2">Venta</th>
               <th className="px-3 py-2">Cliente</th>
               <th className="px-3 py-2">Manejó</th>
               <th className="px-3 py-2">Auto</th>
@@ -198,6 +207,15 @@ export default async function CostosKmPage({
             {recorridos.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50">
                 <td className="whitespace-nowrap px-3 py-2">{fechaHora.format(r.inicio).split(",")[0]}</td>
+                <td className="whitespace-nowrap px-3 py-2">
+                  {r.ventaId != null ? (
+                    <Link href={`/ventas/${r.ventaId}/editar`} className="text-blue-600 hover:underline">
+                      #{r.ventaId}
+                    </Link>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
                 <td className="px-3 py-2 font-medium">{r.cliente}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">{r.usuario}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-600">{r.auto ?? "-"}</td>

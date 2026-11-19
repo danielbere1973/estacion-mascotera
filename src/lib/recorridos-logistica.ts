@@ -12,6 +12,7 @@ export type Recorrido = {
   fin: Date;
   minutos: number;
   cliente: string;
+  ventaId: number | null;
   usuarioId: number;
   usuario: string;
   auto: string | null;
@@ -58,6 +59,7 @@ export async function traerRecorridos(filtro: FiltroRecorridos): Promise<Recorri
       venceAt: true,
       finalizadoAt: true,
       kmRecorridos: true,
+      ventaId: true,
       usuarioId: true,
       cliente: { select: { nombre: true, apellido: true } },
       usuario: {
@@ -80,6 +82,7 @@ export async function traerRecorridos(filtro: FiltroRecorridos): Promise<Recorri
       fin,
       minutos: Math.max(0, Math.round((fin.getTime() - s.createdAt.getTime()) / 60000)),
       cliente: `${s.cliente.apellido}, ${s.cliente.nombre}`,
+      ventaId: s.ventaId,
       usuarioId: s.usuarioId,
       usuario: `${s.usuario.nombre} ${s.usuario.apellido}`,
       auto: s.usuario.vehiculo?.auto ?? null,

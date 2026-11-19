@@ -11,6 +11,8 @@ import {
   finalizarSeguimiento,
   iniciarSeguimiento,
   listarSeguimientosActivos,
+  ventasDeCliente,
+  type VentaParaEntrega,
 } from "./actions";
 
 const MapaUbicacion = dynamic(
@@ -22,6 +24,13 @@ const MapaSeguimientos = dynamic(
   () => import("@/components/mapa-seguimientos").then((m) => m.MapaSeguimientos),
   { ssr: false }
 );
+
+const fechaCorta = new Intl.DateTimeFormat("es-AR", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "America/Argentina/Buenos_Aires",
+});
+const montoVenta = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 // Si un celular no manda posición hace más de esto (pantalla bloqueada, sin
 // señal), se marca en gris en el mapa general.
@@ -100,17 +109,36 @@ export function LogisticaPanel({
   activos,
   usuarioId,
   clienteIdInicial,
+  ventasIniciales,
   origen,
 }: {
   clientes: Cliente[];
   activos: Seguimiento[];
   usuarioId: number;
   clienteIdInicial: string;
+  ventasIniciales: VentaParaEntrega[];
   origen: string;
 }) {
   const [clienteId, setClienteId] = useState(
     clientes.some((c) => String(c.id) === clienteIdInicial) ? clienteIdInicial : ""
   );
+  // Venta que se entrega: por defecto la más reciente del cliente ("" = sin venta).
+  const [ventas, setVentas] = useState<VentaParaEntrega[]>(clienteId ? ventasIniciales : []);
+  const [ventaId, setVentaId] = useState(clienteId && ventasIniciales[0] ? String(ventasIniciales[0].id) : "");
+
+  async function elegirCliente(id: string) {
+    setClienteId(id);
+    setVentas([]);
+    setVentaId("");
+    if (!id) return;
+    try {
+      const lista = await ventasDeCliente(Number(id));
+      setVentas(lista);
+      setVentaId(lista[0] ? String(lista[0].id) : "");
+    } catch {
+      // Sin ventas para elegir: se comparte igual, sin venta asociada.
+    }
+  }
   const [error, setError] = useState("");
   const [iniciando, setIniciando] = useState(false);
   // Seguimiento propio en curso: el recién creado, o el que quedó activo si se
@@ -241,7 +269,7 @@ export function LogisticaPanel({
     setIniciando(true);
     try {
       const p = aPosicion(await obtenerPosicion());
-      const nuevo = await iniciarSeguimiento(clienteSeleccionado.id, p);
+      const nuevo = await iniciarSeguimiento(clienteSeleccionado.id, p, ventaId ? Number(ventaId) : null);
       posicionRef.current = p;
       setPosicion(p);
       setUltimoEnvio(new Date());
@@ -326,13 +354,31 @@ export function LogisticaPanel({
             <Combobox
               options={opcionesCliente}
               value={clienteId}
-              onSelect={setClienteId}
+              onSelect={elegirCliente}
               placeholder="Buscar cliente..."
             />
             {clienteSeleccionado && (
               <p className="text-xs text-gray-500">WhatsApp: {clienteSeleccionado.telefono}</p>
             )}
           </div>
+          {clienteSeleccionado && (
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Venta que se entrega</label>
+              <select
+                value={ventaId}
+                onChange={(e) => setVentaId(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">Sin venta asociada</option>
+                {ventas.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    #{v.id} · {fechaCorta.format(new Date(v.fecha))} · {montoVenta.format(v.total)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500">Queda registrada con los km en Logística → Costos/KM.</p>
+            </div>
+          )}
           <button
             type="button"
             onClick={compartir}
