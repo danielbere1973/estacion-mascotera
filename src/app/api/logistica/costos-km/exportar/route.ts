@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
     nombreArchivo: "costos-km",
     columnas: [
       { titulo: "Fecha", ancho: 11 },
+      { titulo: "Venta", ancho: 8 },
       { titulo: "Cliente", ancho: 26 },
       { titulo: "Manejó", ancho: 20 },
       { titulo: "Auto", ancho: 20 },
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
     ],
     filas: recorridos.map((r) => [
       formatoFecha.format(r.inicio),
+      r.ventaId != null ? `#${r.ventaId}` : "",
       r.cliente,
       r.usuario,
       r.auto ?? "",
@@ -56,6 +58,6 @@ export async function GET(req: NextRequest) {
       ESTADO_LABEL[r.estado],
     ]),
     resumen: `${recorridos.length} recorrido${recorridos.length !== 1 ? "s" : ""}`,
-    pie: ["", "", "", "", "", "Total", km(kmTotal), "", costoTotal, ""],
+    pie: ["", "", "", "", "", "", "Total", km(kmTotal), "", costoTotal, ""],
   });
 }

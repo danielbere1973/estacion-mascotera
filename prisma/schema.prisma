@@ -294,6 +294,7 @@ model Venta {
   usuario           Usuario          @relation(fields: [usuarioId], references: [id])
   vendidoPor        Usuario?         @relation("VentaVendidaPor", fields: [vendidoPorId], references: [id])
   tarjetasTablero   TarjetaTablero[]
+  seguimientos      SeguimientoUbicacion[]
 
   @@index([fechaVenta])
   @@index([clienteId])
@@ -787,11 +788,15 @@ model SeguimientoUbicacion {
   kmLatitud    Float?
   kmLongitud   Float?
   kmAt         DateTime?
+  // Venta que se está entregando (se elige al compartir la ubicación).
+  ventaId      Int?
   cliente      Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   usuario      Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  venta        Venta?    @relation(fields: [ventaId], references: [id], onDelete: SetNull)
 
   @@index([clienteId])
   @@index([usuarioId])
+  @@index([ventaId])
 }
 
 enum StatusReminder {

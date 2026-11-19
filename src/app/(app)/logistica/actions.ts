@@ -20,10 +20,17 @@ function posicionValida(p: Posicion) {
 
 // Arranca un seguimiento nuevo para el cliente. Si el mismo usuario tenía otro
 // activo se finaliza: un celular manda una sola ubicación a la vez.
-export async function iniciarSeguimiento(clienteId: number, posicion: Posicion) {
+export async function iniciarSeguimiento(clienteId: number, posicion: Posicion, ventaId?: number | null) {
   const session = await requireAuth("LOGISTICA");
   const usuarioId = Number(session.user.id);
   if (!posicionValida(posicion)) throw new Error("Ubicación inválida.");
+
+  // La venta tiene que ser de ese cliente.
+  const venta =
+    ventaId != null
+      ? await prisma.venta.findFirst({ where: { id: ventaId, clienteId }, select: { id: true } })
+      : null;
+  if (ventaId != null && !venta) throw new Error("La venta elegida no es de ese cliente.");
 
   const cliente = await prisma.cliente.findUnique({
     where: { id: clienteId },
@@ -42,6 +49,7 @@ export async function iniciarSeguimiento(clienteId: number, posicion: Posicion) 
         token: randomBytes(16).toString("base64url"),
         clienteId,
         usuarioId,
+        ventaId: venta?.id ?? null,
         latitud: posicion.latitud,
         longitud: posicion.longitud,
         precision: posicion.precision,
@@ -117,4 +125,35 @@ export async function finalizarSeguimiento(id: number) {
     data: { finalizadoAt: new Date() },
   });
   revalidatePath("/logistica");
+}
+
+export type VentaParaEntrega = { id: number; fecha: string; total: number };
+
+// Últimas ventas del cliente, para elegir cuál se entrega al compartir la ubicación.
+export async function ventasDeCliente(clienteId: number): Promise<VentaParaEntrega[]> {
+  await requireAuth("LOGISTICA");
+  return traerVentasDeCliente(clienteId);
+}
+
+async function traerVentasDeCliente(clienteId: number): Promise<VentaParaEntrega[]> {
+  const ventas = await prisma.venta.findMany({
+    where: { clienteId, esVentaInterna: false },
+    orderBy: { fechaVenta: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      fechaVenta: true,
+      costoEnvio: true,
+      detalles: { select: { cantidad: true, precioVentaUnitario: true, descuentoPorcentaje: true } },
+    },
+  });
+  return ventas.map((v) => ({
+    id: v.id,
+    fecha: v.fechaVenta.toISOString(),
+    total:
+      v.detalles.reduce(
+        (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario) * (1 - Number(d.descuentoPorcentaje) / 100),
+        0
+      ) + Number(v.costoEnvio),
+  }));
 }
