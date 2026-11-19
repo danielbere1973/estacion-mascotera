@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { CanalVenta } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { precioMayoristaDe } from "@/lib/mayoristas";
 import { registrarVenta } from "@/lib/registrar-venta";
 import { estadoStockDe, maximoPorEstado } from "./limites";
+import { COMO_NOS_CONOCISTE, MEDIOS_PAGO_MAYORISTA } from "./opciones";
 
 export type ItemCarrito = { productoId: number; cantidad: number };
 
@@ -18,7 +18,7 @@ export type ResultadoCarrito = { ok: true; ventaId: number; total: number } | { 
 export async function confirmarCarritoMayorista(datos: {
   clienteId: number;
   medioPago: string;
-  canalVenta: CanalVenta;
+  comoNosConociste: string;
   items: ItemCarrito[];
 }): Promise<ResultadoCarrito> {
   try {
@@ -27,8 +27,13 @@ export async function confirmarCarritoMayorista(datos: {
     const clienteId = Number(datos.clienteId);
     const medioPago = datos.medioPago?.trim();
     if (!clienteId) return { ok: false, error: "Elegí un cliente." };
-    if (!medioPago) return { ok: false, error: "Elegí un medio de pago." };
-    if (!Object.values(CanalVenta).includes(datos.canalVenta)) return { ok: false, error: "Canal de venta inválido." };
+    if (!(MEDIOS_PAGO_MAYORISTA as readonly string[]).includes(medioPago)) {
+      return { ok: false, error: "Elegí un medio de pago: Efectivo, Transferencia o Link de Pago." };
+    }
+    const comoNosConociste = datos.comoNosConociste?.trim();
+    if (!(COMO_NOS_CONOCISTE as readonly string[]).includes(comoNosConociste)) {
+      return { ok: false, error: "Elegí cómo nos conociste." };
+    }
 
     // Junta cantidades del mismo producto y descarta las inválidas.
     const cantidadPorProducto = new Map<number, number>();
@@ -91,10 +96,12 @@ export async function confirmarCarritoMayorista(datos: {
 
     const ventaId = await registrarVenta({
       clienteId,
-      canalVenta: datos.canalVenta,
+      // La venta necesita un canal: los pedidos del catálogo mayorista quedan como WhatsApp.
+      canalVenta: "WHATSAPP",
       medioPago,
       esMayorista: true,
-      descripcion: "Pedido mayorista (Catálogo mayorista)",
+      comoNosConociste,
+      descripcion: `Pedido mayorista (Catálogo mayorista) · Cómo nos conoció: ${comoNosConociste}`,
       usuarioId: Number(session.user.id),
       items,
       tituloTarjeta: "Venta mayorista a",
