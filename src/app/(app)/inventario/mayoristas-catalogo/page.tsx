@@ -32,13 +32,11 @@ export default async function MayoristasCatalogoPage({
       where: {
         activo: true,
         tipoProductoMayorista: { not: null },
+        // Solo productos con "Stock disponible" o "Poco Stock" según el proveedor.
         historialStock: {
           some: {
             activo: true,
-            OR: [
-              { proveedor: { nombre: "HYM" }, estadoStockMayorista: { in: ["Stock disponible", "Poco Stock"] } },
-              { proveedor: { nombre: { not: "HYM" } } },
-            ],
+            estadoStockMayorista: { in: ["Stock disponible", "Poco Stock"] },
           },
         },
         ...(tipoFiltro ? { tipoProductoMayorista: tipoFiltro as TipoProductoMayorista } : {}),
@@ -105,11 +103,9 @@ export default async function MayoristasCatalogoPage({
       skuInterno: p.skuInterno,
       nombre: tn.nombre ?? p.nombreTiendanube ?? p.nombre,
       marca: p.marca,
-      estadoStock: p.historialStock.some((h) => h.proveedor?.nombre === "HYM")
-        ? p.historialStock.some((h) => h.estadoStockMayorista === "Stock disponible")
-          ? "Stock disponible"
-          : "Poco Stock"
-        : null,
+      estadoStock: p.historialStock.some((h) => h.estadoStockMayorista === "Stock disponible")
+        ? "Stock disponible"
+        : "Poco Stock",
       tipoProductoMayorista: p.tipoProductoMayorista as TipoProductoMayorista,
       precioMayorista: precioMayoristaDe(
         {
