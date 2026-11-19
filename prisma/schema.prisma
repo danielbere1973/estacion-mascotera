@@ -39,6 +39,7 @@ model Usuario {
   tarjetasAsignadas    TarjetaTablero[]
   pagosVentaCobrados   PagoVenta[]            @relation("PagoVentaCobradoPor")
   seguimientos         SeguimientoUbicacion[]
+  vehiculo             VehiculoUsuario?
 
   @@index([clienteId])
 }
@@ -574,11 +575,13 @@ model LogMarketing {
 }
 
 // Configuración general de Marketing → Reminders (una sola fila, id = 1).
-// Configuración de Logística > Costos/KM (una sola fila, id 1).
-model ConfigLogistica {
-  id         Int      @id @default(1)
-  costoPorKm Decimal  @default(0) // $ por km para estimar el costo de cada recorrido
+// Auto de cada usuario que hace repartos (Logística > Costos/KM): sus viajes se calculan con su costo por km.
+model VehiculoUsuario {
+  usuarioId  Int      @id
+  auto       String?
+  costoPorKm Decimal  @default(0)
   updatedAt  DateTime @updatedAt
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 }
 
 model ConfigReminders {
