@@ -1,4 +1,4 @@
-import { FILAS_EGRESO, FILAS_INGRESO, getPendientesCobro, getTotalesPeriodo } from "@/lib/cashflow";
+import { FILAS_EGRESO, FILAS_INGRESO, getEgresosPendientes, getPendientesCobro, getTotalesPeriodo } from "@/lib/cashflow";
 import { formatCurrency } from "@/lib/format";
 
 // Fechas del filtro como "AAAA-MM-DD" (lo que usa <input type="date">). Se interpretan en UTC,
@@ -13,6 +13,38 @@ function leerFecha(valor: string | undefined): Date | null {
 
 // Dashboard 2: cuadros de plata que entra y sale en el período. Mismo cálculo que Cashflow
 // (lib/cashflow.ts), así los dos coinciden para el mismo año.
+type Cuadro = {
+  label: string;
+  valor: number;
+  color: string;
+  hint: string;
+  pct?: number | null;
+  desglose: { label: string; monto: number }[];
+};
+
+function TarjetaCuadro({ c }: { c: Cuadro }) {
+  return (
+    <div className="flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p className="text-sm text-gray-500">{c.label}</p>
+      <div className="mt-1 flex items-baseline gap-2">
+        <p className={`text-2xl font-semibold tabular-nums ${c.color}`}>{formatCurrency(c.valor)}</p>
+        {c.pct != null && <span className={`text-sm font-medium ${c.color}`}>{c.pct.toFixed(1)}%</span>}
+      </div>
+      <p className="mt-1 text-xs text-gray-400">{c.hint}</p>
+      {c.desglose.length > 0 && (
+        <dl className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-xs">
+          {c.desglose.map((d) => (
+            <div key={d.label} className="flex justify-between gap-2">
+              <dt className="text-gray-500">{d.label}</dt>
+              <dd className="tabular-nums text-gray-700">{formatCurrency(d.monto)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
 export default async function Dashboard2Page({
   searchParams,
 }: {
@@ -28,9 +60,10 @@ export default async function Dashboard2Page({
   if (desde > hasta) [desde, hasta] = [hasta, desde];
   // "Hasta" incluye ese día completo.
   const hastaExclusivo = new Date(hasta.getTime() + 24 * 60 * 60 * 1000);
-  const [totales, pendientes] = await Promise.all([
+  const [totales, pendientes, egresosPendientes] = await Promise.all([
     getTotalesPeriodo({ desde, hasta: hastaExclusivo }),
     getPendientesCobro({ desde, hasta: hastaExclusivo }),
+    getEgresosPendientes({ desde, hasta: hastaExclusivo }),
   ]);
   const totalPendiente = pendientes.ventas.monto + pendientes.ventasInternas.monto;
   const ventasPendientes = pendientes.ventas.ventas + pendientes.ventasInternas.ventas;
@@ -43,7 +76,7 @@ export default async function Dashboard2Page({
   const rentabilidadNeta = totalIngresos - totalEgresos;
   const pctRentabilidad = totalIngresos > 0 ? (rentabilidadNeta / totalIngresos) * 100 : null;
 
-  const cuadros = [
+  const cuadros: Cuadro[] = [
     {
       label: "Total de Ingresos",
       valor: totalIngresos,
@@ -69,6 +102,10 @@ export default async function Dashboard2Page({
         { label: "Total de Egresos", monto: -totalEgresos },
       ],
     },
+  ];
+
+  // Segunda línea: lo que falta cobrar (izquierda) y lo que falta pagar (derecha).
+  const cuadrosPendientes: Cuadro[] = [
     {
       label: "Ingresos pendientes de cobro",
       valor: totalPendiente,
@@ -78,6 +115,16 @@ export default async function Dashboard2Page({
         { label: `Ventas (${etiquetaVentas(pendientes.ventas.ventas)})`, monto: pendientes.ventas.monto },
         { label: `Ventas internas (${etiquetaVentas(pendientes.ventasInternas.ventas)})`, monto: pendientes.ventasInternas.monto },
       ],
+    },
+    {
+      label: "Egresos pendientes de pago",
+      valor: egresosPendientes.monto,
+      color: "text-amber-600",
+      hint: `${egresosPendientes.compras} compra${egresosPendientes.compras !== 1 ? "s" : ""} de mercadería del período sin marcar como pagada`,
+      desglose: egresosPendientes.porProveedor.map((p) => ({
+        label: `${p.proveedor} (${p.compras} compra${p.compras !== 1 ? "s" : ""})`,
+        monto: p.monto,
+      })),
     },
   ];
 
@@ -112,24 +159,15 @@ export default async function Dashboard2Page({
         </form>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cuadros.map((c) => (
-          <div key={c.label} className="flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">{c.label}</p>
-            <div className="mt-1 flex items-baseline gap-2">
-              <p className={`text-2xl font-semibold tabular-nums ${c.color}`}>{formatCurrency(c.valor)}</p>
-              {c.pct != null && <span className={`text-sm font-medium ${c.color}`}>{c.pct.toFixed(1)}%</span>}
-            </div>
-            <p className="mt-1 text-xs text-gray-400">{c.hint}</p>
-            <dl className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-xs">
-              {c.desglose.map((d) => (
-                <div key={d.label} className="flex justify-between gap-2">
-                  <dt className="text-gray-500">{d.label}</dt>
-                  <dd className="tabular-nums text-gray-700">{formatCurrency(d.monto)}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+          <TarjetaCuadro key={c.label} c={c} />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {cuadrosPendientes.map((c) => (
+          <TarjetaCuadro key={c.label} c={c} />
         ))}
       </div>
     </div>
