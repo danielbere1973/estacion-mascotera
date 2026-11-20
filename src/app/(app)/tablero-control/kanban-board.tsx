@@ -118,11 +118,17 @@ export function KanbanBoard({
     return true;
   });
 
-  // Opciones del filtro por venta: solo las ventas que tienen alguna tarjeta, de la más nueva a la más vieja.
+  // Opciones del filtro por venta: solo las ventas que tienen alguna tarjeta (del cliente filtrado, si hay uno),
+  // de la más nueva a la más vieja.
   const clientePorVenta = new Map(ventas.map((v) => [v.id, v.clienteNombre]));
-  const ventaIdsConTarjeta = [...new Set(tarjetas.map((t) => t.ventaId).filter((id): id is number => id != null))].sort(
-    (a, b) => b - a,
-  );
+  const ventaIdsConTarjeta = [
+    ...new Set(
+      tarjetas
+        .filter((t) => !filtroClienteId || String(t.clienteId) === filtroClienteId)
+        .map((t) => t.ventaId)
+        .filter((id): id is number => id != null),
+    ),
+  ].sort((a, b) => b - a);
 
   const opcionesCliente = clientes.map((c) => ({
     value: String(c.id),
@@ -190,7 +196,10 @@ export function KanbanBoard({
             <span className="hidden text-sm text-gray-500 sm:inline">Filtros:</span>
             <select
               value={filtroClienteId}
-              onChange={(e) => setFiltroClienteId(e.target.value)}
+              onChange={(e) => {
+                setFiltroClienteId(e.target.value);
+                setFiltroVentaId(""); // la venta elegida puede no ser del nuevo cliente
+              }}
               className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm sm:flex-none"
             >
               <option value="">Todos</option>
