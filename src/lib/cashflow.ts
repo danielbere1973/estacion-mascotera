@@ -132,3 +132,39 @@ export async function getAniosCashflow(): Promise<number[]> {
   const desde = Math.min(actual, ...primeros);
   return Array.from({ length: actual - desde + 1 }, (_, i) => actual - i);
 }
+
+// Ingresos pendientes de cobro de las ventas del período: lo que falta cobrar de cada venta
+// (total − pagos registrados), con el mismo criterio que el estado "Pendiente de pago" /
+// "Parcialmente pagado" de la pantalla de Ventas. Ventas internas, aparte.
+export type PendienteCobro = { monto: number; ventas: number };
+
+export async function getPendientesCobro(periodo: {
+  desde?: Date;
+  hasta?: Date;
+}): Promise<{ ventas: PendienteCobro; ventasInternas: PendienteCobro }> {
+  const fechaVenta = { ...(periodo.desde ? { gte: periodo.desde } : {}), ...(periodo.hasta ? { lt: periodo.hasta } : {}) };
+  const ventas = await prisma.venta.findMany({
+    where: { fechaVenta },
+    select: {
+      esVentaInterna: true,
+      costoEnvio: true,
+      detalles: { select: { cantidad: true, precioVentaUnitario: true, descuentoPorcentaje: true } },
+      pagos: { select: { monto: true } },
+    },
+  });
+
+  const resultado = { ventas: { monto: 0, ventas: 0 }, ventasInternas: { monto: 0, ventas: 0 } };
+  for (const v of ventas) {
+    const total =
+      v.detalles.reduce(
+        (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario) * (1 - Number(d.descuentoPorcentaje ?? 0) / 100),
+        0
+      ) + Number(v.costoEnvio);
+    const pendiente = total - v.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+    if (pendiente <= 0.01) continue;
+    const fila = v.esVentaInterna ? resultado.ventasInternas : resultado.ventas;
+    fila.monto += pendiente;
+    fila.ventas++;
+  }
+  return resultado;
+}

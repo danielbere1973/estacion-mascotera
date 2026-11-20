@@ -1,4 +1,4 @@
-import { FILAS_EGRESO, FILAS_INGRESO, getTotalesPeriodo } from "@/lib/cashflow";
+import { FILAS_EGRESO, FILAS_INGRESO, getPendientesCobro, getTotalesPeriodo } from "@/lib/cashflow";
 import { formatCurrency } from "@/lib/format";
 
 // Fechas del filtro como "AAAA-MM-DD" (lo que usa <input type="date">). Se interpretan en UTC,
@@ -28,7 +28,13 @@ export default async function Dashboard2Page({
   if (desde > hasta) [desde, hasta] = [hasta, desde];
   // "Hasta" incluye ese día completo.
   const hastaExclusivo = new Date(hasta.getTime() + 24 * 60 * 60 * 1000);
-  const totales = await getTotalesPeriodo({ desde, hasta: hastaExclusivo });
+  const [totales, pendientes] = await Promise.all([
+    getTotalesPeriodo({ desde, hasta: hastaExclusivo }),
+    getPendientesCobro({ desde, hasta: hastaExclusivo }),
+  ]);
+  const totalPendiente = pendientes.ventas.monto + pendientes.ventasInternas.monto;
+  const ventasPendientes = pendientes.ventas.ventas + pendientes.ventasInternas.ventas;
+  const etiquetaVentas = (n: number) => `${n} venta${n !== 1 ? "s" : ""}`;
 
   const desgloseIngresos = FILAS_INGRESO.map((f) => ({ label: f.label, monto: totales[f.clave] }));
   const desgloseEgresos = FILAS_EGRESO.map((f) => ({ label: f.label, monto: totales[f.clave] }));
@@ -61,6 +67,16 @@ export default async function Dashboard2Page({
       desglose: [
         { label: "Total de Ingresos", monto: totalIngresos },
         { label: "Total de Egresos", monto: -totalEgresos },
+      ],
+    },
+    {
+      label: "Ingresos pendientes de cobro",
+      valor: totalPendiente,
+      color: "text-amber-600",
+      hint: `${etiquetaVentas(ventasPendientes)} del período sin cobrar del todo (total − pagos registrados)`,
+      desglose: [
+        { label: `Ventas (${etiquetaVentas(pendientes.ventas.ventas)})`, monto: pendientes.ventas.monto },
+        { label: `Ventas internas (${etiquetaVentas(pendientes.ventasInternas.ventas)})`, monto: pendientes.ventasInternas.monto },
       ],
     },
   ];
@@ -96,7 +112,7 @@ export default async function Dashboard2Page({
         </form>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cuadros.map((c) => (
           <div key={c.label} className="flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-gray-500">{c.label}</p>
