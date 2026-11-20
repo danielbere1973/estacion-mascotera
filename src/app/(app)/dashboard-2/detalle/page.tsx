@@ -6,12 +6,38 @@ import {
   getMovimientosPeriodo,
   getVentasPendientesCobro,
   type ClaveFila,
+  type PagoPendiente,
 } from "@/lib/cashflow";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { aIso, rangoDesdeParams } from "../fechas";
 
-type Fila = { fecha: Date; monto: number; titulo: string; detalle?: string; href?: string };
+// pagos: solo en las ventas pendientes de cobro, para mostrar la fecha de acreditación de cada pago.
+type Fila = { fecha: Date; monto: number; titulo: string; detalle?: string; href?: string; pagos?: PagoPendiente[] };
 type Seccion = { titulo: string; filas: Fila[] };
+
+// fechaAcreditacion es una fecha sola guardada a medianoche UTC: se muestra el día tal cual.
+const fmtDiaUtc = (d: Date) => d.toISOString().slice(0, 10).split("-").reverse().join("/");
+
+function Acreditaciones({ pagos }: { pagos: PagoPendiente[] }) {
+  if (pagos.length === 0) return <span className="text-gray-400">Sin pagos</span>;
+  return (
+    <ul className="space-y-0.5">
+      {pagos.map((p, i) => (
+        <li key={i} className="whitespace-nowrap">
+          {p.fechaAcreditacion ? (
+            <span className={p.acreditado ? "text-gray-700" : "font-medium text-amber-600"}>
+              {fmtDiaUtc(p.fechaAcreditacion)}
+              {!p.acreditado && " (a acreditar)"}
+            </span>
+          ) : (
+            <span className="font-medium text-amber-600">Sin fecha</span>
+          )}
+          {pagos.length > 1 && <span className="text-gray-400"> · {formatCurrency(p.monto)}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const FILAS = [...FILAS_INGRESO, ...FILAS_EGRESO];
 const labelDe = (clave: ClaveFila) => FILAS.find((f) => f.clave === clave)!.label;
@@ -72,6 +98,8 @@ export default async function DetalleDashboard2Page({
   const total = resultado.secciones.reduce((acc, s) => acc + s.filas.reduce((a, f) => a + f.monto, 0), 0);
   const cantidad = resultado.secciones.reduce((acc, s) => acc + s.filas.length, 0);
   const variasSecciones = resultado.secciones.length > 1;
+  const conAcreditacion = resultado.secciones.some((s) => s.filas.some((f) => f.pagos));
+  const columnas = conAcreditacion ? 4 : 3;
 
   return (
     <div className="space-y-4">
@@ -101,6 +129,7 @@ export default async function DetalleDashboard2Page({
                   <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
                     <th className="px-3 py-2">Fecha</th>
                     <th className="px-3 py-2">Concepto</th>
+                    {conAcreditacion && <th className="px-3 py-2">Fecha acreditación</th>}
                     <th className="px-3 py-2 text-right">Importe</th>
                   </tr>
                 </thead>
@@ -116,6 +145,11 @@ export default async function DetalleDashboard2Page({
                         )}
                         {f.detalle && <p className="text-xs text-gray-500">{f.detalle}</p>}
                       </td>
+                      {conAcreditacion && (
+                        <td className="px-3 py-2 align-top text-xs">
+                          <Acreditaciones pagos={f.pagos ?? []} />
+                        </td>
+                      )}
                       <td className="whitespace-nowrap px-3 py-2 text-right align-top tabular-nums text-gray-900">
                         {formatCurrency(f.monto)}
                       </td>
@@ -123,14 +157,14 @@ export default async function DetalleDashboard2Page({
                   ))}
                   {filas.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="px-3 py-6 text-center text-sm text-gray-400">Sin movimientos en el período.</td>
+                      <td colSpan={columnas} className="px-3 py-6 text-center text-sm text-gray-400">Sin movimientos en el período.</td>
                     </tr>
                   )}
                 </tbody>
                 {filas.length > 0 && (
                   <tfoot>
                     <tr className="border-t border-gray-200 bg-gray-50 font-semibold">
-                      <td className="px-3 py-2" colSpan={2}>Total</td>
+                      <td className="px-3 py-2" colSpan={columnas - 1}>Total</td>
                       <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(subtotal)}</td>
                     </tr>
                   </tfoot>

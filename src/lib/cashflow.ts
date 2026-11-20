@@ -230,7 +230,8 @@ export async function getAniosCashflow(): Promise<number[]> {
 // Ventas del período con saldo sin cobrar: total − pagos ya acreditados.
 // Un pago cuenta como cobrado solo si tiene fecha de acreditación y esa fecha es hoy o anterior
 // (día de Argentina). Los pagos sin fecha de acreditación o con fecha futura siguen pendientes.
-export type VentaPendiente = Omit<Movimiento, "clave"> & { interna: boolean };
+export type PagoPendiente = { monto: number; fechaAcreditacion: Date | null; acreditado: boolean };
+export type VentaPendiente = Omit<Movimiento, "clave"> & { interna: boolean; pagos: PagoPendiente[] };
 
 const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
 // fechaAcreditacion se guarda como fecha sola (medianoche UTC), así que se compara el día tal cual.
@@ -246,7 +247,7 @@ export async function getVentasPendientesCobro(periodo: Periodo): Promise<VentaP
       costoEnvio: true,
       cliente: { select: { nombre: true, apellido: true } },
       detalles: { select: { cantidad: true, precioVentaUnitario: true, descuentoPorcentaje: true } },
-      pagos: { select: { monto: true, fechaAcreditacion: true } },
+      pagos: { select: { monto: true, fechaAcreditacion: true }, orderBy: { fechaPago: "asc" } },
     },
   });
   const hoy = diaArgentina.format(new Date());
@@ -262,6 +263,11 @@ export async function getVentasPendientesCobro(periodo: Periodo): Promise<VentaP
     return [
       {
         interna: v.esVentaInterna,
+        pagos: v.pagos.map((p) => ({
+          monto: Number(p.monto),
+          fechaAcreditacion: p.fechaAcreditacion,
+          acreditado: estaAcreditado(p.fechaAcreditacion, hoy),
+        })),
         fecha: v.fechaVenta,
         monto: pendiente,
         titulo: `Venta #${v.id} · ${nombreCliente(v.cliente)}`,
