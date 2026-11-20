@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { perfilAcceso } from "@/lib/permissions";
 import { TipoProductoMayorista } from "@prisma/client";
 import { TablaMayoristas } from "./tabla-mayoristas";
+import { BotonForzarTiendanube } from "./boton-forzar-tiendanube";
 
 const LABELS_TIPO: Record<TipoProductoMayorista, string> = {
   ALIMENTO_SECO: "Alimento seco",
@@ -20,7 +21,7 @@ export default async function MayoristasTipoPage({
 }) {
   const { proveedor: proveedorFiltro, sinAsignar, q, tipoActual } = await searchParams;
   const soloSinAsignar = sinAsignar === "1";
-  const { soloLectura } = await perfilAcceso(); // Solo lectura: ve el tipo sin poder cambiarlo.
+  const { soloLectura, esAdmin } = await perfilAcceso(); // Solo lectura: ve el tipo sin poder cambiarlo.
 
   const [productos, proveedores] = await Promise.all([
     prisma.producto.findMany({
@@ -52,12 +53,15 @@ export default async function MayoristasTipoPage({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <Link href="/inventario" className="text-xs text-gray-400 hover:text-gray-600">← Inventario</Link>
         <h1 className="text-xl font-semibold text-gray-900 mt-1">Asignar tipo de producto (mayorista)</h1>
         <p className="mt-1 text-sm text-gray-500">
           Define a qué categoría de margen mayorista pertenece cada producto (alimento seco, húmedo, snack, accesorios).
         </p>
+      </div>
+      {esAdmin && <BotonForzarTiendanube />}
       </div>
 
       <form className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-3">
