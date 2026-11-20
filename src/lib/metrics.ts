@@ -5,6 +5,20 @@ interface RangoFechas {
   hasta?: Date;
 }
 
+// Total de compras: cantidad × costo con descuento + envío (mismo cálculo que la pantalla de Compras).
+const SELECT_TOTAL_COMPRA = { cantidad: true, precioCostoUnitario: true, descuentoPorcentaje: true, costoEnvio: true } as const;
+function totalCompras(
+  compras: { cantidad: number; precioCostoUnitario: unknown; descuentoPorcentaje: unknown; costoEnvio: unknown }[]
+) {
+  return compras.reduce(
+    (acc, c) =>
+      acc +
+      c.cantidad * Number(c.precioCostoUnitario) * (1 - Number(c.descuentoPorcentaje ?? 0) / 100) +
+      Number(c.costoEnvio ?? 0),
+    0
+  );
+}
+
 function fechaWhere({ desde, hasta }: RangoFechas) {
   if (!desde && !hasta) return undefined;
   return {
@@ -46,9 +60,9 @@ export async function getDashboardMetrics(rango: RangoFechas) {
           : { venta: { esVentaInterna: false } },
         _sum: { montoCalculado: true },
       }),
-      prisma.compra.aggregate({
+      prisma.compra.findMany({
         where: fechaCompra ? { fechaCompra } : undefined,
-        _sum: { precioCostoUnitario: true, costoEnvio: true, cantidad: true },
+        select: SELECT_TOTAL_COMPRA,
       }),
       prisma.gasto.findMany({
         where: fechaGasto ? { fechaGasto } : undefined,
@@ -70,7 +84,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
       }),
       prisma.compra.findMany({
         where: { ...(fechaCompra ? { fechaCompra } : {}), facturado: false },
-        select: { cantidad: true, precioCostoUnitario: true, costoEnvio: true },
+        select: SELECT_TOTAL_COMPRA,
       }),
       prisma.ventaConsignacion.findMany({
         where: fechaVenta ? { fecha: fechaVenta } : undefined,
@@ -138,9 +152,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
   totalFacturado += envioCobradoVentas;
   const costosCobranzaVentas = Number(costosCobranzaAgg._sum.montoCalculado ?? 0);
 
-  const totalComprasMercaderia =
-    Number(compras._sum.precioCostoUnitario ?? 0) +
-    Number(compras._sum.costoEnvio ?? 0);
+  const totalComprasMercaderia = totalCompras(compras);
 
   const gastosPorCategoria = gastos.map((g) => ({
     categoria: g.categoriaGasto,
@@ -200,10 +212,7 @@ export async function getDashboardMetrics(rango: RangoFechas) {
 
   const comprasNoFacturadas = {
     cantidad: comprasNoFact.length,
-    total: comprasNoFact.reduce(
-      (acc, c) => acc + c.cantidad * Number(c.precioCostoUnitario) + Number(c.costoEnvio ?? 0),
-      0
-    ),
+    total: totalCompras(comprasNoFact),
   };
 
   return {
@@ -257,9 +266,9 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
         producto: { select: { precioCostoUnitario: true } },
       },
     }),
-    prisma.compra.aggregate({
+    prisma.compra.findMany({
       where: { proveedorId, ...(fechaCompra ? { fechaCompra } : {}) },
-      _sum: { precioCostoUnitario: true, costoEnvio: true, cantidad: true },
+      select: SELECT_TOTAL_COMPRA,
     }),
     prisma.producto.findMany({
       where: { id: { in: productoIds } },
@@ -278,7 +287,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     }),
     prisma.compra.findMany({
       where: { proveedorId, facturado: false, ...(fechaCompra ? { fechaCompra } : {}) },
-      select: { cantidad: true, precioCostoUnitario: true, costoEnvio: true },
+      select: SELECT_TOTAL_COMPRA,
     }),
   ]);
 
@@ -290,8 +299,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
     costoMercaderiaVendida += d.cantidad * Number(d.producto.precioCostoUnitario);
   }
 
-  const totalComprasMercaderia =
-    Number(compras._sum.precioCostoUnitario ?? 0) + Number(compras._sum.costoEnvio ?? 0);
+  const totalComprasMercaderia = totalCompras(compras);
 
   const totalGastado = totalComprasMercaderia;
 
@@ -323,10 +331,7 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
 
   const comprasNoFacturadas = {
     cantidad: comprasNoFact.length,
-    total: comprasNoFact.reduce(
-      (acc, c) => acc + c.cantidad * Number(c.precioCostoUnitario) + Number(c.costoEnvio ?? 0),
-      0
-    ),
+    total: totalCompras(comprasNoFact),
   };
 
   return {
