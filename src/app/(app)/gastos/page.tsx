@@ -83,7 +83,7 @@ export default async function GastosPage() {
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Tipo</label>
+          <label className="text-sm font-medium text-gray-700">Categoría</label>
           <input
             name="categoriaGasto"
             list="categorias-gasto"
@@ -197,7 +197,7 @@ export default async function GastosPage() {
           <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
               <th className="px-3 py-2">Fecha</th>
-              <th className="px-3 py-2">Tipo</th>
+              <th className="px-3 py-2">Categoría</th>
               <th className="px-3 py-2">Tipo</th>
               <th className="px-3 py-2 text-right">Monto</th>
               <th className="px-3 py-2">Notas</th>
