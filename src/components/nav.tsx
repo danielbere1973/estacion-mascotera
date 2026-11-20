@@ -12,8 +12,12 @@ import { MODULOS } from "@/lib/modulos";
 type Link_ = { href: string; label: string; icon: string; exact?: boolean; modulo?: ModuloApp; soloAdmin?: boolean };
 
 // Logística se muestra como grupo desplegable (Seguimiento en vivo y Costos/KM).
-const links: Link_[] = MODULOS.filter((m) => !m.grupo && m.modulo !== "LOGISTICA").map(
-  ({ href, label, icon, modulo }) => ({ href, label, icon, modulo })
+// Cashflow va entre Dashboard y Ventas y no es un módulo habilitable: lo ven solo los administradores.
+const links: Link_[] = MODULOS.filter((m) => !m.grupo && m.modulo !== "LOGISTICA").flatMap(
+  ({ href, label, icon, modulo }): Link_[] => [
+    { href, label, icon, modulo },
+    ...(modulo === "DASHBOARD" ? [{ href: "/cashflow", label: "Cashflow", icon: "💰", soloAdmin: true }] : []),
+  ]
 );
 
 const logisticaLinks: Link_[] = [

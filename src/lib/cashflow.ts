@@ -1,0 +1,114 @@
+import { prisma } from "@/lib/prisma";
+
+// Cashflow mensual de un año. Usa los mismos criterios que el Dashboard (lib/metrics.ts)
+// para que los totales coincidan:
+// - Ventas: detalle × precio con descuento + envío cobrado al cliente, sin ventas internas, por fecha de venta.
+// - Consignaciones: nuestra comisión (2/3 de la ganancia) de lo recibido en consignación que se
+//   registró sin "Nueva venta" (con venta vinculada ya está dentro de Ventas).
+// - Compras: cantidad × costo con descuento + envío, por fecha de compra.
+// - Comisiones de cobro: costos de cada venta (CostoVenta), por fecha de venta.
+// - Gastos: por tipo (fijos, variables, marketing, excepcionales), por fecha del gasto.
+// Los meses se cortan en UTC, igual que los períodos del Dashboard.
+
+export const FILAS_INGRESO = [
+  { clave: "ventas", label: "Ventas" },
+  { clave: "consignaciones", label: "Comisión consignaciones" },
+] as const;
+
+export const FILAS_EGRESO = [
+  { clave: "compras", label: "Compras de mercadería" },
+  { clave: "comisiones", label: "Comisiones de cobro" },
+  { clave: "gastosFijos", label: "Gastos fijos" },
+  { clave: "gastosVariables", label: "Gastos variables" },
+  { clave: "gastosMarketing", label: "Marketing" },
+  { clave: "gastosExcepcionales", label: "Gastos excepcionales" },
+] as const;
+
+type ClaveFila = (typeof FILAS_INGRESO)[number]["clave"] | (typeof FILAS_EGRESO)[number]["clave"];
+
+// 12 importes por fila (enero a diciembre).
+export type Cashflow = Record<ClaveFila, number[]>;
+
+const CLAVE_POR_TIPO_GASTO = {
+  FIJO: "gastosFijos",
+  VARIABLE: "gastosVariables",
+  MARKETING: "gastosMarketing",
+  EXCEPCIONAL: "gastosExcepcionales",
+} as const;
+
+export async function getCashflowAnual(anio: number): Promise<Cashflow> {
+  const rango = { gte: new Date(Date.UTC(anio, 0, 1)), lt: new Date(Date.UTC(anio + 1, 0, 1)) };
+
+  const [ventas, consignaciones, compras, gastos] = await Promise.all([
+    prisma.venta.findMany({
+      where: { fechaVenta: rango, esVentaInterna: false },
+      select: {
+        fechaVenta: true,
+        costoEnvio: true,
+        detalles: { select: { cantidad: true, precioVentaUnitario: true, descuentoPorcentaje: true } },
+        costos: { select: { montoCalculado: true } },
+      },
+    }),
+    prisma.ventaConsignacion.findMany({
+      where: { fecha: rango, detalleVentaId: null, detalle: { consignacion: { direccion: "RECIBIMOS" } } },
+      select: { fecha: true, cantidad: true, precioVentaReal: true, detalle: { select: { precioCosto: true } } },
+    }),
+    prisma.compra.findMany({
+      where: { fechaCompra: rango },
+      select: { fechaCompra: true, cantidad: true, precioCostoUnitario: true, descuentoPorcentaje: true, costoEnvio: true },
+    }),
+    prisma.gasto.findMany({
+      where: { fechaGasto: rango },
+      select: { fechaGasto: true, monto: true, tipoGasto: true },
+    }),
+  ]);
+
+  const cf = Object.fromEntries(
+    [...FILAS_INGRESO, ...FILAS_EGRESO].map((f) => [f.clave, Array<number>(12).fill(0)])
+  ) as Cashflow;
+  const sumar = (clave: ClaveFila, fecha: Date, monto: number) => {
+    cf[clave][fecha.getUTCMonth()] += monto;
+  };
+
+  for (const v of ventas) {
+    const total =
+      v.detalles.reduce(
+        (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario) * (1 - Number(d.descuentoPorcentaje ?? 0) / 100),
+        0
+      ) + Number(v.costoEnvio);
+    sumar("ventas", v.fechaVenta, total);
+    sumar("comisiones", v.fechaVenta, v.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0));
+  }
+
+  for (const c of consignaciones) {
+    const ganancia = Number(c.precioVentaReal) - Number(c.detalle.precioCosto);
+    sumar("consignaciones", c.fecha, ((ganancia * 2) / 3) * c.cantidad);
+  }
+
+  for (const c of compras) {
+    const total =
+      c.cantidad * Number(c.precioCostoUnitario) * (1 - Number(c.descuentoPorcentaje) / 100) + Number(c.costoEnvio ?? 0);
+    sumar("compras", c.fechaCompra, total);
+  }
+
+  for (const g of gastos) {
+    sumar(CLAVE_POR_TIPO_GASTO[g.tipoGasto], g.fechaGasto, Number(g.monto));
+  }
+
+  return cf;
+}
+
+// Años para el filtro: desde el primer movimiento cargado hasta el año actual.
+export async function getAniosCashflow(): Promise<number[]> {
+  const [venta, compra, gasto] = await Promise.all([
+    prisma.venta.aggregate({ _min: { fechaVenta: true } }),
+    prisma.compra.aggregate({ _min: { fechaCompra: true } }),
+    prisma.gasto.aggregate({ _min: { fechaGasto: true } }),
+  ]);
+  const actual = new Date().getUTCFullYear();
+  const primeros = [venta._min.fechaVenta, compra._min.fechaCompra, gasto._min.fechaGasto]
+    .filter((f): f is Date => f != null)
+    .map((f) => f.getUTCFullYear());
+  const desde = Math.min(actual, ...primeros);
+  return Array.from({ length: actual - desde + 1 }, (_, i) => actual - i);
+}
