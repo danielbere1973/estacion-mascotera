@@ -24,9 +24,9 @@ export const FILAS_EGRESO = [
   { clave: "gastosExcepcionales", label: "Gastos excepcionales" },
 ] as const;
 
-type ClaveFila = (typeof FILAS_INGRESO)[number]["clave"] | (typeof FILAS_EGRESO)[number]["clave"];
+export type ClaveFila = (typeof FILAS_INGRESO)[number]["clave"] | (typeof FILAS_EGRESO)[number]["clave"];
 
-// 12 importes por fila (enero a diciembre).
+// Importes por fila: 12 (enero a diciembre) en el cashflow anual, 1 en un total de período.
 export type Cashflow = Record<ClaveFila, number[]>;
 
 const CLAVE_POR_TIPO_GASTO = {
@@ -36,9 +36,25 @@ const CLAVE_POR_TIPO_GASTO = {
   EXCEPCIONAL: "gastosExcepcionales",
 } as const;
 
-export async function getCashflowAnual(anio: number): Promise<Cashflow> {
+// Cashflow del año, mes a mes (índice 0 = enero).
+export function getCashflowAnual(anio: number): Promise<Cashflow> {
   const rango = { gte: new Date(Date.UTC(anio, 0, 1)), lt: new Date(Date.UTC(anio + 1, 0, 1)) };
+  return calcularMovimientos(rango, 12, (fecha) => fecha.getUTCMonth());
+}
 
+// Totales de un período cualquiera (sin desde/hasta = todo), por fila. Lo usa Dashboard 2.
+export async function getTotalesPeriodo(periodo: { desde?: Date; hasta?: Date }): Promise<Record<ClaveFila, number>> {
+  const rango = { ...(periodo.desde ? { gte: periodo.desde } : {}), ...(periodo.hasta ? { lt: periodo.hasta } : {}) };
+  const cf = await calcularMovimientos(rango, 1, () => 0);
+  return Object.fromEntries(Object.entries(cf).map(([clave, valores]) => [clave, valores[0]])) as Record<ClaveFila, number>;
+}
+
+// Suma cada movimiento en su fila y en la columna que indique `columna` (mes, o 0 si es un solo total).
+async function calcularMovimientos(
+  rango: { gte?: Date; lt?: Date },
+  columnas: number,
+  columna: (fecha: Date) => number
+): Promise<Cashflow> {
   const [ventas, consignaciones, compras, gastos] = await Promise.all([
     prisma.venta.findMany({
       where: { fechaVenta: rango, esVentaInterna: false },
@@ -64,10 +80,10 @@ export async function getCashflowAnual(anio: number): Promise<Cashflow> {
   ]);
 
   const cf = Object.fromEntries(
-    [...FILAS_INGRESO, ...FILAS_EGRESO].map((f) => [f.clave, Array<number>(12).fill(0)])
+    [...FILAS_INGRESO, ...FILAS_EGRESO].map((f) => [f.clave, Array<number>(columnas).fill(0)])
   ) as Cashflow;
   const sumar = (clave: ClaveFila, fecha: Date, monto: number) => {
-    cf[clave][fecha.getUTCMonth()] += monto;
+    cf[clave][columna(fecha)] += monto;
   };
 
   for (const v of ventas) {
