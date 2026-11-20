@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { registrarLog } from "@/lib/log";
 import { TipoGasto } from "@prisma/client";
+import { CATEGORIAS_GASTO } from "@/lib/metrics";
 
 export async function crearGasto(formData: FormData) {
   const session = await requireAdmin("GASTOS");
@@ -18,7 +19,7 @@ export async function crearGasto(formData: FormData) {
   const tipoGasto = (formData.get("tipoGasto")?.toString() ?? "VARIABLE") as TipoGasto;
   const esFijo = tipoGasto === "FIJO";
 
-  if (!categoriaGasto) throw new Error("Seleccioná una categoría.");
+  if (!categoriaGasto || !CATEGORIAS_GASTO.includes(categoriaGasto)) throw new Error("Seleccioná una categoría.");
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
 
   await prisma.$transaction(async (tx) => {
@@ -62,7 +63,7 @@ export async function actualizarGasto(formData: FormData) {
   const tipoGasto = (formData.get("tipoGasto")?.toString() ?? "VARIABLE") as TipoGasto;
   const esFijo = tipoGasto === "FIJO";
 
-  if (!categoriaGasto) throw new Error("Seleccioná una categoría.");
+  if (!categoriaGasto || !CATEGORIAS_GASTO.includes(categoriaGasto)) throw new Error("Seleccioná una categoría.");
   if (!monto || monto <= 0) throw new Error("El monto debe ser mayor a 0.");
 
   await prisma.$transaction(async (tx) => {

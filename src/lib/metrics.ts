@@ -355,16 +355,12 @@ export async function getDashboardMetricsRestringido(rango: RangoFechas, proveed
   };
 }
 
-export const CATEGORIAS_GASTO_SUGERIDAS = [
-  "Fijo",
-  "Variable",
-  "Soporte",
-  "Excepcional",
-  "Publicidad",
-  "Monotributo",
-  "Teléfono",
-  "Community Manager",
-  "Soporte IT",
+export const CATEGORIAS_GASTO = [
   "Logística",
+  "Marketing",
+  "Monotributo",
   "Otros",
+  "Publicidad",
+  "Soporte IT",
+  "Teléfono",
 ];
