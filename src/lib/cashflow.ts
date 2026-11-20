@@ -168,3 +168,40 @@ export async function getPendientesCobro(periodo: {
   }
   return resultado;
 }
+
+// Egresos pendientes de pago del período: compras de mercadería sin marcar como pagadas
+// (cantidad × costo con descuento + envío), agrupadas por proveedor de mayor a menor.
+// Los gastos no tienen estado de pago: se cargan ya pagados, así que no entran.
+export async function getEgresosPendientes(periodo: {
+  desde?: Date;
+  hasta?: Date;
+}): Promise<{ monto: number; compras: number; porProveedor: { proveedor: string; monto: number; compras: number }[] }> {
+  const fechaCompra = { ...(periodo.desde ? { gte: periodo.desde } : {}), ...(periodo.hasta ? { lt: periodo.hasta } : {}) };
+  const compras = await prisma.compra.findMany({
+    where: { fechaCompra, pagado: false },
+    select: {
+      cantidad: true,
+      precioCostoUnitario: true,
+      descuentoPorcentaje: true,
+      costoEnvio: true,
+      proveedor: { select: { nombre: true } },
+    },
+  });
+
+  const porProveedor = new Map<string, { monto: number; compras: number }>();
+  let monto = 0;
+  for (const c of compras) {
+    const total =
+      c.cantidad * Number(c.precioCostoUnitario) * (1 - Number(c.descuentoPorcentaje) / 100) + Number(c.costoEnvio ?? 0);
+    monto += total;
+    const fila = porProveedor.get(c.proveedor.nombre) ?? { monto: 0, compras: 0 };
+    fila.monto += total;
+    fila.compras++;
+    porProveedor.set(c.proveedor.nombre, fila);
+  }
+  return {
+    monto,
+    compras: compras.length,
+    porProveedor: [...porProveedor].map(([proveedor, f]) => ({ proveedor, ...f })).sort((a, b) => b.monto - a.monto),
+  };
+}
