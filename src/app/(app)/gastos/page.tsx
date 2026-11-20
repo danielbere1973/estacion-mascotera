@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { CATEGORIAS_GASTO_SUGERIDAS } from "@/lib/metrics";
+import { CATEGORIAS_GASTO } from "@/lib/metrics";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { crearGasto, eliminarGasto } from "./actions";
 import { perfilAcceso } from "@/lib/permissions";
@@ -84,18 +84,21 @@ export default async function GastosPage() {
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Categoría</label>
-          <input
+          <select
             name="categoriaGasto"
-            list="categorias-gasto"
             required
-            placeholder="Seleccionar o escribir..."
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-          <datalist id="categorias-gasto">
-            {CATEGORIAS_GASTO_SUGERIDAS.map((c) => (
-              <option key={c} value={c} />
+            defaultValue=""
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white"
+          >
+            <option value="" disabled>
+              Seleccionar...
+            </option>
+            {CATEGORIAS_GASTO.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
-          </datalist>
+          </select>
         </div>
 
         <div className="space-y-1">
