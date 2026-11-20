@@ -24,7 +24,7 @@ export const FILAS_EGRESO = [
   { clave: "gastosFijos", label: "Gastos fijos" },
   { clave: "gastosVariables", label: "Gastos variables" },
   { clave: "gastosMarketing", label: "Marketing" },
-  { clave: "gastosExcepcionales", label: "Gastos excepcionales" },
+  { clave: "gastosExcepcionales", label: "Gastos OTC (Excepcional, única vez)" },
 ] as const;
 
 export type ClaveFila = (typeof FILAS_INGRESO)[number]["clave"] | (typeof FILAS_EGRESO)[number]["clave"];

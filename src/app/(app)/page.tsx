@@ -59,7 +59,7 @@ export default async function DashboardPage({
     {
       label: "Rentabilidad Neta",
       value: metrics.rentabilidadNeta,
-      hint: "Rentabilidad operativa − gastos fijos, marketing y excepcionales",
+      hint: "Rentabilidad operativa − gastos fijos, marketing y OTC",
       highlight: true,
       pct: pctNeta,
     },
@@ -70,7 +70,7 @@ export default async function DashboardPage({
       pct: null as number | null,
     },
     {
-      label: "Gastos Excepcionales",
+      label: "Gastos OTC (Excepcional, única vez)",
       value: metrics.totalGastosExcepcionales,
       hint: "Pagos únicos o infrecuentes — impactan rentabilidad neta pero no operativa",
       pct: null as number | null,
