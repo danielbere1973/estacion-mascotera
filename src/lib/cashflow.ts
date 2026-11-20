@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 
-// Cashflow mensual de un año. Usa los mismos criterios que el Dashboard (lib/metrics.ts)
-// para que los totales coincidan:
-// - Ventas: detalle × precio con descuento + envío cobrado al cliente, sin ventas internas, por fecha de venta.
+// Cashflow (mensual de un año) y totales de Dashboard 2. Parte de los criterios del Dashboard
+// (lib/metrics.ts), salvo que acá las ventas internas suman como ingreso:
+// - Ventas: detalle × precio con descuento + envío cobrado al cliente, por fecha de venta.
+// - Ventas internas: mismo cálculo, en su propia fila. A diferencia del Dashboard, acá suman:
+//   se retribuye su costo y se registra la venta, así que es plata que entra.
 // - Consignaciones: nuestra comisión (2/3 de la ganancia) de lo recibido en consignación que se
 //   registró sin "Nueva venta" (con venta vinculada ya está dentro de Ventas).
 // - Compras: cantidad × costo con descuento + envío, por fecha de compra.
@@ -12,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 
 export const FILAS_INGRESO = [
   { clave: "ventas", label: "Ventas" },
+  { clave: "ventasInternas", label: "Ventas internas" },
   { clave: "consignaciones", label: "Comisión consignaciones" },
 ] as const;
 
@@ -57,9 +60,10 @@ async function calcularMovimientos(
 ): Promise<Cashflow> {
   const [ventas, consignaciones, compras, gastos] = await Promise.all([
     prisma.venta.findMany({
-      where: { fechaVenta: rango, esVentaInterna: false },
+      where: { fechaVenta: rango },
       select: {
         fechaVenta: true,
+        esVentaInterna: true,
         costoEnvio: true,
         detalles: { select: { cantidad: true, precioVentaUnitario: true, descuentoPorcentaje: true } },
         costos: { select: { montoCalculado: true } },
@@ -92,7 +96,7 @@ async function calcularMovimientos(
         (acc, d) => acc + d.cantidad * Number(d.precioVentaUnitario) * (1 - Number(d.descuentoPorcentaje ?? 0) / 100),
         0
       ) + Number(v.costoEnvio);
-    sumar("ventas", v.fechaVenta, total);
+    sumar(v.esVentaInterna ? "ventasInternas" : "ventas", v.fechaVenta, total);
     sumar("comisiones", v.fechaVenta, v.costos.reduce((acc, c) => acc + Number(c.montoCalculado), 0));
   }
 
