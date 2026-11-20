@@ -98,7 +98,7 @@ export default async function Dashboard2Page({
       label: "Ingresos pendientes de cobro",
       valor: totalPendiente,
       color: "text-amber-600",
-      hint: `${etiquetaVentas(ventasPendientes)} del período sin cobrar del todo (total − pagos registrados)`,
+      hint: `${etiquetaVentas(ventasPendientes)} del período sin cobrar del todo (total − pagos acreditados hasta hoy)`,
       desglose: [
         { label: `Ventas (${etiquetaVentas(pendientes.ventas.ventas)})`, monto: pendientes.ventas.monto, href: detalle("pendientesVentas") },
         { label: `Ventas internas (${etiquetaVentas(pendientes.ventasInternas.ventas)})`, monto: pendientes.ventasInternas.monto, href: detalle("pendientesVentasInternas") },

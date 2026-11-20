@@ -227,9 +227,14 @@ export async function getAniosCashflow(): Promise<number[]> {
   return Array.from({ length: actual - desde + 1 }, (_, i) => actual - i);
 }
 
-// Ventas del período con saldo sin cobrar: total − pagos registrados, mismo criterio que el estado
-// "Pendiente de pago" / "Parcialmente pagado" de la pantalla de Ventas.
+// Ventas del período con saldo sin cobrar: total − pagos ya acreditados.
+// Un pago cuenta como cobrado solo si tiene fecha de acreditación y esa fecha es hoy o anterior
+// (día de Argentina). Los pagos sin fecha de acreditación o con fecha futura siguen pendientes.
 export type VentaPendiente = Omit<Movimiento, "clave"> & { interna: boolean };
+
+const diaArgentina = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+// fechaAcreditacion se guarda como fecha sola (medianoche UTC), así que se compara el día tal cual.
+const estaAcreditado = (fecha: Date | null, hoy: string) => fecha != null && fecha.toISOString().slice(0, 10) <= hoy;
 
 export async function getVentasPendientesCobro(periodo: Periodo): Promise<VentaPendiente[]> {
   const ventas = await prisma.venta.findMany({
@@ -241,12 +246,17 @@ export async function getVentasPendientesCobro(periodo: Periodo): Promise<VentaP
       costoEnvio: true,
       cliente: { select: { nombre: true, apellido: true } },
       detalles: { select: { cantidad: true, precioVentaUnitario: true, descuentoPorcentaje: true } },
-      pagos: { select: { monto: true } },
+      pagos: { select: { monto: true, fechaAcreditacion: true } },
     },
   });
+  const hoy = diaArgentina.format(new Date());
   return ventas.flatMap((v) => {
     const total = totalDetalles(v.detalles) + Number(v.costoEnvio);
-    const pagado = v.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+    const registrado = v.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+    const pagado = v.pagos
+      .filter((p) => estaAcreditado(p.fechaAcreditacion, hoy))
+      .reduce((acc, p) => acc + Number(p.monto), 0);
+    const sinAcreditar = registrado - pagado;
     const pendiente = total - pagado;
     if (pendiente <= 0.01) return [];
     return [
@@ -255,7 +265,9 @@ export async function getVentasPendientesCobro(periodo: Periodo): Promise<VentaP
         fecha: v.fechaVenta,
         monto: pendiente,
         titulo: `Venta #${v.id} · ${nombreCliente(v.cliente)}`,
-        detalle: `Total $${pesos(total)} · pagado $${pesos(pagado)}`,
+        detalle:
+          `Total $${pesos(total)} · acreditado $${pesos(pagado)}` +
+          (sinAcreditar > 0.01 ? ` · registrado sin acreditar $${pesos(sinAcreditar)}` : ""),
         href: `/ventas/${v.id}/editar`,
       },
     ];
