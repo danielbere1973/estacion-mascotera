@@ -8,12 +8,14 @@ import { traerCategoriasTiendanube, traerDatosPorSkuTiendanube, type CategoriaTN
 // Archivo aparte de tiendanube.ts porque ese lo usan también scripts que corren fuera de Next.
 // Si una consulta falla no se cachea: se reintenta en la próxima carga.
 const DIEZ_MINUTOS = 600;
+// Etiqueta de estas cachés: forzarActualizacionTiendanube (Mayorista › Tipo mayorista) la invalida.
+export const TAG_CACHE_TIENDANUBE = "tiendanube";
 
 // unstable_cache guarda el resultado como JSON: el Map viaja como lista de pares.
 const datosPorSkuCacheado = unstable_cache(
   async (storeId: string, accessToken: string) => [...(await traerDatosPorSkuTiendanube(storeId, accessToken))],
   ["tiendanube-datos-por-sku"],
-  { revalidate: DIEZ_MINUTOS }
+  { revalidate: DIEZ_MINUTOS, tags: [TAG_CACHE_TIENDANUBE] }
 );
 
 export async function traerDatosPorSkuTiendanubeCacheado(storeId: string, accessToken: string): Promise<Map<string, DatosTN>> {
@@ -21,4 +23,7 @@ export async function traerDatosPorSkuTiendanubeCacheado(storeId: string, access
 }
 
 export const traerCategoriasTiendanubeCacheado: (storeId: string, accessToken: string) => Promise<CategoriaTN[]> =
-  unstable_cache(traerCategoriasTiendanube, ["tiendanube-categorias"], { revalidate: DIEZ_MINUTOS });
+  unstable_cache(traerCategoriasTiendanube, ["tiendanube-categorias"], {
+    revalidate: DIEZ_MINUTOS,
+    tags: [TAG_CACHE_TIENDANUBE],
+  });
