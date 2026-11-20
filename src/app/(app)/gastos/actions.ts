@@ -8,6 +8,14 @@ import { registrarLog } from "@/lib/log";
 import { TipoGasto } from "@prisma/client";
 import { CATEGORIAS_GASTO } from "@/lib/metrics";
 
+const TIPOS_GASTO_PERMITIDOS: TipoGasto[] = ["FIJO", "VARIABLE", "EXCEPCIONAL"];
+
+function leerTipoGasto(formData: FormData): TipoGasto {
+  const tipo = (formData.get("tipoGasto")?.toString() ?? "VARIABLE") as TipoGasto;
+  if (!TIPOS_GASTO_PERMITIDOS.includes(tipo)) throw new Error("Tipo de gasto inválido.");
+  return tipo;
+}
+
 export async function crearGasto(formData: FormData) {
   const session = await requireAdmin("GASTOS");
 
@@ -16,7 +24,7 @@ export async function crearGasto(formData: FormData) {
   const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const fechaGastoStr = formData.get("fechaGasto")?.toString();
   const pagadoPorIdStr = formData.get("pagadoPorId")?.toString();
-  const tipoGasto = (formData.get("tipoGasto")?.toString() ?? "VARIABLE") as TipoGasto;
+  const tipoGasto = leerTipoGasto(formData);
   const esFijo = tipoGasto === "FIJO";
 
   if (!categoriaGasto || !CATEGORIAS_GASTO.includes(categoriaGasto)) throw new Error("Seleccioná una categoría.");
@@ -60,7 +68,7 @@ export async function actualizarGasto(formData: FormData) {
   const descripcion = formData.get("descripcion")?.toString().trim() || null;
   const fechaGastoStr = formData.get("fechaGasto")?.toString();
   const pagadoPorIdStr = formData.get("pagadoPorId")?.toString();
-  const tipoGasto = (formData.get("tipoGasto")?.toString() ?? "VARIABLE") as TipoGasto;
+  const tipoGasto = leerTipoGasto(formData);
   const esFijo = tipoGasto === "FIJO";
 
   if (!categoriaGasto || !CATEGORIAS_GASTO.includes(categoriaGasto)) throw new Error("Seleccioná una categoría.");

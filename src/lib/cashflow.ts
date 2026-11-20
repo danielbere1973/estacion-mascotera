@@ -23,7 +23,6 @@ export const FILAS_EGRESO = [
   { clave: "comisiones", label: "Comisiones de cobro" },
   { clave: "gastosFijos", label: "Gastos fijos" },
   { clave: "gastosVariables", label: "Gastos variables" },
-  { clave: "gastosMarketing", label: "Marketing" },
   { clave: "gastosExcepcionales", label: "Gastos OTC (Excepcional, única vez)" },
 ] as const;
 
@@ -35,7 +34,7 @@ export type Cashflow = Record<ClaveFila, number[]>;
 const CLAVE_POR_TIPO_GASTO = {
   FIJO: "gastosFijos",
   VARIABLE: "gastosVariables",
-  MARKETING: "gastosMarketing",
+  MARKETING: "gastosVariables", // tipo dado de baja: se cuenta como variable
   EXCEPCIONAL: "gastosExcepcionales",
 } as const;
 

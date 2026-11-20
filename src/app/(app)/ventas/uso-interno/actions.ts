@@ -31,7 +31,7 @@ export async function crearUsoInterno(formData: FormData) {
     const gasto = await tx.gasto.create({
       data: {
         categoriaGasto: "Publicidad",
-        tipoGasto: "MARKETING",
+        tipoGasto: "VARIABLE",
         esFijo: false,
         monto,
         descripcion: descripcion
