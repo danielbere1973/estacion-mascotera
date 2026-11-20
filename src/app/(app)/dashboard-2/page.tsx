@@ -21,7 +21,7 @@ export default async function Dashboard2Page({ searchParams }: { searchParams: P
       label: "Total de Ingresos",
       valor: totalIngresos,
       color: "text-green-700",
-      hint: "Plata que entra: ventas y comisión de consignaciones",
+      hint: "Plata que entra: ventas (incluidas las internas) y comisión de consignaciones",
       desglose: desgloseIngresos,
     },
     {

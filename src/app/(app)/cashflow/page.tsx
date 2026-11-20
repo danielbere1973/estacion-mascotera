@@ -54,7 +54,7 @@ export default async function CashflowPage({ searchParams }: { searchParams: Pro
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Cashflow</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Ingresos y egresos mes a mes, con los mismos criterios que el Dashboard.
+            Ingresos y egresos mes a mes (mismo cálculo que Dashboard 2).
           </p>
         </div>
         <SelectorAnio anios={anios} anio={anio} />
@@ -120,7 +120,7 @@ export default async function CashflowPage({ searchParams }: { searchParams: Pro
       </div>
 
       <p className="text-xs text-gray-400">
-        Ventas por fecha de venta (sin ventas internas, con envío cobrado). Comisión consignaciones: nuestra parte de lo
+        Ventas por fecha de venta (con envío cobrado); las ventas internas van en su propia fila. Comisión consignaciones: nuestra parte de lo
         recibido en consignación vendido sin &quot;Nueva venta&quot;. Compras por fecha de compra, con descuento y envío.
       </p>
     </div>
