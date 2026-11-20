@@ -1,15 +1,7 @@
 import { FILAS_EGRESO, FILAS_INGRESO, getEgresosPendientes, getPendientesCobro, getTotalesPeriodo } from "@/lib/cashflow";
+import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
-
-// Fechas del filtro como "AAAA-MM-DD" (lo que usa <input type="date">). Se interpretan en UTC,
-// igual que los cortes de mes del Dashboard y del Cashflow.
-const FECHA = /^\d{4}-\d{2}-\d{2}$/;
-const aIso = (d: Date) => d.toISOString().slice(0, 10);
-function leerFecha(valor: string | undefined): Date | null {
-  if (!valor || !FECHA.test(valor)) return null;
-  const d = new Date(`${valor}T00:00:00Z`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+import { aIso, hrefDetalle, rangoDesdeParams } from "./fechas";
 
 // Dashboard 2: cuadros de plata que entra y sale en el período. Mismo cálculo que Cashflow
 // (lib/cashflow.ts), así los dos coinciden para el mismo año.
@@ -19,7 +11,8 @@ type Cuadro = {
   color: string;
   hint: string;
   pct?: number | null;
-  desglose: { label: string; monto: number }[];
+  // Cada línea linkea al listado de lo que suma (Dashboard 2 › detalle).
+  desglose: { label: string; monto: number; href: string }[];
 };
 
 function TarjetaCuadro({ c }: { c: Cuadro }) {
@@ -35,7 +28,9 @@ function TarjetaCuadro({ c }: { c: Cuadro }) {
         <dl className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-xs">
           {c.desglose.map((d) => (
             <div key={d.label} className="flex justify-between gap-2">
-              <dt className="text-gray-500">{d.label}</dt>
+              <dt>
+                <Link href={d.href} className="text-blue-700 hover:underline">{d.label}</Link>
+              </dt>
               <dd className="tabular-nums text-gray-700">{formatCurrency(d.monto)}</dd>
             </div>
           ))}
@@ -51,15 +46,8 @@ export default async function Dashboard2Page({
   searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
   const params = await searchParams;
-  // Sin fechas elegidas: desde el 1 del mes actual hasta hoy.
-  // "Hoy" con la fecha de Argentina (de noche en UTC ya es el día siguiente).
-  const hoyAr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
-  const hoy = new Date(`${hoyAr}T00:00:00Z`);
-  let desde = leerFecha(params.desde) ?? new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 1));
-  let hasta = leerFecha(params.hasta) ?? hoy;
-  if (desde > hasta) [desde, hasta] = [hasta, desde];
-  // "Hasta" incluye ese día completo.
-  const hastaExclusivo = new Date(hasta.getTime() + 24 * 60 * 60 * 1000);
+  const { desde, hasta, hastaExclusivo } = rangoDesdeParams(params);
+  const detalle = (concepto: string, extra?: Record<string, string>) => hrefDetalle(concepto, desde, hasta, extra);
   const [totales, pendientes, egresosPendientes] = await Promise.all([
     getTotalesPeriodo({ desde, hasta: hastaExclusivo }),
     getPendientesCobro({ desde, hasta: hastaExclusivo }),
@@ -69,8 +57,8 @@ export default async function Dashboard2Page({
   const ventasPendientes = pendientes.ventas.ventas + pendientes.ventasInternas.ventas;
   const etiquetaVentas = (n: number) => `${n} venta${n !== 1 ? "s" : ""}`;
 
-  const desgloseIngresos = FILAS_INGRESO.map((f) => ({ label: f.label, monto: totales[f.clave] }));
-  const desgloseEgresos = FILAS_EGRESO.map((f) => ({ label: f.label, monto: totales[f.clave] }));
+  const desgloseIngresos = FILAS_INGRESO.map((f) => ({ label: f.label, monto: totales[f.clave], href: detalle(f.clave) }));
+  const desgloseEgresos = FILAS_EGRESO.map((f) => ({ label: f.label, monto: totales[f.clave], href: detalle(f.clave) }));
   const totalIngresos = desgloseIngresos.reduce((acc, d) => acc + d.monto, 0);
   const totalEgresos = desgloseEgresos.reduce((acc, d) => acc + d.monto, 0);
   const rentabilidadNeta = totalIngresos - totalEgresos;
@@ -98,8 +86,8 @@ export default async function Dashboard2Page({
       hint: "Total de Ingresos − Total de Egresos",
       pct: pctRentabilidad,
       desglose: [
-        { label: "Total de Ingresos", monto: totalIngresos },
-        { label: "Total de Egresos", monto: -totalEgresos },
+        { label: "Total de Ingresos", monto: totalIngresos, href: detalle("ingresos") },
+        { label: "Total de Egresos", monto: -totalEgresos, href: detalle("egresos") },
       ],
     },
   ];
@@ -112,8 +100,8 @@ export default async function Dashboard2Page({
       color: "text-amber-600",
       hint: `${etiquetaVentas(ventasPendientes)} del período sin cobrar del todo (total − pagos registrados)`,
       desglose: [
-        { label: `Ventas (${etiquetaVentas(pendientes.ventas.ventas)})`, monto: pendientes.ventas.monto },
-        { label: `Ventas internas (${etiquetaVentas(pendientes.ventasInternas.ventas)})`, monto: pendientes.ventasInternas.monto },
+        { label: `Ventas (${etiquetaVentas(pendientes.ventas.ventas)})`, monto: pendientes.ventas.monto, href: detalle("pendientesVentas") },
+        { label: `Ventas internas (${etiquetaVentas(pendientes.ventasInternas.ventas)})`, monto: pendientes.ventasInternas.monto, href: detalle("pendientesVentasInternas") },
       ],
     },
     {
@@ -124,6 +112,7 @@ export default async function Dashboard2Page({
       desglose: egresosPendientes.porProveedor.map((p) => ({
         label: `${p.proveedor} (${p.compras} compra${p.compras !== 1 ? "s" : ""})`,
         monto: p.monto,
+        href: detalle("comprasImpagas", { proveedor: String(p.proveedorId) }),
       })),
     },
   ];
