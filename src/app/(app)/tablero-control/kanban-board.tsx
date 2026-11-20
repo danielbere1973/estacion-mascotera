@@ -80,6 +80,7 @@ export function KanbanBoard({
   const [clienteIdNueva, setClienteIdNueva] = useState("");
   const [filtroClienteId, setFiltroClienteId] = useState("");
   const [filtroId, setFiltroId] = useState("");
+  const [filtroVentaId, setFiltroVentaId] = useState("");
   const [corteEnCurso, setCorteEnCurso] = useState(false);
   const [previewCorte, setPreviewCorte] = useState<{
     conMapeo: { lineaId: number; skuInterno: string; nombre: string; cantidad: number }[];
@@ -113,8 +114,15 @@ export function KanbanBoard({
   const tarjetasVisibles = tarjetas.filter((t) => {
     if (filtroClienteId && String(t.clienteId) !== filtroClienteId) return false;
     if (filtroIdLimpio && !String(t.id).includes(filtroIdLimpio)) return false;
+    if (filtroVentaId && String(t.ventaId) !== filtroVentaId) return false;
     return true;
   });
+
+  // Opciones del filtro por venta: solo las ventas que tienen alguna tarjeta, de la más nueva a la más vieja.
+  const clientePorVenta = new Map(ventas.map((v) => [v.id, v.clienteNombre]));
+  const ventaIdsConTarjeta = [...new Set(tarjetas.map((t) => t.ventaId).filter((id): id is number => id != null))].sort(
+    (a, b) => b - a,
+  );
 
   const opcionesCliente = clientes.map((c) => ({
     value: String(c.id),
@@ -199,6 +207,23 @@ export function KanbanBoard({
               inputMode="numeric"
               className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
+            <select
+              value={filtroVentaId}
+              onChange={(e) => setFiltroVentaId(e.target.value)}
+              title="Filtrar por ID de venta"
+              className="w-36 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">ID de Venta</option>
+              {ventaIdsConTarjeta.map((id) => {
+                const cliente = clientePorVenta.get(id);
+                return (
+                  <option key={id} value={id}>
+                    #{id}
+                    {cliente ? ` — ${cliente}` : ""}
+                  </option>
+                );
+              })}
+            </select>
           </div>
           {!soloLectura && (<>
           <button
