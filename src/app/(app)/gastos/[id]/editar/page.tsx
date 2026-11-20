@@ -49,7 +49,7 @@ export default async function EditarGastoPage({
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Tipo</label>
+          <label className="text-sm font-medium text-gray-700">Categoría</label>
           <input
             name="categoriaGasto"
             list="categorias-gasto"
