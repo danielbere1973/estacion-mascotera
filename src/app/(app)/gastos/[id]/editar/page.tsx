@@ -115,7 +115,6 @@ export default async function EditarGastoPage({
           >
             <option value="FIJO">Fijo — impacta rentabilidad neta (no operativa)</option>
             <option value="VARIABLE">Variable — impacta rentabilidad operativa y neta</option>
-            <option value="MARKETING">Marketing — impacta rentabilidad operativa y neta</option>
             <option value="EXCEPCIONAL">OTC (Excepcional, única vez) — no impacta ninguna rentabilidad</option>
           </select>
         </div>

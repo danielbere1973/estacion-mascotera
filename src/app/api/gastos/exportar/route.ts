@@ -6,7 +6,7 @@ import { formatoFecha, generarExportacion, leerFormato } from "@/lib/exportar";
 // Exportar todos los gastos (la pantalla muestra los últimos 50) en PDF, XLS o DOC.
 // Alcanza con tener la sección Gastos (también para Solo lectura).
 
-const TIPOS: Record<string, string> = { FIJO: "Fijo", VARIABLE: "Variable", MARKETING: "Marketing", EXCEPCIONAL: "OTC (Excepcional, única vez)" };
+const TIPOS: Record<string, string> = { FIJO: "Fijo", VARIABLE: "Variable", EXCEPCIONAL: "OTC (Excepcional, única vez)" };
 
 export async function GET(req: NextRequest) {
   if (!(await puedeVer("GASTOS"))) {

@@ -10,7 +10,6 @@ import { BotonExportar } from "@/components/boton-exportar";
 const TIPOS_GASTO: Record<string, { label: string; cls: string }> = {
   FIJO:        { label: "Fijo",        cls: "bg-gray-100 text-gray-600" },
   VARIABLE:    { label: "Variable",    cls: "bg-blue-50 text-blue-600" },
-  MARKETING:   { label: "Marketing",   cls: "bg-purple-50 text-purple-600" },
   EXCEPCIONAL: { label: "OTC (Excepcional, única vez)", cls: "bg-orange-50 text-orange-600" },
 };
 
@@ -147,7 +146,6 @@ export default async function GastosPage() {
           >
             <option value="FIJO">Fijo — impacta rentabilidad neta (no operativa)</option>
             <option value="VARIABLE">Variable — impacta rentabilidad operativa y neta</option>
-            <option value="MARKETING">Marketing — impacta rentabilidad operativa y neta</option>
             <option value="EXCEPCIONAL">OTC (Excepcional, única vez) — no impacta ninguna rentabilidad</option>
           </select>
         </div>
